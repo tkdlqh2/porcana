@@ -1,20 +1,16 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-import base64
+
+from .user.router import router as user_router
+from .deck.router import router as deck_router
+from .card.router import router as card_router
 
 app = FastAPI(title="Porcana API")
 
-class Deck(BaseModel):
-    code: str
+app.include_router(user_router)
+app.include_router(deck_router)
+app.include_router(card_router)
+
 
 @app.get("/")
 async def root():
     return {"message": "Porcana backend"}
-
-@app.post("/decode")
-async def decode_deck(deck: Deck):
-    try:
-        decoded = base64.b64decode(deck.code).decode('utf-8')
-        return {"decoded": decoded}
-    except Exception:
-        return {"error": "Invalid deck code"}

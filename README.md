@@ -22,3 +22,14 @@ docker-compose up --build
 ## License
 
 See [LICENSE](LICENSE).
+
+## API Overview
+
+The backend organizes functionality by domain under `backend/app/`. Each domain exposes a router mounted in `main.py`.
+
+- `GET /users` - list users
+- `GET /decks` - list decks
+- `POST /decks/decode` - decode a deck code
+- `GET /cards` - list cards
+
+These routes currently store data in memory for demonstration purposes.
