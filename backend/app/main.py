@@ -13,4 +13,7 @@ app.include_router(card_router)
 
 @app.get("/")
 async def root():
+    """
+    Handle the root endpoint and return a welcome message for the Porcana backend.
+    """
     return {"message": "Porcana backend"}
