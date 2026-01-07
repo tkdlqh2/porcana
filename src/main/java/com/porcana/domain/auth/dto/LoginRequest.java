@@ -1,13 +1,18 @@
 package com.porcana.domain.auth.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 
-@Getter
-@NoArgsConstructor
-public class LoginRequest {
-    private String provider; // GOOGLE|KAKAO|EMAIL
-    private String code;
-    private String email;
-    private String password;
+@ValidLoginRequest
+public record LoginRequest(
+        @Pattern(regexp = "^(EMAIL|GOOGLE|APPLE)$", message = "provider는 EMAIL, GOOGLE, APPLE 중 하나여야 합니다")
+        String provider,
+
+        String code,
+
+        @Email(message = "올바른 이메일 형식이 아닙니다")
+        String email,
+
+        String password
+) {
 }

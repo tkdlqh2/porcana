@@ -1,10 +1,9 @@
 package com.porcana.domain.auth.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
 
-@Getter
-@NoArgsConstructor
-public class RefreshRequest {
-    private String refreshToken;
+public record RefreshRequest(
+        @NotBlank(message = "Refresh Token은 필수입니다")
+        String refreshToken
+) {
 }

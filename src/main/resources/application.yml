@@ -3,35 +3,36 @@ spring:
     name: porcana
 
   datasource:
-    url: jdbc:h2:mem:porcana
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/porcana}
+    username: ${DATABASE_USERNAME:porcana}
+    password: ${DATABASE_PASSWORD:porcana}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate  # Flyway manages schema
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  security:
-    # TODO: Configure security settings
-    user:
-      name: admin
-      password: admin
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
 
 server:
   port: 8080
   servlet:
     context-path: /app/v1
+
+jwt:
+  secret: ${JWT_SECRET:porcana-secret-key-for-jwt-token-generation-must-be-at-least-256-bits-long}
+  access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:3600000}  # 1 hour
+  refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:604800000}  # 7 days
 
 logging:
   level:

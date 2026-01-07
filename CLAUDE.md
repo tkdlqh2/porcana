@@ -1,5 +1,51 @@
 # Porcana MVP API Contract (Frontend 공유용)
 
+## Development Philosophy
+
+### Command Pattern
+- **Controller**: Request DTO 수신 → Command 생성 (Command.from(request)) → Service 호출
+- **Command**: Request로부터 자신을 생성하는 정적 팩토리 메서드 제공
+- **Service**: Command DTO 수신 → 비즈니스 로직 처리
+- **Entity**: Command로부터 생성 (Entity.from(command))
+
+**Flow Example:**
+```
+Request DTO (SignupRequest)
+    ↓ Command의 정적 팩토리 메서드
+Command DTO (SignupCommand.from(request))
+    ↓ Service로 전달
+Entity (User.from(command))
+```
+
+**Code Example:**
+```java
+// Controller
+@PostMapping("/signup")
+public ResponseEntity<AuthResponse> signup(@RequestBody SignupRequest request) {
+    SignupCommand command = SignupCommand.from(request);
+    AuthResponse response = authService.signup(command);
+    return ResponseEntity.ok(response);
+}
+
+// Command
+public static SignupCommand from(SignupRequest request) {
+    return SignupCommand.builder()
+        .email(request.getEmail())
+        .password(request.getPassword())
+        .nickname(request.getNickname())
+        .provider(User.AuthProvider.EMAIL)
+        .build();
+}
+```
+
+**이유:**
+- 계층 간 명확한 책임 분리
+- Request DTO는 API 스펙에 종속, Command는 도메인 로직에 집중
+- **변환 로직을 Command가 소유** → Controller는 단순히 호출만
+- Entity 생성 로직을 Entity 내부에 캡슐화
+
+---
+
 ## Base
 - Base Path: /app/v1
 - Auth: Authorization: Bearer {accessToken}
@@ -23,13 +69,33 @@
 
 # 1) Auth / User
 
+## POST /auth/signup
+Request
+{
+"email": "string",
+"password": "string",
+"nickname": "string"
+}
+Response
+{
+"accessToken": "string",
+"refreshToken": "string"
+}
+
+## GET /auth/check-email?email=string
+Check if email is available for signup
+
+Response
+{
+"available": true|false
+}
+
 ## POST /auth/login
 Request
 {
-"provider": "GOOGLE|KAKAO|EMAIL",
-"code": "string (optional)",
-"email": "string (optional)",
-"password": "string (optional)"
+"provider": "EMAIL",
+"email": "string",
+"password": "string"
 }
 Response
 {

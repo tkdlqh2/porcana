@@ -29,8 +29,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
     // Database
-    runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.h2database:h2'  // For local development only
+
+    // Flyway Migration
+    implementation 'org.flywaydb:flyway-core:10.8.1'
+    implementation 'org.flywaydb:flyway-database-postgresql:10.8.1'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -41,9 +45,17 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
+    // Swagger/OpenAPI
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.testcontainers:testcontainers:1.19.3'
+    testImplementation 'org.testcontainers:postgresql:1.19.3'
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+    testImplementation 'io.rest-assured:rest-assured:5.4.0'
+    testImplementation 'io.rest-assured:json-path:5.4.0'
 }
 
 tasks.named('test') {
