@@ -16,10 +16,12 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Validated
 @Tag(name = "Auth", description = "인증 API")
 @RestController
 @RequestMapping("/auth")
