@@ -66,6 +66,6 @@ public class User {
     }
 
     public enum AuthProvider {
-        EMAIL, GOOGLE, KAKAO
+        EMAIL, GOOGLE, APPLE
     }
 }

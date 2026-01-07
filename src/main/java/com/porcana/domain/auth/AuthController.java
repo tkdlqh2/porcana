@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,7 +36,7 @@ public class AuthController {
             }
     )
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(@RequestBody SignupRequest request) {
+    public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
         SignupCommand command = SignupCommand.from(request);
         AuthResponse response = authService.signup(command);
         return ResponseEntity.ok(response);
@@ -50,7 +51,7 @@ public class AuthController {
             }
     )
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginCommand command = LoginCommand.from(request);
         AuthResponse response = authService.login(command);
         return ResponseEntity.ok(response);
@@ -81,7 +82,7 @@ public class AuthController {
             }
     )
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshRequest request) {
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         AuthResponse response = authService.refresh(request.getRefreshToken());
         return ResponseEntity.ok(response);
     }
