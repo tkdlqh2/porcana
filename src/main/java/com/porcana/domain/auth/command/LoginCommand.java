@@ -13,10 +13,14 @@ public class LoginCommand {
     private final User.AuthProvider provider;
 
     public static LoginCommand from(LoginRequest request) {
+        User.AuthProvider provider = request.provider() != null ?
+                User.AuthProvider.valueOf(request.provider()) :
+                User.AuthProvider.EMAIL;
+
         return LoginCommand.builder()
-                .email(request.getEmail())
-                .password(request.getPassword())
-                .provider(User.AuthProvider.valueOf(request.getProvider()))
+                .email(request.email())
+                .password(request.password())
+                .provider(provider)
                 .build();
     }
 }

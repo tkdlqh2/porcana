@@ -15,9 +15,9 @@ public class SignupCommand {
 
     public static SignupCommand from(SignupRequest request) {
         return SignupCommand.builder()
-                .email(request.getEmail())
-                .password(request.getPassword())
-                .nickname(request.getNickname())
+                .email(request.email())
+                .password(request.password())
+                .nickname(request.nickname())
                 .provider(User.AuthProvider.EMAIL)
                 .build();
     }

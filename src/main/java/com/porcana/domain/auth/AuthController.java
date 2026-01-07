@@ -21,7 +21,7 @@ import java.util.Map;
 
 @Tag(name = "Auth", description = "인증 API")
 @RestController
-@RequestMapping("/app/v1/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -83,7 +83,7 @@ public class AuthController {
     )
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
-        AuthResponse response = authService.refresh(request.getRefreshToken());
+        AuthResponse response = authService.refresh(request.refreshToken());
         return ResponseEntity.ok(response);
     }
 }
