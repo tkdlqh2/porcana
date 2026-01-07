@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: porcana
+
+  datasource:
+    url: jdbc:h2:mem:porcana
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+
+  security:
+    # TODO: Configure security settings
+    user:
+      name: admin
+      password: admin
+
+server:
+  port: 8080
+  servlet:
+    context-path: /app/v1
+
+logging:
+  level:
+    com.porcana: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
