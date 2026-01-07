@@ -22,16 +22,15 @@ spring:
         format_sql: true
         highlight_sql: true
 
-  security:
-    # TODO: Configure security settings
-    user:
-      name: admin
-      password: admin
-
 server:
   port: 8080
   servlet:
     context-path: /app/v1
+
+jwt:
+  secret: porcana-secret-key-for-jwt-token-generation-must-be-at-least-256-bits-long
+  access-token-validity: 3600000  # 1 hour
+  refresh-token-validity: 604800000  # 7 days
 
 logging:
   level:

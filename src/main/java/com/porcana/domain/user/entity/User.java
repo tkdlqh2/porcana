@@ -1,10 +1,8 @@
 package com.porcana.domain.user.entity;
 
+import com.porcana.domain.auth.command.SignupCommand;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -34,6 +32,7 @@ public class User {
     @Column(nullable = false)
     private AuthProvider provider;
 
+    @Setter
     @Column(name = "main_portfolio_id")
     private UUID mainPortfolioId;
 
@@ -53,12 +52,17 @@ public class User {
         this.provider = provider;
     }
 
-    public void updateNickname(String nickname) {
-        this.nickname = nickname;
+    public static User from(SignupCommand command, String encodedPassword) {
+        return User.builder()
+                .email(command.getEmail())
+                .password(encodedPassword)
+                .nickname(command.getNickname())
+                .provider(command.getProvider())
+                .build();
     }
 
-    public void setMainPortfolioId(UUID mainPortfolioId) {
-        this.mainPortfolioId = mainPortfolioId;
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     public enum AuthProvider {

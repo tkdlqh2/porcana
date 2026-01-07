@@ -1,7 +1,13 @@
 package com.porcana.domain.auth;
 
+import com.porcana.domain.auth.command.LoginCommand;
+import com.porcana.domain.auth.command.SignupCommand;
+import com.porcana.domain.auth.dto.AuthResponse;
 import com.porcana.domain.auth.dto.LoginRequest;
 import com.porcana.domain.auth.dto.RefreshRequest;
+import com.porcana.domain.auth.dto.SignupRequest;
+import com.porcana.domain.auth.service.AuthService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,7 +17,22 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/app/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
+
+    private final AuthService authService;
+
+    /**
+     * POST /app/v1/auth/signup
+     * Request: { email, password, nickname }
+     * Response: { accessToken, refreshToken }
+     */
+    @PostMapping("/signup")
+    public ResponseEntity<AuthResponse> signup(@RequestBody SignupRequest request) {
+        SignupCommand command = SignupCommand.from(request);
+        AuthResponse response = authService.signup(command);
+        return ResponseEntity.ok(response);
+    }
 
     /**
      * POST /app/v1/auth/login
@@ -19,9 +40,10 @@ public class AuthController {
      * Response: { accessToken, refreshToken }
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        // TODO: Implement login logic
-        return ResponseEntity.status(501).body("Not implemented");
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+        LoginCommand command = LoginCommand.from(request);
+        AuthResponse response = authService.login(command);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -30,8 +52,8 @@ public class AuthController {
      * Response: { accessToken, refreshToken }
      */
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestBody RefreshRequest request) {
-        // TODO: Implement token refresh logic
-        return ResponseEntity.status(501).body("Not implemented");
+    public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshRequest request) {
+        AuthResponse response = authService.refresh(request.getRefreshToken());
+        return ResponseEntity.ok(response);
     }
 }
