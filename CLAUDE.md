@@ -6,17 +6,17 @@
 - Content-Type: application/json
 - Date format: ISO-8601 (YYYY-MM-DD for chart points)
 - Enum:
-    - DeckStatus: DRAFT | ACTIVE | FINISHED
+    - PortfolioStatus: DRAFT | ACTIVE | FINISHED
 
 ## Screen List (MVP)
 1) Login
-2) Home (main deck widget only)
-3) Deck List
-4) Deck Create Start
-5) Arena Round (pick 1 of 3)
-6) Deck Create Complete
-7) Deck Detail
-8) Deck Performance Chart (tab or separate)
+2) Home (main portfolio widget only)
+3) Portfolio List
+4) Portfolio Create Start
+5) Arena Round (pick 1 of 3 assets)
+6) Portfolio Create Complete
+7) Portfolio Detail
+8) Portfolio Performance Chart (tab or separate)
 9) Asset Detail
 
 ---
@@ -53,7 +53,7 @@ Response
 {
 "userId": "uuid",
 "nickname": "string",
-"mainDeckId": "uuid|null"
+"mainPortfolioId": "uuid|null"
 }
 
 ## PATCH /me
@@ -69,19 +69,19 @@ Response
 
 ---
 
-# 2) Home (Main Deck Widget)
+# 2) Home (Main Portfolio Widget)
 
 ## GET /home
-Response (when no main deck)
+Response (when no main portfolio)
 {
-"hasMainDeck": false
+"hasMainPortfolio": false
 }
 
-Response (when has main deck)
+Response (when has main portfolio)
 {
-"hasMainDeck": true,
-"mainDeck": {
-"deckId": "uuid",
+"hasMainPortfolio": true,
+"mainPortfolio": {
+"portfolioId": "uuid",
 "name": "string",
 "startedAt": "YYYY-MM-DD",
 "totalReturnPct": 12.34
@@ -100,23 +100,23 @@ Response (when has main deck)
 ]
 }
 
-## PUT /decks/{deckId}/main
+## PUT /portfolios/{portfolioId}/main
 Response
-{ "mainDeckId": "uuid" }
+{ "mainPortfolioId": "uuid" }
 
-## DELETE /decks/main
+## DELETE /portfolios/main
 Response
-{ "mainDeckId": null }
+{ "mainPortfolioId": null }
 
 ---
 
-# 3) Deck List
+# 3) Portfolio List
 
-## GET /decks
+## GET /portfolios
 Response
 [
 {
-"deckId": "uuid",
+"portfolioId": "uuid",
 "name": "string",
 "status": "DRAFT|ACTIVE|FINISHED",
 "isMain": true,
@@ -127,25 +127,25 @@ Response
 
 ---
 
-# 4) Deck (CRUD minimal for MVP)
+# 4) Portfolio (CRUD minimal for MVP)
 
-## POST /decks
+## POST /portfolios
 Request
 {
 "name": "string"
 }
 Response
 {
-"deckId": "uuid",
+"portfolioId": "uuid",
 "name": "string",
 "status": "DRAFT",
 "createdAt": "YYYY-MM-DD"
 }
 
-## GET /decks/{deckId}
+## GET /portfolios/{portfolioId}
 Response
 {
-"deckId": "uuid",
+"portfolioId": "uuid",
 "name": "string",
 "status": "DRAFT|ACTIVE|FINISHED",
 "isMain": true,
@@ -162,10 +162,10 @@ Response
 ]
 }
 
-## POST /decks/{deckId}/start
+## POST /portfolios/{portfolioId}/start
 Response
 {
-"deckId": "uuid",
+"portfolioId": "uuid",
 "status": "ACTIVE",
 "startedAt": "YYYY-MM-DD"
 }
@@ -177,12 +177,12 @@ Response
 ## POST /arena/sessions
 Request
 {
-"deckId": "uuid"
+"portfolioId": "uuid"
 }
 Response
 {
 "sessionId": "uuid",
-"deckId": "uuid",
+"portfolioId": "uuid",
 "status": "IN_PROGRESS|COMPLETED",
 "currentRound": 1
 }
@@ -192,9 +192,8 @@ Response
 {
 "sessionId": "uuid",
 "round": 1,
-"cards": [
+"assets": [
 {
-"cardId": "uuid",
 "assetId": "uuid",
 "ticker": "string",
 "name": "string",
@@ -207,7 +206,7 @@ Response
 ## POST /arena/sessions/{sessionId}/rounds/current/pick
 Request
 {
-"pickedCardId": "uuid"
+"pickedAssetId": "uuid"
 }
 Response
 {
@@ -215,7 +214,6 @@ Response
 "status": "IN_PROGRESS|COMPLETED",
 "currentRound": 2,
 "picked": {
-"cardId": "uuid",
 "assetId": "uuid"
 }
 }
@@ -224,7 +222,7 @@ Response
 Response
 {
 "sessionId": "uuid",
-"deckId": "uuid",
+"portfolioId": "uuid",
 "status": "IN_PROGRESS|COMPLETED",
 "currentRound": 3,
 "totalRounds": 10
@@ -232,12 +230,12 @@ Response
 
 ---
 
-# 6) Deck Performance
+# 6) Portfolio Performance
 
-## GET /decks/{deckId}/performance?range=1M|3M|1Y
+## GET /portfolios/{portfolioId}/performance?range=1M|3M|1Y
 Response
 {
-"deckId": "uuid",
+"portfolioId": "uuid",
 "range": "1M",
 "points": [
 { "date": "YYYY-MM-DD", "value": 100.0 }
@@ -246,7 +244,7 @@ Response
 
 ---
 
-# 7) Assets (Stock cards)
+# 7) Assets (종목)
 
 ## GET /assets/search?query=string
 Response
@@ -286,14 +284,14 @@ Response
 ]
 }
 
-## GET /assets/{assetId}/in-my-main-deck
+## GET /assets/{assetId}/in-my-main-portfolio
 Response (not included)
 { "included": false }
 
 Response (included)
 {
 "included": true,
-"deckId": "uuid",
+"portfolioId": "uuid",
 "weightPct": 25.0,
 "returnPct": 18.3
 }
