@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -67,7 +68,7 @@ public class AuthController {
     @GetMapping("/check-email")
     public ResponseEntity<Map<String, Boolean>> checkEmail(
             @Parameter(description = "확인할 이메일 주소", required = true)
-            @RequestParam String email
+            @RequestParam @Email String email
     ) {
         boolean available = authService.isEmailAvailable(email);
         return ResponseEntity.ok(Map.of("available", available));
