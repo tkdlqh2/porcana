@@ -8,8 +8,8 @@ import com.porcana.domain.auth.dto.RefreshRequest;
 import com.porcana.domain.auth.dto.SignupRequest;
 import com.porcana.domain.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +65,7 @@ public class AuthController {
     )
     @GetMapping("/check-email")
     public ResponseEntity<Map<String, Boolean>> checkEmail(
-            @io.swagger.v3.oas.annotations.Parameter(description = "확인할 이메일 주소", required = true)
+            @Parameter(description = "확인할 이메일 주소", required = true)
             @RequestParam String email
     ) {
         boolean available = authService.isEmailAvailable(email);

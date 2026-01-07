@@ -29,8 +29,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
     // Database
-    runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.h2database:h2'  // For local development only
+
+    // Flyway Migration
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

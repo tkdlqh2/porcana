@@ -3,24 +3,26 @@ spring:
     name: porcana
 
   datasource:
-    url: jdbc:h2:mem:porcana
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/porcana}
+    username: ${DATABASE_USERNAME:porcana}
+    password: ${DATABASE_PASSWORD:porcana}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate  # Flyway manages schema
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
 
 server:
   port: 8080
