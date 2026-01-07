@@ -59,6 +59,11 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
+    public boolean isEmailAvailable(String email) {
+        return !userRepository.existsByEmail(email);
+    }
+
+    @Transactional(readOnly = true)
     public AuthResponse refresh(String refreshToken) {
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new IllegalArgumentException("Invalid refresh token");

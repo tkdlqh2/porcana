@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * Auth Controller
  * Base Path: /app/v1/auth
@@ -44,6 +46,18 @@ public class AuthController {
         LoginCommand command = LoginCommand.from(request);
         AuthResponse response = authService.login(command);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /app/v1/auth/check-email
+     * Check if email is already taken
+     * Query: email=test@example.com
+     * Response: { available: true/false }
+     */
+    @GetMapping("/check-email")
+    public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam String email) {
+        boolean available = authService.isEmailAvailable(email);
+        return ResponseEntity.ok(Map.of("available", available));
     }
 
     /**

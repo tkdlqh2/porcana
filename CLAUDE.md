@@ -69,13 +69,33 @@ public static SignupCommand from(SignupRequest request) {
 
 # 1) Auth / User
 
+## POST /auth/signup
+Request
+{
+"email": "string",
+"password": "string",
+"nickname": "string"
+}
+Response
+{
+"accessToken": "string",
+"refreshToken": "string"
+}
+
+## GET /auth/check-email?email=string
+Check if email is available for signup
+
+Response
+{
+"available": true|false
+}
+
 ## POST /auth/login
 Request
 {
-"provider": "GOOGLE|KAKAO|EMAIL",
-"code": "string (optional)",
-"email": "string (optional)",
-"password": "string (optional)"
+"provider": "EMAIL",
+"email": "string",
+"password": "string"
 }
 Response
 {
