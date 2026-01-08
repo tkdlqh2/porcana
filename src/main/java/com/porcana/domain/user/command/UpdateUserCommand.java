@@ -11,7 +11,7 @@ public class UpdateUserCommand {
 
     public static UpdateUserCommand from(UpdateUserRequest request) {
         return UpdateUserCommand.builder()
-                .nickname(request.getNickname())
+                .nickname(request.nickname())
                 .build();
     }
 }
