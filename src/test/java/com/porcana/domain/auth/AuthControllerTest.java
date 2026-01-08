@@ -38,7 +38,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .body(request)
                 .log().all()
         .when()
-                .post("/app/v1/auth/signup")
+                .post("/auth/signup")
         .then()
                 .log().all()
                 .statusCode(200)
@@ -60,14 +60,14 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(request)
         .when()
-                .post("/app/v1/auth/signup");
+                .post("/auth/signup");
 
         // 두 번째 회원가입 (중복)
         given()
                 .contentType(ContentType.JSON)
                 .body(request)
         .when()
-                .post("/app/v1/auth/signup")
+                .post("/auth/signup")
         .then()
                 .statusCode(400);
     }
@@ -85,7 +85,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(request)
         .when()
-                .post("/app/v1/auth/signup")
+                .post("/auth/signup")
         .then()
                 .statusCode(400);
     }
@@ -103,7 +103,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(request)
         .when()
-                .post("/app/v1/auth/signup")
+                .post("/auth/signup")
         .then()
                 .statusCode(400);
     }
@@ -121,7 +121,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(request)
         .when()
-                .post("/app/v1/auth/signup")
+                .post("/auth/signup")
         .then()
                 .statusCode(400);
     }
@@ -140,7 +140,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(signupRequest)
         .when()
-                .post("/app/v1/auth/signup");
+                .post("/auth/signup");
 
         // 로그인
         LoginRequest loginRequest = new LoginRequest(
@@ -154,7 +154,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(loginRequest)
         .when()
-                .post("/app/v1/auth/login")
+                .post("/auth/login")
         .then()
                 .statusCode(200)
                 .body("accessToken", notNullValue())
@@ -175,7 +175,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(signupRequest)
         .when()
-                .post("/app/v1/auth/signup");
+                .post("/auth/signup");
 
         // 로그인 (잘못된 비밀번호)
         LoginRequest loginRequest = new LoginRequest(
@@ -189,7 +189,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(loginRequest)
         .when()
-                .post("/app/v1/auth/login")
+                .post("/auth/login")
         .then()
                 .statusCode(400);
     }
@@ -208,7 +208,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(loginRequest)
         .when()
-                .post("/app/v1/auth/login")
+                .post("/auth/login")
         .then()
                 .statusCode(400);
     }
@@ -219,7 +219,7 @@ class AuthControllerTest extends BaseIntegrationTest {
         given()
                 .param("email", "available@example.com")
         .when()
-                .get("/app/v1/auth/check-email")
+                .get("/auth/check-email")
         .then()
                 .statusCode(200)
                 .body("available", is(true));
@@ -239,13 +239,13 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(signupRequest)
         .when()
-                .post("/app/v1/auth/signup");
+                .post("/auth/signup");
 
         // 중복 체크
         given()
                 .param("email", "test@example.com")
         .when()
-                .get("/app/v1/auth/check-email")
+                .get("/auth/check-email")
         .then()
                 .statusCode(200)
                 .body("available", is(false));
@@ -265,7 +265,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(signupRequest)
         .when()
-                .post("/app/v1/auth/signup")
+                .post("/auth/signup")
         .then()
                 .statusCode(200)
                 .extract()
@@ -278,7 +278,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(refreshRequest)
         .when()
-                .post("/app/v1/auth/refresh")
+                .post("/auth/refresh")
         .then()
                 .statusCode(200)
                 .body("accessToken", notNullValue())
@@ -294,7 +294,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(refreshRequest)
         .when()
-                .post("/app/v1/auth/refresh")
+                .post("/auth/refresh")
         .then()
                 .statusCode(400);
     }

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
  * Base Path: /app/v1
  */
 @RestController
-@RequestMapping("/app/v1")
+@RequestMapping("")
 public class HomeController {
 
     /**

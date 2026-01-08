@@ -2,6 +2,33 @@
 
 ## Development Philosophy
 
+### Request DTO as Record
+- **Request DTO**: Java Record로 작성 (불변성, 간결함)
+- **Response DTO**: @Builder + Lombok 사용 (유연한 생성)
+- **Command DTO**: @Builder + Lombok 사용 (내부 로직용)
+
+**Request DTO Example:**
+```java
+public record SignupRequest(
+    @Email(message = "올바른 이메일 형식이 아닙니다")
+    String email,
+
+    @NotBlank(message = "비밀번호는 필수입니다")
+    @Size(min = 8, message = "비밀번호는 최소 8자 이상이어야 합니다")
+    String password,
+
+    @NotBlank(message = "닉네임은 필수입니다")
+    String nickname
+) {
+}
+```
+
+**이유:**
+- Record는 불변 객체로 API 요청 데이터에 적합
+- Validation annotation을 필드에 직접 적용 가능
+- getter 메서드 자동 생성 (field명과 동일: `request.email()`)
+- equals/hashCode/toString 자동 생성
+
 ### Command Pattern
 - **Controller**: Request DTO 수신 → Command 생성 (Command.from(request)) → Service 호출
 - **Command**: Request로부터 자신을 생성하는 정적 팩토리 메서드 제공
@@ -30,9 +57,9 @@ public ResponseEntity<AuthResponse> signup(@RequestBody SignupRequest request) {
 // Command
 public static SignupCommand from(SignupRequest request) {
     return SignupCommand.builder()
-        .email(request.getEmail())
-        .password(request.getPassword())
-        .nickname(request.getNickname())
+        .email(request.email())
+        .password(request.password())
+        .nickname(request.mickname())
         .provider(User.AuthProvider.EMAIL)
         .build();
 }
@@ -43,6 +70,46 @@ public static SignupCommand from(SignupRequest request) {
 - Request DTO는 API 스펙에 종속, Command는 도메인 로직에 집중
 - **변환 로직을 Command가 소유** → Controller는 단순히 호출만
 - Entity 생성 로직을 Entity 내부에 캡슐화
+
+### Swagger Authentication (JWT)
+- **Bearer Token 방식**: Swagger UI에서 JWT 토큰 인증 지원
+- **Annotation 기반 구분**: @SecurityRequirement로 인증 필요 API 표시
+- **SecurityScheme 설정**: SwaggerConfig에서 JWT scheme 등록
+
+**인증이 필요한 API:**
+```java
+@SecurityRequirement(name = "JWT")
+@RestController
+@RequestMapping("/app/v1")
+public class UserController {
+    // 이 컨트롤러의 모든 엔드포인트에 JWT 필요
+    // Swagger UI에서 자물쇠 아이콘 표시됨
+}
+```
+
+**인증이 필요없는 API:**
+```java
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+    // @SecurityRequirement 없음 = 공개 API
+    // Swagger UI에서 자물쇠 아이콘 없음
+}
+```
+
+**Custom Annotation - @CurrentUser:**
+```java
+@GetMapping("/me")
+public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
+    // @CurrentUser: JWT 토큰에서 userId 자동 추출
+    // CurrentUserArgumentResolver가 SecurityContext에서 userId 파싱
+}
+```
+
+**이유:**
+- API별 인증 요구사항을 명확히 구분
+- Swagger UI에서 시각적으로 인증 필요 여부 확인 가능
+- @CurrentUser로 반복적인 인증 처리 코드 제거
 
 ---
 

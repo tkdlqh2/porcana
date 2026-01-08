@@ -1,10 +1,9 @@
 package com.porcana.domain.user.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
 
-@Getter
-@NoArgsConstructor
-public class UpdateUserRequest {
-    private String nickname;
+public record UpdateUserRequest(
+        @NotBlank(message = "닉네임은 필수입니다")
+        String nickname
+) {
 }

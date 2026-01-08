@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
  * Base Path: /app/v1/portfolios
  */
 @RestController
-@RequestMapping("/app/v1/portfolios")
+@RequestMapping("/portfolios")
 public class PortfolioController {
 
     /**
