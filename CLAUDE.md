@@ -44,6 +44,46 @@ public static SignupCommand from(SignupRequest request) {
 - **변환 로직을 Command가 소유** → Controller는 단순히 호출만
 - Entity 생성 로직을 Entity 내부에 캡슐화
 
+### Swagger Authentication (JWT)
+- **Bearer Token 방식**: Swagger UI에서 JWT 토큰 인증 지원
+- **Annotation 기반 구분**: @SecurityRequirement로 인증 필요 API 표시
+- **SecurityScheme 설정**: SwaggerConfig에서 JWT scheme 등록
+
+**인증이 필요한 API:**
+```java
+@SecurityRequirement(name = "JWT")
+@RestController
+@RequestMapping("/app/v1")
+public class UserController {
+    // 이 컨트롤러의 모든 엔드포인트에 JWT 필요
+    // Swagger UI에서 자물쇠 아이콘 표시됨
+}
+```
+
+**인증이 필요없는 API:**
+```java
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+    // @SecurityRequirement 없음 = 공개 API
+    // Swagger UI에서 자물쇠 아이콘 없음
+}
+```
+
+**Custom Annotation - @CurrentUser:**
+```java
+@GetMapping("/me")
+public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
+    // @CurrentUser: JWT 토큰에서 userId 자동 추출
+    // CurrentUserArgumentResolver가 SecurityContext에서 userId 파싱
+}
+```
+
+**이유:**
+- API별 인증 요구사항을 명확히 구분
+- Swagger UI에서 시각적으로 인증 필요 여부 확인 가능
+- @CurrentUser로 반복적인 인증 처리 코드 제거
+
 ---
 
 ## Base
