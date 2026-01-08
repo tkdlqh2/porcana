@@ -2,6 +2,33 @@
 
 ## Development Philosophy
 
+### Request DTO as Record
+- **Request DTO**: Java Record로 작성 (불변성, 간결함)
+- **Response DTO**: @Builder + Lombok 사용 (유연한 생성)
+- **Command DTO**: @Builder + Lombok 사용 (내부 로직용)
+
+**Request DTO Example:**
+```java
+public record SignupRequest(
+    @Email(message = "올바른 이메일 형식이 아닙니다")
+    String email,
+
+    @NotBlank(message = "비밀번호는 필수입니다")
+    @Size(min = 8, message = "비밀번호는 최소 8자 이상이어야 합니다")
+    String password,
+
+    @NotBlank(message = "닉네임은 필수입니다")
+    String nickname
+) {
+}
+```
+
+**이유:**
+- Record는 불변 객체로 API 요청 데이터에 적합
+- Validation annotation을 필드에 직접 적용 가능
+- getter 메서드 자동 생성 (field명과 동일: `request.email()`)
+- equals/hashCode/toString 자동 생성
+
 ### Command Pattern
 - **Controller**: Request DTO 수신 → Command 생성 (Command.from(request)) → Service 호출
 - **Command**: Request로부터 자신을 생성하는 정적 팩토리 메서드 제공
