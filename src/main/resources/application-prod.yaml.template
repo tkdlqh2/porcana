@@ -1,0 +1,38 @@
+# Production configuration
+# Copy this file to application-prod.yaml and fill in the actual secret values
+# application-prod.yaml is gitignored for security
+
+spring:
+  datasource:
+    url: jdbc:postgresql://your-prod-db-host:5432/porcana  # Replace with actual production DB URL
+    username: your_db_username  # Replace with actual DB username
+    password: your_db_password  # Replace with actual DB password
+
+  jpa:
+    show-sql: false  # Disable in production for performance
+
+  flyway:
+    enabled: true
+
+  batch:
+    job:
+      enabled: false
+
+jwt:
+  secret: your-super-secret-jwt-key-at-least-256-bits-long  # Generate with: openssl rand -base64 32
+  access-token-validity: 3600000  # 1 hour
+  refresh-token-validity: 604800000  # 7 days
+
+batch:
+  provider:
+    kr:
+      api-key: your_datagokr_api_key  # Get from https://www.data.go.kr/
+    us:
+      api-key: your_fmp_api_key  # Get from https://financialmodelingprep.com/
+
+logging:
+  level:
+    com.porcana: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.springframework.batch: INFO

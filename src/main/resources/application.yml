@@ -24,6 +24,12 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: true
 
+  batch:
+    job:
+      enabled: false  # Disable automatic job execution on startup
+    jdbc:
+      initialize-schema: always  # Spring Batch will create its metadata tables
+
 server:
   port: 8080
   servlet:
@@ -34,8 +40,18 @@ jwt:
   access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:3600000}  # 1 hour
   refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:604800000}  # 7 days
 
+batch:
+  provider:
+    kr:
+      api-key: ${DATAGOKR_API_KEY:}
+      api-url: https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService
+    us:
+      api-key: ${FMP_API_KEY:}
+      base-url: https://financialmodelingprep.com
+
 logging:
   level:
     com.porcana: DEBUG
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
+    org.springframework.batch: DEBUG

@@ -1,0 +1,92 @@
+package com.porcana.batch.job;
+
+import com.porcana.batch.dto.AssetBatchDto;
+import com.porcana.batch.provider.us.FmpAssetProvider;
+import com.porcana.domain.asset.AssetRepository;
+import com.porcana.domain.asset.entity.Asset;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import java.util.List;
+
+/**
+ * Spring Batch job for fetching US market assets
+ *
+ * Steps:
+ * 1. Fetch S&P 500 constituents from FMP API (already tagged with SP500)
+ */
+@Slf4j
+@Configuration
+@RequiredArgsConstructor
+public class UsAssetBatchJob {
+
+    private final JobRepository jobRepository;
+    private final PlatformTransactionManager transactionManager;
+    private final FmpAssetProvider fmpProvider;
+    private final AssetRepository assetRepository;
+
+    @Bean
+    public Job usAssetJob() {
+        return new JobBuilder("usAssetJob", jobRepository)
+                .start(fetchUsAssetsStep())
+                .build();
+    }
+
+    /**
+     * Step 1: Fetch S&P 500 constituents from FMP
+     * Assets are already tagged with SP500 and marked as active by the provider
+     */
+    @Bean
+    public Step fetchUsAssetsStep() {
+        return new StepBuilder("fetchUsAssetsStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    log.info("Starting S&P 500 fetch from FMP");
+
+                    try {
+                        List<AssetBatchDto> assets = fmpProvider.fetchAssets();
+                        log.info("Fetched {} S&P 500 constituents from FMP", assets.size());
+
+                        int created = 0;
+                        int updated = 0;
+
+                        for (AssetBatchDto dto : assets) {
+                            boolean exists = assetRepository.existsBySymbolAndMarket(
+                                    dto.getSymbol(), dto.getMarket());
+
+                            if (exists) {
+                                // Update existing
+                                Asset existing = assetRepository.findBySymbolAndMarket(
+                                                dto.getSymbol(), dto.getMarket())
+                                        .orElseThrow();
+                                dto.updateEntity(existing);
+                                assetRepository.save(existing);
+                                updated++;
+                            } else {
+                                // Create new
+                                assetRepository.save(dto.toEntity());
+                                created++;
+                            }
+                        }
+
+                        log.info("S&P 500 upsert complete: {} created, {} updated",
+                                created, updated);
+
+                    } catch (Exception e) {
+                        log.error("Failed to fetch S&P 500 constituents", e);
+                        throw new RuntimeException("US asset fetch failed", e);
+                    }
+
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+}
