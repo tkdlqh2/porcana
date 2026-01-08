@@ -113,6 +113,106 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 
 ---
 
+## Data Model & Batch Strategy
+
+### Asset (종목) Entity
+
+종목 데이터를 Record 형태로 관리하는 불변 테이블입니다.
+
+**필드 설계:**
+- `id`: UUID (Primary Key)
+- `market`: ENUM (KR | US) - 시장 구분
+- `symbol`: String - 종목 코드 (US: AAPL, KR: 005930)
+- `exchange`: String - 거래소 (US: NASDAQ/NYSE, KR: KOSPI/KOSDAQ/ETF)
+- `name`: String - 종목명
+- `type`: ENUM (STOCK | ETF) - 상품 유형
+- `universe_tags`: List<String> - 유니버스 태그 (SP500, NASDAQ100, KOSPI200, KOSDAQ150, ETF_CORE 등)
+- `active`: Boolean - 활성화 여부 (카드 풀에 포함 여부)
+- `as_of`: LocalDate - 기준일 (이 레코드가 "언제 기준"인지)
+- `created_at`: LocalDateTime
+- `updated_at`: LocalDateTime
+
+**Entity Example:**
+```java
+@Entity
+@Table(name = "assets")
+public class Asset {
+    @Id
+    private UUID id;
+
+    @Enumerated(EnumType.STRING)
+    private Market market;  // KR, US
+
+    private String symbol;  // AAPL, 005930
+    private String exchange;  // NASDAQ, KOSPI
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    private AssetType type;  // STOCK, ETF
+
+    @Convert(converter = StringListConverter.class)
+    private List<String> universeTags;  // ["SP500", "NASDAQ100"]
+
+    private Boolean active;
+    private LocalDate asOf;
+
+    public enum Market { KR, US }
+    public enum AssetType { STOCK, ETF }
+}
+```
+
+### Spring Batch 기반 종목 데이터 생성 전략
+
+**한국 종목 (KR Market):**
+1. **전체 종목 수집** (data.go.kr API)
+   - 공공데이터포털 "전체 상장종목 메타" API 호출
+   - 모든 종목을 `kr_symbols` 테이블에 upsert
+   - 기본 정보: symbol, name, exchange (KOSPI/KOSDAQ/ETF)
+
+2. **유니버스 태깅**
+   - `kospi200.csv`: KOSPI200 구성종목 코드 목록
+   - `kosdaq150.csv`: KOSDAQ150 구성종목 코드 목록
+   - CSV의 종목 코드를 기준으로 `universe_tags` 추가
+   - 태깅된 종목만 `active = true` 설정 → 카드 풀에 포함
+
+3. **Batch Job 구조**
+   ```
+   KrAssetBatchJob
+   ├─ Step 1: Fetch from data.go.kr → Upsert to kr_symbols
+   ├─ Step 2: Read kospi200.csv → Tag KOSPI200
+   └─ Step 3: Read kosdaq150.csv → Tag KOSDAQ150
+   ```
+
+**미국 종목 (US Market):**
+1. **S&P 500 구성종목 수집** (FMP API)
+   - FMP (Financial Modeling Prep) Constituents API 사용
+   - Endpoint: `/api/v3/sp500_constituent`
+   - 응답: symbol, name, sector, subSector 등
+
+2. **데이터 처리**
+   - exchange는 FMP 응답 또는 별도 조회로 확인 (NASDAQ/NYSE)
+   - `universe_tags = ["SP500"]`
+   - `active = true` 설정
+   - `type = STOCK` (ETF는 별도 처리)
+
+3. **Batch Job 구조**
+   ```
+   UsAssetBatchJob
+   └─ Step 1: Fetch from FMP → Upsert to assets (market=US, active=true)
+   ```
+
+**공통 처리 원칙:**
+- **Upsert 전략**: symbol + market을 natural key로 사용, 중복 시 업데이트
+- **as_of 관리**: 배치 실행일을 `as_of`로 기록 (데이터의 시점 추적)
+- **active 플래그**: 유니버스에 포함된 종목만 `active=true`, 나머지는 `false`
+- **이력 관리**: 필요 시 `as_of` 기준으로 과거 구성종목 조회 가능 (향후 확장)
+
+**배치 실행 주기:**
+- 초기 데이터 구축: 수동 실행 (./gradlew bootRun --args='--spring.batch.job.names=krAssetBatchJob')
+- 정기 업데이트: 주 1회 스케줄링 (예: 매주 월요일 새벽)
+
+---
+
 ## Base
 - Base Path: /app/v1
 - Auth: Authorization: Bearer {accessToken}
