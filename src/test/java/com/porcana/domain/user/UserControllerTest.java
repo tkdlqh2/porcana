@@ -1,59 +1,45 @@
 package com.porcana.domain.user;
 
 import com.porcana.BaseIntegrationTest;
-import com.porcana.domain.auth.dto.SignupRequest;
 import com.porcana.domain.user.dto.UpdateUserRequest;
-import com.porcana.domain.user.repository.UserRepository;
+import com.porcana.global.security.JwtTokenProvider;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.jdbc.Sql;
+
+import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+@Sql(scripts = "/sql/user-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class UserControllerTest extends BaseIntegrationTest {
 
     @Autowired
-    private UserRepository userRepository;
+    private JwtTokenProvider jwtTokenProvider;
 
-    @BeforeEach
-    void setUp() {
-        userRepository.deleteAll();
-    }
+    // Test user ID from SQL file
+    private static final UUID TEST_USER_ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
 
-    private String signupAndGetAccessToken() {
-        SignupRequest signupRequest = new SignupRequest(
-                "test@example.com",
-                "password123",
-                "테스터"
-        );
-
-        return given()
-                .contentType(ContentType.JSON)
-                .body(signupRequest)
-        .when()
-                .post("/app/v1/auth/signup")
-        .then()
-                .statusCode(200)
-                .extract()
-                .path("accessToken");
+    private String createAccessToken() {
+        return jwtTokenProvider.createAccessToken(TEST_USER_ID);
     }
 
     @Test
     @DisplayName("내 정보 조회 성공")
     void getMe_success() {
-        String accessToken = signupAndGetAccessToken();
+        String accessToken = createAccessToken();
 
         given()
                 .header("Authorization", "Bearer " + accessToken)
         .when()
-                .get("/app/v1/me")
+                .get("/me")
         .then()
                 .log().all()
                 .statusCode(200)
-                .body("userId", notNullValue())
+                .body("userId", equalTo(TEST_USER_ID.toString()))
                 .body("nickname", equalTo("테스터"))
                 .body("mainPortfolioId", nullValue());
     }
@@ -63,7 +49,7 @@ class UserControllerTest extends BaseIntegrationTest {
     void getMe_fail_noAuth() {
         given()
         .when()
-                .get("/app/v1/me")
+                .get("/me")
         .then()
                 .statusCode(403);
     }
@@ -74,7 +60,7 @@ class UserControllerTest extends BaseIntegrationTest {
         given()
                 .header("Authorization", "Bearer invalid-token")
         .when()
-                .get("/app/v1/me")
+                .get("/me")
         .then()
                 .statusCode(403);
     }
@@ -82,7 +68,7 @@ class UserControllerTest extends BaseIntegrationTest {
     @Test
     @DisplayName("내 정보 수정 성공")
     void updateMe_success() {
-        String accessToken = signupAndGetAccessToken();
+        String accessToken = createAccessToken();
 
         UpdateUserRequest updateRequest = new UpdateUserRequest("새닉네임");
 
@@ -91,18 +77,18 @@ class UserControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateRequest)
         .when()
-                .patch("/app/v1/me")
+                .patch("/me")
         .then()
                 .log().all()
                 .statusCode(200)
-                .body("userId", notNullValue())
+                .body("userId", equalTo(TEST_USER_ID.toString()))
                 .body("nickname", equalTo("새닉네임"));
     }
 
     @Test
     @DisplayName("내 정보 수정 실패 - validation 오류 (빈 닉네임)")
     void updateMe_fail_blankNickname() {
-        String accessToken = signupAndGetAccessToken();
+        String accessToken = createAccessToken();
 
         UpdateUserRequest updateRequest = new UpdateUserRequest("");
 
@@ -111,7 +97,7 @@ class UserControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateRequest)
         .when()
-                .patch("/app/v1/me")
+                .patch("/me")
         .then()
                 .statusCode(400);
     }
@@ -125,7 +111,7 @@ class UserControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateRequest)
         .when()
-                .patch("/app/v1/me")
+                .patch("/me")
         .then()
                 .statusCode(403);
     }
@@ -133,7 +119,7 @@ class UserControllerTest extends BaseIntegrationTest {
     @Test
     @DisplayName("내 정보 수정 후 조회하면 변경된 닉네임 확인")
     void updateMe_then_getMe() {
-        String accessToken = signupAndGetAccessToken();
+        String accessToken = createAccessToken();
 
         // 닉네임 수정
         UpdateUserRequest updateRequest = new UpdateUserRequest("변경된닉네임");
@@ -143,7 +129,7 @@ class UserControllerTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateRequest)
         .when()
-                .patch("/app/v1/me")
+                .patch("/me")
         .then()
                 .statusCode(200);
 
@@ -151,7 +137,7 @@ class UserControllerTest extends BaseIntegrationTest {
         given()
                 .header("Authorization", "Bearer " + accessToken)
         .when()
-                .get("/app/v1/me")
+                .get("/me")
         .then()
                 .statusCode(200)
                 .body("nickname", equalTo("변경된닉네임"));
