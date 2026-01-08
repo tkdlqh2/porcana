@@ -15,7 +15,6 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI openAPI() {
         String jwt = "JWT";
-        SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwt);
         Components components = new Components()
                 .addSecuritySchemes(jwt, new SecurityScheme()
                         .name(jwt)
@@ -32,7 +31,6 @@ public class SwaggerConfig {
                         .license(new License()
                                 .name("CC BY-NC 4.0")
                                 .url("https://creativecommons.org/licenses/by-nc/4.0/")))
-                .addSecurityItem(securityRequirement)
                 .components(components);
     }
 }

@@ -7,6 +7,7 @@ import com.porcana.domain.user.service.UserService;
 import com.porcana.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/app/v1")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "JWT")
 public class UserController {
 
     private final UserService userService;
