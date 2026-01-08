@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
  * Base Path: /app/v1/arena
  */
 @RestController
-@RequestMapping("/app/v1/arena")
+@RequestMapping("/arena")
 public class ArenaController {
 
     /**

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
  * Base Path: /app/v1/assets
  */
 @RestController
-@RequestMapping("/app/v1/assets")
+@RequestMapping("/assets")
 public class AssetController {
 
     /**
