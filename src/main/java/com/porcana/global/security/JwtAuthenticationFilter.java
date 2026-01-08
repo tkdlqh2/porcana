@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -28,7 +30,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = getTokenFromRequest(request);
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
+        // 토큰이 있는 경우
+        if (token != null) {
+            // 토큰이 유효하지 않으면 403 Forbidden
+            if (!jwtTokenProvider.validateToken(token)) {
+                jwtAccessDeniedHandler.handle(request, response, new AccessDeniedException("Invalid JWT token"));
+                return;
+            }
+
+            // 토큰이 유효하면 인증 설정
             UUID userId = jwtTokenProvider.getUserIdFromToken(token);
 
             UsernamePasswordAuthenticationToken authentication =
@@ -37,6 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
+        // 토큰이 없는 경우 → 인증 없이 진행 → 401 Unauthorized (AuthenticationEntryPoint에서 처리)
 
         filterChain.doFilter(request, response);
     }

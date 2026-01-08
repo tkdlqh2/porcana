@@ -51,7 +51,7 @@ class UserControllerTest extends BaseIntegrationTest {
         .when()
                 .get("/me")
         .then()
-                .statusCode(403);
+                .statusCode(401);
     }
 
     @Test
@@ -113,7 +113,7 @@ class UserControllerTest extends BaseIntegrationTest {
         .when()
                 .patch("/me")
         .then()
-                .statusCode(403);
+                .statusCode(401);
     }
 
     @Test

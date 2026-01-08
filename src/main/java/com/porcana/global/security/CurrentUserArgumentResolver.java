@@ -1,6 +1,8 @@
 package com.porcana.global.security;
 
 import org.springframework.core.MethodParameter;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -25,10 +27,19 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
                                    NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        // 인증 정보가 없는 경우 -> 401 Unauthorized
         if (authentication == null || authentication.getPrincipal() == null) {
-            throw new IllegalStateException("User is not authenticated");
+            throw new AuthenticationCredentialsNotFoundException("User is not authenticated");
         }
 
-        return (UUID) authentication.getPrincipal();
+        // Principal 타입이 잘못된 경우 -> 403 Forbidden
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UUID)) {
+            throw new AccessDeniedException(
+                "Principal must be UUID but was: " + principal.getClass().getName()
+            );
+        }
+
+        return (UUID) principal;
     }
 }
