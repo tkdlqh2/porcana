@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.porcana.batch.dto.AssetBatchDto;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
+import com.porcana.domain.asset.entity.Sector;
 import com.porcana.domain.asset.entity.UniverseTag;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -143,12 +144,19 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                 universeTags.add(UniverseTag.NASDAQ100);
             }
 
+            // Convert FMP sector name to GICS Sector enum
+            Sector sector = Sector.fromFmpName(profile.getSector());
+            if (sector == null && profile.getSector() != null) {
+                log.warn("Unknown sector from FMP for {}: {}. Setting sector to null.",
+                        symbol, profile.getSector());
+            }
+
             return AssetBatchDto.builder()
                     .market(Asset.Market.US)
                     .symbol(symbol)
                     .name(profile.getCompanyName() != null ? profile.getCompanyName() : symbol)
                     .type(profile.isEtf() ? Asset.AssetType.ETF : Asset.AssetType.STOCK)
-                    .sector(profile.getSector())
+                    .sector(sector)
                     .universeTags(universeTags)
                     .active(true) // All fetched assets are active
                     .asOf(asOf)

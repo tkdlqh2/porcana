@@ -42,8 +42,9 @@ public class Asset {
     @Column(nullable = false, length = 10)
     private AssetType type;
 
-    @Column(length = 100)
-    private String sector;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private Sector sector;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
@@ -69,7 +70,7 @@ public class Asset {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Asset(Market market, String symbol, String name, AssetType type, String sector,
+    public Asset(Market market, String symbol, String name, AssetType type, Sector sector,
                  List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
         this.market = market;
         this.symbol = symbol;
