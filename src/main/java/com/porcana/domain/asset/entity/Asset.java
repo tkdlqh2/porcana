@@ -35,15 +35,15 @@ public class Asset {
     @Column(nullable = false, length = 20)
     private String symbol;
 
-    @Column(length = 50)
-    private String exchange;
-
     @Column(nullable = false, length = 200)
     private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private AssetType type;
+
+    @Column(length = 100)
+    private String sector;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
@@ -69,13 +69,13 @@ public class Asset {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Asset(Market market, String symbol, String exchange, String name,
-                 AssetType type, List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
+    public Asset(Market market, String symbol, String name, AssetType type, String sector,
+                 List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
         this.market = market;
         this.symbol = symbol;
-        this.exchange = exchange;
         this.name = name;
         this.type = type;
+        this.sector = sector;
         this.universeTags = universeTags != null ? universeTags : new ArrayList<>();
         this.active = active != null ? active : false;
         this.asOf = asOf;

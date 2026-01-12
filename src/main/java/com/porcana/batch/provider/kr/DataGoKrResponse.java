@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 /**
  * Response wrapper for data.go.kr API
  */
@@ -66,7 +68,7 @@ public class DataGoKrResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Items {
         @JsonProperty("item")
-        private Item item;
+        private List<Item> item;
     }
 
     @Getter

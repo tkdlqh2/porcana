@@ -19,9 +19,9 @@ public class AssetBatchDto {
 
     private final Asset.Market market;
     private final String symbol;
-    private final String exchange;
     private final String name;
     private final Asset.AssetType type;
+    private final String sector;
 
     @Builder.Default
     private final List<UniverseTag> universeTags = new ArrayList<>();
@@ -38,9 +38,9 @@ public class AssetBatchDto {
         return Asset.builder()
                 .market(market)
                 .symbol(symbol)
-                .exchange(exchange)
                 .name(name)
                 .type(type)
+                .sector(sector)
                 .universeTags(universeTags)
                 .active(active)
                 .asOf(asOf)

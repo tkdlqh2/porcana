@@ -164,23 +164,28 @@ public class Asset {
 ### Spring Batch 기반 종목 데이터 생성 전략
 
 **한국 종목 (KR Market):**
-1. **전체 종목 수집** (data.go.kr API)
-   - 공공데이터포털 "전체 상장종목 메타" API 호출
-   - 모든 종목을 `kr_symbols` 테이블에 upsert
-   - 기본 정보: symbol, name, exchange (KOSPI/KOSDAQ/ETF)
+1. **종목 데이터 수집** (data.go.kr API)
+   - CSV 파일(kospi200.csv, kosdaq150.csv)에서 종목 코드 목록 읽기 (약 348개)
+   - 각 종목 코드마다 data.go.kr의 `getStockPriceInfo` API를 개별 호출
+   - 응답 데이터를 `assets` 테이블에 upsert (초기 active=false)
+   - 기본 정보: symbol, name, exchange (KOSPI/KOSDAQ), type (STOCK/ETF)
+   - 주의: 약 348개 종목 × API 호출이므로 시간 소요 (약 5-10분)
 
 2. **유니버스 태깅**
-   - `kospi200.csv`: KOSPI200 구성종목 코드 목록
-   - `kosdaq150.csv`: KOSDAQ150 구성종목 코드 목록
+   - `kospi200.csv`: KOSPI200 구성종목 코드 목록 (약 199개)
+   - `kosdaq150.csv`: KOSDAQ150 구성종목 코드 목록 (약 149개)
    - CSV의 종목 코드를 기준으로 `universe_tags` 추가
    - 태깅된 종목만 `active = true` 설정 → 카드 풀에 포함
 
 3. **Batch Job 구조**
    ```
    KrAssetBatchJob
-   ├─ Step 1: Fetch from data.go.kr → Upsert to kr_symbols
-   ├─ Step 2: Read kospi200.csv → Tag KOSPI200
-   └─ Step 3: Read kosdaq150.csv → Tag KOSDAQ150
+   ├─ Step 1: fetchKrAssetsStep
+   │   └─ CSV에서 종목 코드 읽기 → 각 코드마다 API 호출 → assets 테이블 upsert
+   ├─ Step 2: tagKospi200Step
+   │   └─ kospi200.csv 기반 태깅 및 활성화
+   └─ Step 3: tagKosdaq150Step
+       └─ kosdaq150.csv 기반 태깅 및 활성화
    ```
 
 **미국 종목 (US Market):**

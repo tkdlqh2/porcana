@@ -2,12 +2,14 @@ package com.porcana.batch.provider.kr;
 
 import com.porcana.batch.dto.AssetBatchDto;
 import com.porcana.domain.asset.entity.Asset;
+import com.porcana.domain.asset.entity.AssetPrice;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -54,11 +56,18 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
             List<AssetBatchDto> assets = new ArrayList<>();
 
             // Fetch data for each symbol
+            int total = symbols.size();
+            int count = 0;
             for (String symbol : symbols) {
+                count++;
                 try {
+                    log.info("Fetching asset {}/{}: {}", count, total, symbol);
                     AssetBatchDto asset = fetchAssetBySymbol(symbol);
                     if (asset != null) {
                         assets.add(asset);
+                        log.info("Successfully fetched: {} - {}", symbol, asset.getName());
+                    } else {
+                        log.warn("No data returned for symbol: {}", symbol);
                     }
 
                     // Add small delay to avoid rate limiting
@@ -67,6 +76,11 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
                 } catch (Exception e) {
                     log.warn("Failed to fetch data for symbol: {}. Skipping. Error: {}", symbol, e.getMessage());
                     // Continue with next symbol instead of failing entire batch
+                }
+
+                // Log progress every 10 symbols
+                if (count % 10 == 0) {
+                    log.info("Progress: {}/{} symbols processed, {} assets collected", count, total, assets.size());
                 }
             }
 
@@ -114,16 +128,97 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
             }
 
             DataGoKrResponse.Body body = response.getResponse().getBody();
-            if (body == null || body.getItems() == null || body.getItems().getItem() == null) {
+            if (body == null || body.getItems() == null || body.getItems().getItem() == null || body.getItems().getItem().isEmpty()) {
                 log.warn("No data found for symbol: {}", symbol);
                 return null;
             }
 
-            return convertToDto(body.getItems().getItem());
+            // likeSrtnCd로 조회하면 보통 1개의 결과만 반환됨, 첫 번째 아이템 사용
+            return convertToDto(body.getItems().getItem().get(0));
 
         } catch (Exception e) {
             log.error("Failed to fetch data for symbol: {}", symbol, e);
             return null;
+        }
+    }
+
+    /**
+     * Fetch historical price data for a single asset
+     * Fetches data from 1 year ago to now
+     *
+     * @param asset The asset to fetch prices for
+     * @return List of AssetPrice entities (not yet persisted)
+     */
+    public List<AssetPrice> fetchHistoricalPrices(Asset asset) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("data.go.kr API key not configured. Skipping historical price fetch.");
+            return new ArrayList<>();
+        }
+
+        LocalDate oneYearAgo = LocalDate.now().minusYears(1);
+        String beginBasDt = oneYearAgo.format(DATE_FORMATTER);
+        String endBasDt = LocalDate.now().format(DATE_FORMATTER);
+
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl + "/getStockPriceInfo")
+                .queryParam("serviceKey", apiKey)
+                .queryParam("likeSrtnCd", asset.getSymbol())
+                .queryParam("beginBasDt", beginBasDt)
+                .queryParam("endBasDt", endBasDt)
+                .queryParam("resultType", "json")
+                .queryParam("numOfRows", "500")
+                .toUriString();
+
+        try {
+            log.info("Fetching historical prices for {}: from {} to {}",
+                    asset.getSymbol(), beginBasDt, endBasDt);
+
+            DataGoKrResponse response = restTemplate.getForObject(url, DataGoKrResponse.class);
+
+            if (response == null || response.getResponse() == null) {
+                log.warn("No response for symbol: {}", asset.getSymbol());
+                return new ArrayList<>();
+            }
+
+            DataGoKrResponse.Header header = response.getResponse().getHeader();
+            if (!"00".equals(header.getResultCode())) {
+                log.warn("API error for symbol {}: {} - {}",
+                        asset.getSymbol(), header.getResultCode(), header.getResultMsg());
+                return new ArrayList<>();
+            }
+
+            DataGoKrResponse.Body body = response.getResponse().getBody();
+            if (body == null || body.getItems() == null || body.getItems().getItem() == null) {
+                log.warn("No data found for symbol: {}", asset.getSymbol());
+                return new ArrayList<>();
+            }
+
+            List<AssetPrice> assetPrices = new ArrayList<>();
+            for (DataGoKrResponse.Item item : body.getItems().getItem()) {
+                try {
+                    LocalDate priceDate = parseDate(item.getBasDt());
+                    BigDecimal price = parsePrice(item.getClpr());
+                    Long volume = item.getTrqu();
+
+                    if (price != null && volume != null) {
+                        AssetPrice assetPrice = AssetPrice.builder()
+                                .asset(asset)
+                                .priceDate(priceDate)
+                                .price(price)
+                                .volume(volume)
+                                .build();
+                        assetPrices.add(assetPrice);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to parse price data for {}: {}", asset.getSymbol(), e.getMessage());
+                }
+            }
+
+            log.info("Fetched {} historical price records for {}", assetPrices.size(), asset.getSymbol());
+            return assetPrices;
+
+        } catch (Exception e) {
+            log.error("Failed to fetch historical prices for symbol: {}", asset.getSymbol(), e);
+            return new ArrayList<>();
         }
     }
 
@@ -136,11 +231,8 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
      * Convert data.go.kr API response item to AssetBatchDto
      */
     private AssetBatchDto convertToDto(DataGoKrResponse.Item item) {
-        // Determine exchange based on market category
-        String exchange = determineExchange(item.getMrktCtg());
-
-        // Determine asset type based on exchange
-        Asset.AssetType type = determineAssetType(exchange, item.getItmsNm());
+        // Determine asset type
+        Asset.AssetType type = determineAssetType(item.getItmsNm());
 
         // Parse base date
         LocalDate asOf = parseDate(item.getBasDt());
@@ -148,41 +240,19 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
         return AssetBatchDto.builder()
                 .market(Asset.Market.KR)
                 .symbol(item.getSrtnCd())
-                .exchange(exchange)
                 .name(item.getItmsNm())
                 .type(type)
+                .sector(null) // Korean stock sector data to be added later
                 .active(false) // Will be set to true by universe tagging step
                 .asOf(asOf)
                 .build();
     }
 
     /**
-     * Determine exchange from market category
-     * mrktCtg values: "KOSPI", "KOSDAQ", "KONEX", etc.
-     */
-    private String determineExchange(String mrktCtg) {
-        if (mrktCtg == null) {
-            return "UNKNOWN";
-        }
-
-        String normalized = mrktCtg.toUpperCase().trim();
-
-        if (normalized.contains("KOSPI")) {
-            return "KOSPI";
-        } else if (normalized.contains("KOSDAQ")) {
-            return "KOSDAQ";
-        } else if (normalized.contains("KONEX")) {
-            return "KONEX";
-        }
-
-        return normalized;
-    }
-
-    /**
      * Determine asset type (STOCK or ETF)
      * Korean ETFs typically have specific naming patterns or ISIN codes
      */
-    private Asset.AssetType determineAssetType(String exchange, String name) {
+    private Asset.AssetType determineAssetType(String name) {
         if (name == null) {
             return Asset.AssetType.STOCK;
         }
@@ -212,6 +282,23 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
         } catch (Exception e) {
             log.warn("Failed to parse date: {}. Using current date.", dateStr);
             return LocalDate.now();
+        }
+    }
+
+    /**
+     * Parse price string to BigDecimal
+     * Korean stock prices are typically in KRW (whole numbers)
+     */
+    private BigDecimal parsePrice(String priceStr) {
+        if (priceStr == null || priceStr.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            return new BigDecimal(priceStr.trim());
+        } catch (Exception e) {
+            log.warn("Failed to parse price: {}", priceStr);
+            return null;
         }
     }
 }
