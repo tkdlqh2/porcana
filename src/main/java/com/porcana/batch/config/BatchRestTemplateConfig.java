@@ -3,8 +3,12 @@ package com.porcana.batch.config;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.time.Duration;
 
 /**
@@ -16,9 +20,27 @@ public class BatchRestTemplateConfig {
 
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
+        RestTemplate restTemplate = builder
                 .setConnectTimeout(Duration.ofSeconds(5))
                 .setReadTimeout(Duration.ofSeconds(10))
                 .build();
+
+        // Custom error handler to treat 404 as normal response for missing symbols
+        restTemplate.setErrorHandler(new DefaultResponseErrorHandler() {
+            @Override
+            public void handleError(ClientHttpResponse response) throws IOException {
+                HttpStatus statusCode = (HttpStatus) response.getStatusCode();
+
+                // Don't throw exception for 404 - some symbols may not exist in the API
+                if (statusCode == HttpStatus.NOT_FOUND) {
+                    return;
+                }
+
+                // For other errors, use default handling
+                super.handleError(response);
+            }
+        });
+
+        return restTemplate;
     }
 }

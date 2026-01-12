@@ -3,8 +3,10 @@ package com.porcana.batch.job;
 import com.porcana.batch.dto.AssetBatchDto;
 import com.porcana.batch.provider.kr.DataGoKrAssetProvider;
 import com.porcana.batch.provider.kr.UniverseTaggingProvider;
+import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
+import com.porcana.domain.asset.entity.AssetPrice;
 import com.porcana.domain.asset.entity.UniverseTag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -39,6 +43,7 @@ public class KrAssetBatchJob {
     private final DataGoKrAssetProvider dataGoKrProvider;
     private final UniverseTaggingProvider taggingProvider;
     private final AssetRepository assetRepository;
+    private final AssetPriceRepository assetPriceRepository;
 
     @Bean
     public Job krAssetJob() {
@@ -46,6 +51,7 @@ public class KrAssetBatchJob {
                 .start(fetchKrAssetsStep())
                 .next(tagKospi200Step())
                 .next(tagKosdaq150Step())
+                .next(fetchKrHistoricalPricesStep())
                 .build();
     }
 
@@ -150,6 +156,63 @@ public class KrAssetBatchJob {
                     }
 
                     log.info("KOSDAQ150 tagging complete: {} assets tagged", tagged);
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    /**
+     * Step 4: Fetch historical prices for recently created assets
+     * Fetches prices for assets created within the last 24 hours
+     */
+    @Bean
+    public Step fetchKrHistoricalPricesStep() {
+        return new StepBuilder("fetchKrHistoricalPricesStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    log.info("Starting historical price fetch for Korean assets");
+
+                    // Find assets created in the last 24 hours
+                    LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+                    List<Asset> recentAssets = assetRepository.findByMarketAndCreatedAtAfter(
+                            Asset.Market.KR, oneDayAgo);
+
+                    log.info("Found {} Korean assets created in the last 24 hours", recentAssets.size());
+
+                    int totalPricesFetched = 0;
+                    int assetsProcessed = 0;
+
+                    for (Asset asset : recentAssets) {
+                        try {
+                            // Check if historical prices already exist
+                            boolean hasHistoricalData = assetPriceRepository.existsByAsset(asset);
+                            if (hasHistoricalData) {
+                                log.info("Asset {} already has historical price data, skipping", asset.getSymbol());
+                                continue;
+                            }
+
+                            log.info("Fetching historical prices for {}", asset.getSymbol());
+                            List<AssetPrice> prices = dataGoKrProvider.fetchHistoricalPrices(asset);
+
+                            if (!prices.isEmpty()) {
+                                // Save all prices at once
+                                assetPriceRepository.saveAll(prices);
+                                totalPricesFetched += prices.size();
+                                assetsProcessed++;
+                                log.info("Saved {} historical prices for {}", prices.size(), asset.getSymbol());
+                            }
+
+                            // Add delay to avoid rate limiting
+                            Thread.sleep(150);
+
+                        } catch (Exception e) {
+                            log.warn("Failed to fetch historical prices for {}: {}",
+                                    asset.getSymbol(), e.getMessage());
+                        }
+                    }
+
+                    log.info("Historical price fetch complete: {} prices saved for {} assets",
+                            totalPricesFetched, assetsProcessed);
+
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();

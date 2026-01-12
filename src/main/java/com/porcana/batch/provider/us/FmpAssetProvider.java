@@ -34,7 +34,7 @@ import java.util.Set;
 public class FmpAssetProvider implements UsAssetDataProvider {
 
     private static final String PROFILE_ENDPOINT = "/stable/profile";
-    private static final String HISTORICAL_PRICE_ENDPOINT = "/stable/historical-price-ceod/light";
+    private static final String HISTORICAL_PRICE_ENDPOINT = "/stable/historical-price-eod/light";
     private static final String SP500_CSV = "batch/s&p500.csv";
     private static final String NASDAQ100_CSV = "batch/nasdaq100.csv";
 
@@ -122,13 +122,13 @@ public class FmpAssetProvider implements UsAssetDataProvider {
      */
     private AssetBatchDto fetchAssetBySymbol(String symbol, Set<String> sp500Symbols,
                                              Set<String> nasdaq100Symbols, LocalDate asOf) {
-        String url = String.format("%s%s%s?apikey=%s", baseUrl, PROFILE_ENDPOINT, symbol, apiKey);
+        String url = String.format("%s%s?symbol=%s&apikey=%s", baseUrl, PROFILE_ENDPOINT, symbol, apiKey);
 
         try {
             FmpProfile[] profiles = restTemplate.getForObject(url, FmpProfile[].class);
 
             if (profiles == null || profiles.length == 0) {
-                log.warn("No profile data for symbol: {}", symbol);
+                log.debug("No profile data for symbol: {} (may not exist in FMP database)", symbol);
                 return null;
             }
 
@@ -155,7 +155,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                     .build();
 
         } catch (Exception e) {
-            log.error("Failed to fetch profile for symbol: {}", symbol, e);
+            log.warn("Failed to fetch profile for symbol: {}. Error: {}", symbol, e.getMessage());
             return null;
         }
     }

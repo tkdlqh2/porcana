@@ -26,7 +26,7 @@ public class BatchScheduler {
      * Execute Korean asset batch job every 30 minutes
      * Uncomment @Scheduled annotation to enable
      */
-    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
+//    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
     public void runKrAssetBatch() {
         try {
             log.info("Starting scheduled Korean asset batch job");
@@ -49,7 +49,7 @@ public class BatchScheduler {
      * Execute US asset batch job every 30 minutes
      * Uncomment @Scheduled annotation to enable
      */
-    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
+//    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
     public void runUsAssetBatch() {
         try {
             log.info("Starting scheduled US asset batch job");
