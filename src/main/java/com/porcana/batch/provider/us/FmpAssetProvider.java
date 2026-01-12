@@ -204,6 +204,50 @@ public class FmpAssetProvider implements UsAssetDataProvider {
     }
 
     /**
+     * Fetch daily price data for a single asset (latest trading day)
+     * Used for daily price updates
+     *
+     * @param asset The asset to fetch price for
+     * @return AssetPrice entity (not yet persisted), or null if no data
+     */
+    public AssetPrice fetchDailyPrice(Asset asset) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("FMP API key not configured. Skipping daily price fetch.");
+            return null;
+        }
+
+        // Fetch last 3 days to ensure we get the latest trading day
+        LocalDate threeDaysAgo = LocalDate.now().minusDays(3);
+        String fromDate = threeDaysAgo.format(DateTimeFormatter.ISO_LOCAL_DATE);
+
+        String url = String.format("%s%s?from=%s&symbol=%s&apikey=%s",
+                baseUrl, HISTORICAL_PRICE_ENDPOINT, fromDate, asset.getSymbol(), apiKey);
+
+        try {
+            FmpHistoricalPrice[] prices = restTemplate.getForObject(url, FmpHistoricalPrice[].class);
+
+            if (prices == null || prices.length == 0) {
+                log.warn("No daily price data for symbol: {}", asset.getSymbol());
+                return null;
+            }
+
+            // Get the most recent price (first in array, as FMP returns newest first)
+            FmpHistoricalPrice latestPrice = prices[0];
+
+            return AssetPrice.builder()
+                    .asset(asset)
+                    .priceDate(LocalDate.parse(latestPrice.getDate()))
+                    .price(BigDecimal.valueOf(latestPrice.getPrice()))
+                    .volume(latestPrice.getVolume())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Failed to fetch daily price for symbol: {}", asset.getSymbol(), e);
+            return null;
+        }
+    }
+
+    /**
      * Fetch historical price data for a single asset
      * Fetches data from 1 year ago to now
      *

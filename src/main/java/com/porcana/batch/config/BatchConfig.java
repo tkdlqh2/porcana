@@ -33,6 +33,12 @@ public class BatchConfig {
     @Qualifier("usAssetJob")
     private final Job usAssetJob;
 
+    @Qualifier("krDailyPriceJob")
+    private final Job krDailyPriceJob;
+
+    @Qualifier("usDailyPriceJob")
+    private final Job usDailyPriceJob;
+
     /**
      * Scheduled asset update job - runs every Sunday at 2 AM
      * Updates both Korean and US market assets
@@ -64,6 +70,51 @@ public class BatchConfig {
 
         } catch (Exception e) {
             log.error("Failed to run weekly asset update", e);
+            // In production, you might want to send alerts here
+        }
+    }
+
+    /**
+     * Scheduled daily price update job for Korean market
+     * Runs every weekday at 18:00 KST (after market close at 15:30)
+     */
+    @Scheduled(cron = "0 0 18 * * MON-FRI", zone = "Asia/Seoul")
+    public void runKrDailyPriceUpdate() {
+        log.info("Starting scheduled Korean daily price update");
+
+        try {
+            JobParameters params = new JobParametersBuilder()
+                    .addLong("time", System.currentTimeMillis())
+                    .addString("market", "KR")
+                    .toJobParameters();
+            jobLauncher.run(krDailyPriceJob, params);
+            log.info("Korean daily price update completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to run Korean daily price update", e);
+            // In production, you might want to send alerts here
+        }
+    }
+
+    /**
+     * Scheduled daily price update job for US market
+     * Runs every weekday at 07:00 KST (after US market close)
+     * Note: TUE-SAT in KST corresponds to MON-FRI in US Eastern Time
+     */
+    @Scheduled(cron = "0 0 7 * * TUE-SAT", zone = "Asia/Seoul")
+    public void runUsDailyPriceUpdate() {
+        log.info("Starting scheduled US daily price update");
+
+        try {
+            JobParameters params = new JobParametersBuilder()
+                    .addLong("time", System.currentTimeMillis())
+                    .addString("market", "US")
+                    .toJobParameters();
+            jobLauncher.run(usDailyPriceJob, params);
+            log.info("US daily price update completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to run US daily price update", e);
             // In production, you might want to send alerts here
         }
     }

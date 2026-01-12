@@ -28,4 +28,10 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
      * Used to fetch recently created assets for historical price backfilling
      */
     List<Asset> findByMarketAndCreatedAtAfter(Asset.Market market, LocalDateTime createdAt);
+
+    /**
+     * Find all active assets by market
+     * Used for daily price updates
+     */
+    List<Asset> findByMarketAndActiveTrue(Asset.Market market);
 }

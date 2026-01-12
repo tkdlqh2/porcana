@@ -21,6 +21,8 @@ public class BatchScheduler {
     private final JobLauncher jobLauncher;
     private final Job krAssetJob;
     private final Job usAssetJob;
+    private final Job krDailyPriceJob;
+    private final Job usDailyPriceJob;
 
     /**
      * Execute Korean asset batch job every 30 minutes
@@ -65,6 +67,52 @@ public class BatchScheduler {
 
         } catch (Exception e) {
             log.error("Failed to execute US asset batch job", e);
+        }
+    }
+
+    /**
+     * Execute Korean daily price update batch job every 24 hours
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runKrDailyPriceBatch() {
+        try {
+            log.info("Starting scheduled Korean daily price update batch job");
+
+            // Use current timestamp to make each execution unique
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(krDailyPriceJob, jobParameters);
+
+            log.info("Korean daily price update batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute Korean daily price update batch job", e);
+        }
+    }
+
+    /**
+     * Execute US daily price update batch job every 24 hours
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runUsDailyPriceBatch() {
+        try {
+            log.info("Starting scheduled US daily price update batch job");
+
+            // Use current timestamp to make each execution unique
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(usDailyPriceJob, jobParameters);
+
+            log.info("US daily price update batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute US daily price update batch job", e);
         }
     }
 }

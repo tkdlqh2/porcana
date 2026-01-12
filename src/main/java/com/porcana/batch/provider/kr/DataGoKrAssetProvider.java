@@ -143,6 +143,80 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
     }
 
     /**
+     * Fetch daily price data for a single asset (latest trading day)
+     * Used for daily price updates
+     *
+     * @param asset The asset to fetch price for
+     * @return AssetPrice entity (not yet persisted), or null if no data
+     */
+    public AssetPrice fetchDailyPrice(Asset asset) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("data.go.kr API key not configured. Skipping daily price fetch.");
+            return null;
+        }
+
+        // Fetch last 5 days to ensure we get the latest trading day
+        LocalDate fiveDaysAgo = LocalDate.now().minusDays(5);
+        String beginBasDt = fiveDaysAgo.format(DATE_FORMATTER);
+        String endBasDt = LocalDate.now().format(DATE_FORMATTER);
+
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl + "/getStockPriceInfo")
+                .queryParam("serviceKey", apiKey)
+                .queryParam("likeSrtnCd", asset.getSymbol())
+                .queryParam("beginBasDt", beginBasDt)
+                .queryParam("endBasDt", endBasDt)
+                .queryParam("resultType", "json")
+                .queryParam("numOfRows", "10")
+                .toUriString();
+
+        try {
+            DataGoKrResponse response = restTemplate.getForObject(url, DataGoKrResponse.class);
+
+            if (response == null || response.getResponse() == null) {
+                log.warn("No response for symbol: {}", asset.getSymbol());
+                return null;
+            }
+
+            DataGoKrResponse.Header header = response.getResponse().getHeader();
+            if (!"00".equals(header.getResultCode())) {
+                log.warn("API error for symbol {}: {} - {}",
+                        asset.getSymbol(), header.getResultCode(), header.getResultMsg());
+                return null;
+            }
+
+            DataGoKrResponse.Body body = response.getResponse().getBody();
+            if (body == null || body.getItems() == null || body.getItems().getItem() == null
+                    || body.getItems().getItem().isEmpty()) {
+                log.warn("No data found for symbol: {}", asset.getSymbol());
+                return null;
+            }
+
+            // Get the most recent price (first item in the list)
+            DataGoKrResponse.Item latestItem = body.getItems().getItem().get(0);
+
+            LocalDate priceDate = parseDate(latestItem.getBasDt());
+            BigDecimal price = parsePrice(latestItem.getClpr());
+            Long volume = latestItem.getTrqu();
+
+            if (price == null || volume == null) {
+                log.warn("Invalid price data for symbol: {}", asset.getSymbol());
+                return null;
+            }
+
+            return AssetPrice.builder()
+                    .asset(asset)
+                    .priceDate(priceDate)
+                    .price(price)
+                    .volume(volume)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Failed to fetch daily price for symbol: {}", asset.getSymbol(), e);
+            return null;
+        }
+    }
+
+    /**
      * Fetch historical price data for a single asset
      * Fetches data from 1 year ago to now
      *
