@@ -12,10 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Implementation of Korean asset data provider using data.go.kr API
@@ -48,12 +45,17 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
     public List<AssetBatchDto> fetchAssets() throws AssetDataProviderException {
         log.info("Fetching Korean market assets from data.go.kr");
 
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("data.go.kr API key not configured. Skipping asset fetch.");
+            return Collections.emptyList();
+        }
+
         try {
             // Get all stock symbols from CSV files
             Set<String> symbols = getAllStockSymbols();
             log.info("Found {} unique stock symbols from CSV files", symbols.size());
 
-            List<AssetBatchDto> assets = new ArrayList<>();
+            List<AssetBatchDto> assets = new ArrayList<>(symbols.size());
 
             // Fetch data for each symbol
             int total = symbols.size();
@@ -310,6 +312,9 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
 
         // Parse base date
         LocalDate asOf = parseDate(item.getBasDt());
+        if (asOf == null) {
+            asOf = LocalDate.now(); // Only for asOf in asset metadata, not for price dates
+        }
 
         return AssetBatchDto.builder()
                 .market(Asset.Market.KR)
@@ -348,14 +353,14 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
      */
     private LocalDate parseDate(String dateStr) {
         if (dateStr == null || dateStr.trim().isEmpty()) {
-            return LocalDate.now();
+            return null;
         }
 
         try {
             return LocalDate.parse(dateStr.trim(), DATE_FORMATTER);
         } catch (Exception e) {
             log.warn("Failed to parse date: {}. Using current date.", dateStr);
-            return LocalDate.now();
+            return null;
         }
     }
 

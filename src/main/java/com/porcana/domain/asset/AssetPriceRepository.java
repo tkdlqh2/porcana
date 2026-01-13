@@ -3,6 +3,7 @@ package com.porcana.domain.asset;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -37,6 +38,7 @@ public interface AssetPriceRepository extends JpaRepository<AssetPrice, UUID> {
     /**
      * Delete price data older than a specific date
      */
+    @Modifying
     void deleteByPriceDateBefore(LocalDate date);
 
     /**

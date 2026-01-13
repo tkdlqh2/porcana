@@ -27,8 +27,10 @@ batch:
   provider:
     kr:
       api-key: your_datagokr_api_key  # Get from https://www.data.go.kr/
+      api-url: https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService
     us:
       api-key: your_fmp_api_key  # Get from https://financialmodelingprep.com/
+      base-url: https://financialmodelingprep.com
 
 logging:
   level:

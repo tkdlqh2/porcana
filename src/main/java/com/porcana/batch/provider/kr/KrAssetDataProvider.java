@@ -8,10 +8,6 @@ import com.porcana.batch.provider.AssetDataProvider;
  */
 public interface KrAssetDataProvider extends AssetDataProvider {
 
-    /**
-     * Fetch all Korean market assets (KOSPI, KOSDAQ, ETF)
-     * Returns base data without universe tagging
-     */
     @Override
     default String getProviderName() {
         return "KR_ASSET_PROVIDER";

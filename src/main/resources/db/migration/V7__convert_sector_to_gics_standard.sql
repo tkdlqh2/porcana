@@ -15,4 +15,4 @@ UPDATE assets SET sector = 'UTILITIES' WHERE sector = 'Utilities';
 
 -- Alter column length from VARCHAR(100) to VARCHAR(50)
 -- This is safe because GICS enum values are shorter than 50 characters
-ALTER TABLE assets MODIFY COLUMN sector VARCHAR(50);
+ALTER TABLE assets ALTER COLUMN sector TYPE VARCHAR(50);

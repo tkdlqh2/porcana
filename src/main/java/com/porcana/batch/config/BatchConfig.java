@@ -1,6 +1,5 @@
 package com.porcana.batch.config;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
@@ -14,7 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * Spring Batch configuration
- *
+ * <p>
  * Enables batch processing infrastructure and provides common batch settings
  * Includes scheduled jobs for weekly asset updates
  */
@@ -22,22 +21,27 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Configuration
 @EnableBatchProcessing
 @EnableScheduling
-@RequiredArgsConstructor
 public class BatchConfig {
 
     private final JobLauncher jobLauncher;
-
-    @Qualifier("krAssetJob")
     private final Job krAssetJob;
-
-    @Qualifier("usAssetJob")
     private final Job usAssetJob;
-
-    @Qualifier("krDailyPriceJob")
     private final Job krDailyPriceJob;
-
-    @Qualifier("usDailyPriceJob")
     private final Job usDailyPriceJob;
+
+    public BatchConfig(
+            JobLauncher jobLauncher,
+            @Qualifier("krAssetJob") Job krAssetJob,
+            @Qualifier("usAssetJob") Job usAssetJob,
+            @Qualifier("krDailyPriceJob") Job krDailyPriceJob,
+            @Qualifier("usDailyPriceJob")Job usDailyPriceJob
+    ) {
+        this.jobLauncher = jobLauncher;
+        this.krAssetJob = krAssetJob;
+        this.usAssetJob = usAssetJob;
+        this.krDailyPriceJob = krDailyPriceJob;
+        this.usDailyPriceJob = usDailyPriceJob;
+    }
 
     /**
      * Scheduled asset update job - runs every Sunday at 2 AM
@@ -56,7 +60,11 @@ public class BatchConfig {
                     .toJobParameters();
             jobLauncher.run(krAssetJob, krParams);
             log.info("Korean market asset batch completed");
+        } catch (Exception e) {
+            log.error("Failed to run Korean market asset batch", e);
+        }
 
+        try{
             // Run US market batch
             log.info("Running US market asset batch");
             JobParameters usParams = new JobParametersBuilder()
@@ -66,11 +74,8 @@ public class BatchConfig {
             jobLauncher.run(usAssetJob, usParams);
             log.info("US market asset batch completed");
 
-            log.info("Weekly asset update completed successfully");
-
         } catch (Exception e) {
-            log.error("Failed to run weekly asset update", e);
-            // In production, you might want to send alerts here
+            log.error("Failed to run US market asset batch", e);
         }
     }
 
@@ -94,6 +99,7 @@ public class BatchConfig {
             log.error("Failed to run Korean daily price update", e);
             // In production, you might want to send alerts here
         }
+        log.info("Weekly asset update finished");
     }
 
     /**

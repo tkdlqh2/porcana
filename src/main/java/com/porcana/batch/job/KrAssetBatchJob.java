@@ -115,18 +115,18 @@ public class KrAssetBatchJob {
                     Set<String> kospi200Symbols = taggingProvider.readKospi200Constituents();
                     log.info("Read {} KOSPI200 symbols from CSV", kospi200Symbols.size());
 
-                    int tagged = 0;
+                    int[] tagged = {0};
                     for (String symbol : kospi200Symbols) {
                         assetRepository.findBySymbolAndMarket(symbol, Asset.Market.KR)
                                 .ifPresent(asset -> {
                                     asset.addUniverseTag(UniverseTag.KOSPI200);
                                     asset.activate(); // KOSPI200 constituents are active
                                     assetRepository.save(asset);
+                                    tagged[0]++;
                                 });
-                        tagged++;
                     }
 
-                    log.info("KOSPI200 tagging complete: {} assets tagged", tagged);
+                    log.info("KOSPI200 tagging complete: {} assets tagged", tagged[0]);
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();
@@ -144,18 +144,18 @@ public class KrAssetBatchJob {
                     Set<String> kosdaq150Symbols = taggingProvider.readKosdaq150Constituents();
                     log.info("Read {} KOSDAQ150 symbols from CSV", kosdaq150Symbols.size());
 
-                    int tagged = 0;
+                    int[] tagged = {0};
                     for (String symbol : kosdaq150Symbols) {
                         assetRepository.findBySymbolAndMarket(symbol, Asset.Market.KR)
                                 .ifPresent(asset -> {
                                     asset.addUniverseTag(UniverseTag.KOSDAQ150);
                                     asset.activate(); // KOSDAQ150 constituents are active
                                     assetRepository.save(asset);
+                                    tagged[0]++;
                                 });
-                        tagged++;
                     }
 
-                    log.info("KOSDAQ150 tagging complete: {} assets tagged", tagged);
+                    log.info("KOSDAQ150 tagging complete: {} assets tagged", tagged[0]);
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();

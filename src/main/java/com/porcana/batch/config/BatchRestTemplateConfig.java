@@ -29,10 +29,8 @@ public class BatchRestTemplateConfig {
         restTemplate.setErrorHandler(new DefaultResponseErrorHandler() {
             @Override
             public void handleError(ClientHttpResponse response) throws IOException {
-                HttpStatus statusCode = (HttpStatus) response.getStatusCode();
-
                 // Don't throw exception for 404 - some symbols may not exist in the API
-                if (statusCode == HttpStatus.NOT_FOUND) {
+                if (response.getStatusCode().value() == 404) {
                     return;
                 }
 

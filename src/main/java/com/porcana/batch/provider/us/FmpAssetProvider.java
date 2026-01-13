@@ -98,7 +98,10 @@ public class FmpAssetProvider implements UsAssetDataProvider {
 
                     // Add small delay to avoid rate limiting
                     Thread.sleep(150);
-
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Asset fetch interrupted at symbol: {}", symbol);
+                    break;
                 } catch (Exception e) {
                     log.warn("Failed to fetch data for symbol: {}. Skipping. Error: {}", symbol, e.getMessage());
                 }
