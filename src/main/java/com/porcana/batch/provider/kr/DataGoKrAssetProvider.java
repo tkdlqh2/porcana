@@ -364,7 +364,7 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
         try {
             return LocalDate.parse(dateStr.trim(), DATE_FORMATTER);
         } catch (Exception e) {
-            log.warn("Failed to parse date: {}. Using current date.", dateStr);
+            log.warn("Failed to parse date: {}. ", dateStr);
             return null;
         }
     }
