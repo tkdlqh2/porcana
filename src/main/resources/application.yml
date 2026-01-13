@@ -47,6 +47,15 @@ batch:
       api-key: ${FMP_API_KEY:}
       base-url: https://financialmodelingprep.com
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
 logging:
   level:
     com.porcana: DEBUG

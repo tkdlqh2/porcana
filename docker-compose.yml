@@ -1,0 +1,29 @@
+services:
+  api:
+    image: ghcr.io/tkdlqh2/porcana-api:latest
+    container_name: porcana-api
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      # 예시 - 네 앱 설정에 맞게 바꿔
+      SPRING_PROFILES_ACTIVE: prod
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./config/application-prod.yaml:/app/config/application-prod.yaml:ro
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: porcana-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"  # 외부에서 접근 필요 없으면 지워도 됨
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
