@@ -123,10 +123,10 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 - `id`: UUID (Primary Key)
 - `market`: ENUM (KR | US) - 시장 구분
 - `symbol`: String - 종목 코드 (US: AAPL, KR: 005930)
-- `exchange`: String - 거래소 (US: NASDAQ/NYSE, KR: KOSPI/KOSDAQ/ETF)
 - `name`: String - 종목명
 - `type`: ENUM (STOCK | ETF) - 상품 유형
-- `universe_tags`: List<String> - 유니버스 태그 (SP500, NASDAQ100, KOSPI200, KOSDAQ150, ETF_CORE 등)
+- `sector`: ENUM (Sector) - GICS 표준 섹터 (MATERIALS, COMMUNICATION_SERVICES, CONSUMER_DISCRETIONARY, CONSUMER_STAPLES, ENERGY, FINANCIALS, HEALTH_CARE, INDUSTRIALS, REAL_ESTATE, INFORMATION_TECHNOLOGY, UTILITIES)
+- `universe_tags`: List<UniverseTag> - 유니버스 태그 (SP500, NASDAQ100, KOSPI200, KOSDAQ150 등)
 - `active`: Boolean - 활성화 여부 (카드 풀에 포함 여부)
 - `as_of`: LocalDate - 기준일 (이 레코드가 "언제 기준"인지)
 - `created_at`: LocalDateTime
@@ -144,14 +144,17 @@ public class Asset {
     private Market market;  // KR, US
 
     private String symbol;  // AAPL, 005930
-    private String exchange;  // NASDAQ, KOSPI
     private String name;
 
     @Enumerated(EnumType.STRING)
     private AssetType type;  // STOCK, ETF
 
-    @Convert(converter = StringListConverter.class)
-    private List<String> universeTags;  // ["SP500", "NASDAQ100"]
+    @Enumerated(EnumType.STRING)
+    private Sector sector;  // GICS 표준 섹터
+
+    @ElementCollection
+    @Enumerated(EnumType.STRING)
+    private List<UniverseTag> universeTags;  // [SP500, NASDAQ100]
 
     private Boolean active;
     private LocalDate asOf;
@@ -160,6 +163,36 @@ public class Asset {
     public enum AssetType { STOCK, ETF }
 }
 ```
+
+**Sector ENUM (GICS 표준):**
+```java
+public enum Sector {
+    MATERIALS,                  // 소재
+    COMMUNICATION_SERVICES,     // 커뮤니케이션 서비스
+    CONSUMER_DISCRETIONARY,     // 임의소비재
+    CONSUMER_STAPLES,          // 필수소비재
+    ENERGY,                    // 에너지
+    FINANCIALS,                // 금융
+    HEALTH_CARE,               // 헬스케어
+    INDUSTRIALS,               // 산업재
+    REAL_ESTATE,               // 부동산
+    INFORMATION_TECHNOLOGY,    // 정보기술
+    UTILITIES                  // 유틸리티
+}
+```
+
+**FMP API Sector → GICS Sector 매핑:**
+- Basic Materials → MATERIALS
+- Communication Services → COMMUNICATION_SERVICES
+- Consumer Cyclical → CONSUMER_DISCRETIONARY
+- Consumer Defensive → CONSUMER_STAPLES
+- Energy → ENERGY
+- Financial Services → FINANCIALS
+- Healthcare → HEALTH_CARE
+- Industrials → INDUSTRIALS
+- Real Estate → REAL_ESTATE
+- Technology → INFORMATION_TECHNOLOGY
+- Utilities → UTILITIES
 
 ### Spring Batch 기반 종목 데이터 생성 전략
 
@@ -214,7 +247,71 @@ public class Asset {
 
 **배치 실행 주기:**
 - 초기 데이터 구축: 수동 실행 (./gradlew bootRun --args='--spring.batch.job.names=krAssetBatchJob')
-- 정기 업데이트: 주 1회 스케줄링 (예: 매주 월요일 새벽)
+- 정기 업데이트: 주 1회 스케줄링 (매주 일요일 02:00 KST)
+
+---
+
+## Spring Batch 기반 일일 가격 업데이트 전략
+
+### AssetPrice (가격 데이터) Entity
+
+종목의 일별 종가 및 거래량 데이터를 저장합니다.
+
+**필드 설계:**
+- `id`: UUID (Primary Key)
+- `asset_id`: UUID (Foreign Key → assets)
+- `price_date`: LocalDate - 거래일
+- `price`: BigDecimal - 종가
+- `volume`: Long - 거래량
+- `created_at`: LocalDateTime
+
+**Unique Index:** `(asset_id, price_date)` - 중복 방지
+
+### 일일 가격 업데이트 배치 Job
+
+**한국 마켓 (krDailyPriceJob):**
+- **대상**: `active = true`인 모든 한국 종목
+- **데이터 소스**: data.go.kr API (`getStockPriceInfo`)
+- **처리 로직**:
+  1. active한 종목 목록 조회
+  2. 각 종목마다 최근 5일치 데이터 요청 (최신 거래일 확보)
+  3. 최신 거래일 가격 추출
+  4. 중복 체크 (`asset_id + price_date`)
+  5. 신규 가격만 저장
+- **Rate Limiting**: 100ms 딜레이
+- **실행 주기**: 매 평일 18:00 KST (장 마감 15:30 이후)
+
+**미국 마켓 (usDailyPriceJob):**
+- **대상**: `active = true`인 모든 미국 종목
+- **데이터 소스**: FMP API (`historical-price-eod`)
+- **처리 로직**:
+  1. active한 종목 목록 조회
+  2. 각 종목마다 최근 3일치 데이터 요청 (최신 거래일 확보)
+  3. 최신 거래일 가격 추출 (FMP는 최신순 정렬)
+  4. 중복 체크 (`asset_id + price_date`)
+  5. 신규 가격만 저장
+- **Rate Limiting**: 150ms 딜레이
+- **실행 주기**: 매 평일 07:00 KST (미국 장 마감 후, TUE-SAT KST = MON-FRI EST)
+
+**배치 스케줄링 (BatchConfig):**
+```java
+// 한국 시장: 평일 18:00 KST
+@Scheduled(cron = "0 0 18 * * MON-FRI", zone = "Asia/Seoul")
+public void runKrDailyPriceUpdate()
+
+// 미국 시장: 평일 07:00 KST (화-토, 시차 고려)
+@Scheduled(cron = "0 0 7 * * TUE-SAT", zone = "Asia/Seoul")
+public void runUsDailyPriceUpdate()
+```
+
+**수동 실행:**
+```bash
+# 한국 시장 일일 가격 업데이트
+./gradlew bootRun --args='--spring.batch.job.names=krDailyPriceJob'
+
+# 미국 시장 일일 가격 업데이트
+./gradlew bootRun --args='--spring.batch.job.names=usDailyPriceJob'
+```
 
 ---
 
