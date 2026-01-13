@@ -80,7 +80,7 @@ public static SignupCommand from(SignupRequest request) {
 ```java
 @SecurityRequirement(name = "JWT")
 @RestController
-@RequestMapping("/app/v1")
+@RequestMapping("/api/v1")
 public class UserController {
     // 이 컨트롤러의 모든 엔드포인트에 JWT 필요
     // Swagger UI에서 자물쇠 아이콘 표시됨
@@ -90,7 +90,7 @@ public class UserController {
 **인증이 필요없는 API:**
 ```java
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 public class AuthController {
     // @SecurityRequirement 없음 = 공개 API
     // Swagger UI에서 자물쇠 아이콘 없음
@@ -316,7 +316,7 @@ public void runUsDailyPriceUpdate()
 ---
 
 ## Base
-- Base Path: /app/v1
+- Base Path: /api/v1
 - Auth: Authorization: Bearer {accessToken}
 - Content-Type: application/json
 - Date format: ISO-8601 (YYYY-MM-DD for chart points)

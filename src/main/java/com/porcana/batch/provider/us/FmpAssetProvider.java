@@ -188,12 +188,24 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                     new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
 
                 String line;
+                boolean isFirstLine = true;
                 while ((line = reader.readLine()) != null) {
+                    // Skip header line if exists
+                    if (isFirstLine && line.toLowerCase().contains("symbol")) {
+                        isFirstLine = false;
+                        continue;
+                    }
+                    isFirstLine = false;
+
                     line = line.trim();
                     if (line.isEmpty() || line.startsWith("#")) {
                         continue;
                     }
-                    symbols.add(line);
+                    // Handle CSV format - take first column
+                    String symbol = line.split(",")[0].trim();
+                    if (!symbol.isEmpty()) {
+                        symbols.add(symbol);
+                    }
                 }
             }
 

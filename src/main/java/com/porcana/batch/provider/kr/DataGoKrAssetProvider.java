@@ -200,8 +200,9 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
             BigDecimal price = parsePrice(latestItem.getClpr());
             Long volume = latestItem.getTrqu();
 
-            if (price == null || volume == null) {
-                log.warn("Invalid price data for symbol: {}", asset.getSymbol());
+            if (priceDate == null || price == null || volume == null) {
+                log.warn("Invalid price data for symbol: {} (date: {}, price: {}, volume: {})",
+                        asset.getSymbol(), priceDate, price, volume);
                 return null;
             }
 
@@ -275,7 +276,7 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
                     BigDecimal price = parsePrice(item.getClpr());
                     Long volume = item.getTrqu();
 
-                    if (price != null && volume != null) {
+                    if (priceDate != null && price != null && volume != null) {
                         AssetPrice assetPrice = AssetPrice.builder()
                                 .asset(asset)
                                 .priceDate(priceDate)
