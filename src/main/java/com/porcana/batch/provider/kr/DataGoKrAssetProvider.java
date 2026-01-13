@@ -75,6 +75,10 @@ public class DataGoKrAssetProvider implements KrAssetDataProvider {
                     // Add small delay to avoid rate limiting
                     Thread.sleep(100);
 
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Asset fetch interrupted at symbol: {}", symbol);
+                    break;
                 } catch (Exception e) {
                     log.warn("Failed to fetch data for symbol: {}. Skipping. Error: {}", symbol, e.getMessage());
                     // Continue with next symbol instead of failing entire batch
