@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @Tag(name = "User", description = "사용자 정보 API")
 @RestController
-@RequestMapping("")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "JWT")
 public class UserController {

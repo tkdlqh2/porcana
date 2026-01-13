@@ -7,10 +7,10 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Arena Controller (Hearthstone-style drafting)
- * Base Path: /app/v1/arena
+ * Base Path: /api/v1/arena
  */
 @RestController
-@RequestMapping("/arena")
+@RequestMapping("/api/v1/arena")
 public class ArenaController {
 
     /**
