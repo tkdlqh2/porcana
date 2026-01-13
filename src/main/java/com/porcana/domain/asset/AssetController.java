@@ -5,10 +5,10 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Asset Controller (종목)
- * Base Path: /app/v1/assets
+ * Base Path: /api/v1/assets
  */
 @RestController
-@RequestMapping("/assets")
+@RequestMapping("/api/v1/assets")
 public class AssetController {
 
     /**

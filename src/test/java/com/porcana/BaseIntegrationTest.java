@@ -7,6 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -18,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
+@DirtiesContext
 public abstract class BaseIntegrationTest {
 
     @LocalServerPort
@@ -30,19 +32,24 @@ public abstract class BaseIntegrationTest {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
             .withDatabaseName("porcana_test")
             .withUsername("test")
-            .withPassword("test");
+            .withPassword("test")
+            .withReuse(true);
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.hikari.maximum-pool-size", () -> 5);
+        registry.add("spring.datasource.hikari.minimum-idle", () -> 2);
+        registry.add("spring.datasource.hikari.connection-timeout", () -> 20000);
+        registry.add("spring.datasource.hikari.max-lifetime", () -> 600000);
     }
 
     @BeforeEach
     void setUpRestAssured() {
         RestAssured.port = port;
-        RestAssured.basePath = "/app/v1";
+        RestAssured.basePath = "/api/v1";
 
         // Mock passwordEncoder to return plain text
         MockPasswordEncoder mockEncoder = new MockPasswordEncoder();

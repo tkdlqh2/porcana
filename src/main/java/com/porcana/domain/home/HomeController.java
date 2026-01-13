@@ -5,10 +5,10 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Home Controller (Main Portfolio Widget)
- * Base Path: /app/v1
+ * Base Path: /api/v1
  */
 @RestController
-@RequestMapping("")
+@RequestMapping("/api/v1")
 public class HomeController {
 
     /**
