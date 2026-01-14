@@ -15,7 +15,10 @@ import org.springframework.scheduling.annotation.Scheduled;
  * Spring Batch configuration
  * <p>
  * Enables batch processing infrastructure and provides common batch settings
- * Includes scheduled jobs for weekly asset updates
+ * Includes scheduled jobs for:
+ * - Weekly asset updates (stocks and ETFs)
+ * - Daily price updates (stocks and ETFs)
+ * - Daily exchange rate updates
  */
 @Slf4j
 @Configuration
@@ -32,6 +35,7 @@ public class BatchConfig {
     private final Job usDailyPriceJob;
     private final Job krEtfDailyPriceJob;
     private final Job usEtfDailyPriceJob;
+    private final Job exchangeRateJob;
 
     public BatchConfig(
             JobLauncher jobLauncher,
@@ -42,7 +46,8 @@ public class BatchConfig {
             @Qualifier("krDailyPriceJob") Job krDailyPriceJob,
             @Qualifier("usDailyPriceJob") Job usDailyPriceJob,
             @Qualifier("krEtfDailyPriceJob") Job krEtfDailyPriceJob,
-            @Qualifier("usEtfDailyPriceJob") Job usEtfDailyPriceJob
+            @Qualifier("usEtfDailyPriceJob") Job usEtfDailyPriceJob,
+            @Qualifier("exchangeRateJob") Job exchangeRateJob
     ) {
         this.jobLauncher = jobLauncher;
         this.krAssetJob = krAssetJob;
@@ -53,6 +58,7 @@ public class BatchConfig {
         this.usDailyPriceJob = usDailyPriceJob;
         this.krEtfDailyPriceJob = krEtfDailyPriceJob;
         this.usEtfDailyPriceJob = usEtfDailyPriceJob;
+        this.exchangeRateJob = exchangeRateJob;
     }
 
     /**
@@ -194,6 +200,28 @@ public class BatchConfig {
 
         } catch (Exception e) {
             log.error("Failed to run US ETF daily price update", e);
+            // In production, you might want to send alerts here
+        }
+    }
+
+    /**
+     * Scheduled exchange rate update job
+     * Runs every weekday at 11:00 KST
+     * Korea Exim Bank updates exchange rates around 10:00 KST
+     */
+    @Scheduled(cron = "0 0 11 * * MON-FRI", zone = "Asia/Seoul")
+    public void runExchangeRateUpdate() {
+        log.info("Starting scheduled exchange rate update");
+
+        try {
+            JobParameters params = new JobParametersBuilder()
+                    .addLong("time", System.currentTimeMillis())
+                    .toJobParameters();
+            jobLauncher.run(exchangeRateJob, params);
+            log.info("Exchange rate update completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to run exchange rate update", e);
             // In production, you might want to send alerts here
         }
     }

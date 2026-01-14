@@ -27,6 +27,7 @@ public class BatchScheduler {
     private final Job usDailyPriceJob;
     private final Job krEtfDailyPriceJob;
     private final Job usEtfDailyPriceJob;
+    private final Job exchangeRateJob;
 
     /**
      * Execute Korean asset batch job every 30 minutes
@@ -205,6 +206,28 @@ public class BatchScheduler {
 
         } catch (Exception e) {
             log.error("Failed to execute US ETF daily price update batch job", e);
+        }
+    }
+
+    /**
+     * Execute exchange rate update batch job every 24 hours
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runExchangeRateBatch() {
+        try {
+            log.info("Starting scheduled exchange rate update batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(exchangeRateJob, jobParameters);
+
+            log.info("Exchange rate update batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute exchange rate update batch job", e);
         }
     }
 }
