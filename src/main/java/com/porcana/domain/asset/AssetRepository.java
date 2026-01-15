@@ -40,4 +40,10 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
      * Used for ETF-specific daily price updates
      */
     List<Asset> findByMarketAndTypeAndActiveTrue(Asset.Market market, Asset.AssetType type);
+
+    /**
+     * Find all active assets
+     * Used for risk calculation
+     */
+    List<Asset> findByActiveTrue();
 }
