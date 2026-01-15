@@ -28,6 +28,7 @@ public class BatchScheduler {
     private final Job krEtfDailyPriceJob;
     private final Job usEtfDailyPriceJob;
     private final Job exchangeRateJob;
+    private final Job assetRiskJob;
 
     /**
      * Execute Korean asset batch job every 30 minutes
@@ -228,6 +229,29 @@ public class BatchScheduler {
 
         } catch (Exception e) {
             log.error("Failed to execute exchange rate update batch job", e);
+        }
+    }
+
+    /**
+     * Execute asset risk calculation batch job every Sunday at 03:00 KST
+     * Runs weekly after asset data update (02:00 KST)
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runAssetRiskBatch() {
+        try {
+            log.info("Starting scheduled weekly asset risk calculation batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(assetRiskJob, jobParameters);
+
+            log.info("Weekly asset risk calculation batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute weekly asset risk calculation batch job", e);
         }
     }
 }
