@@ -237,7 +237,7 @@ public class BatchScheduler {
      * Runs weekly after asset data update (02:00 KST)
      * Uncomment @Scheduled annotation to enable
      */
-//    @Scheduled(cron = "0 0 3 * * SUN", zone = "Asia/Seoul")
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
     public void runAssetRiskBatch() {
         try {
             log.info("Starting scheduled weekly asset risk calculation batch job");

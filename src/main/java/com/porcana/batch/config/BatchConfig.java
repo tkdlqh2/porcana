@@ -36,6 +36,7 @@ public class BatchConfig {
     private final Job krEtfDailyPriceJob;
     private final Job usEtfDailyPriceJob;
     private final Job exchangeRateJob;
+    private final Job assetRiskJob;
 
     public BatchConfig(
             JobLauncher jobLauncher,
@@ -47,7 +48,8 @@ public class BatchConfig {
             @Qualifier("usDailyPriceJob") Job usDailyPriceJob,
             @Qualifier("krEtfDailyPriceJob") Job krEtfDailyPriceJob,
             @Qualifier("usEtfDailyPriceJob") Job usEtfDailyPriceJob,
-            @Qualifier("exchangeRateJob") Job exchangeRateJob
+            @Qualifier("exchangeRateJob") Job exchangeRateJob,
+            @Qualifier("assetRiskJob") Job assetRiskJob
     ) {
         this.jobLauncher = jobLauncher;
         this.krAssetJob = krAssetJob;
@@ -59,6 +61,7 @@ public class BatchConfig {
         this.krEtfDailyPriceJob = krEtfDailyPriceJob;
         this.usEtfDailyPriceJob = usEtfDailyPriceJob;
         this.exchangeRateJob = exchangeRateJob;
+        this.assetRiskJob = assetRiskJob;
     }
 
     /**
@@ -223,6 +226,29 @@ public class BatchConfig {
         } catch (Exception e) {
             log.error("Failed to run exchange rate update", e);
             // In production, you might want to send alerts here
+        }
+    }
+
+    /**
+     * Execute asset risk calculation batch job every Sunday at 03:00 KST
+     * Runs weekly after asset data update (02:00 KST)
+     * Uncomment @Scheduled annotation to enable
+     */
+    @Scheduled(cron = "0 0 3 * * SUN", zone = "Asia/Seoul")
+    public void runAssetRiskBatch() {
+        try {
+            log.info("Starting scheduled weekly asset risk calculation batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(assetRiskJob, jobParameters);
+
+            log.info("Weekly asset risk calculation batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute weekly asset risk calculation batch job", e);
         }
     }
 }
