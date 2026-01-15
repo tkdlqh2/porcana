@@ -46,6 +46,17 @@ batch:
     us:
       api-key: ${FMP_API_KEY:}
       base-url: https://financialmodelingprep.com
+    exchangerate:
+      api-key: ${KOREAEXIM_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
 
 management:
   endpoints:

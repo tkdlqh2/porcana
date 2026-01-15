@@ -21,8 +21,13 @@ public class BatchScheduler {
     private final JobLauncher jobLauncher;
     private final Job krAssetJob;
     private final Job usAssetJob;
+    private final Job krEtfJob;
+    private final Job usEtfJob;
     private final Job krDailyPriceJob;
     private final Job usDailyPriceJob;
+    private final Job krEtfDailyPriceJob;
+    private final Job usEtfDailyPriceJob;
+    private final Job exchangeRateJob;
 
     /**
      * Execute Korean asset batch job every 30 minutes
@@ -113,6 +118,116 @@ public class BatchScheduler {
 
         } catch (Exception e) {
             log.error("Failed to execute US daily price update batch job", e);
+        }
+    }
+
+    /**
+     * Execute Korean ETF batch job
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
+    public void runKrEtfBatch() {
+        try {
+            log.info("Starting scheduled Korean ETF batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(krEtfJob, jobParameters);
+
+            log.info("Korean ETF batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute Korean ETF batch job", e);
+        }
+    }
+
+    /**
+     * Execute US ETF batch job
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
+    public void runUsEtfBatch() {
+        try {
+            log.info("Starting scheduled US ETF batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(usEtfJob, jobParameters);
+
+            log.info("US ETF batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute US ETF batch job", e);
+        }
+    }
+
+    /**
+     * Execute Korean ETF daily price update batch job every 24 hours
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runKrEtfDailyPriceBatch() {
+        try {
+            log.info("Starting scheduled Korean ETF daily price update batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(krEtfDailyPriceJob, jobParameters);
+
+            log.info("Korean ETF daily price update batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute Korean ETF daily price update batch job", e);
+        }
+    }
+
+    /**
+     * Execute US ETF daily price update batch job every 24 hours
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runUsEtfDailyPriceBatch() {
+        try {
+            log.info("Starting scheduled US ETF daily price update batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(usEtfDailyPriceJob, jobParameters);
+
+            log.info("US ETF daily price update batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute US ETF daily price update batch job", e);
+        }
+    }
+
+    /**
+     * Execute exchange rate update batch job every 24 hours
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runExchangeRateBatch() {
+        try {
+            log.info("Starting scheduled exchange rate update batch job");
+
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+
+            jobLauncher.run(exchangeRateJob, jobParameters);
+
+            log.info("Exchange rate update batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute exchange rate update batch job", e);
         }
     }
 }

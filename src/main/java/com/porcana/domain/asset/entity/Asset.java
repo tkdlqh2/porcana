@@ -46,6 +46,10 @@ public class Asset {
     @Column(length = 50)
     private Sector sector;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private AssetClass assetClass;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "asset_universe_tags",
@@ -71,12 +75,13 @@ public class Asset {
 
     @Builder
     public Asset(Market market, String symbol, String name, AssetType type, Sector sector,
-                 List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
+                 AssetClass assetClass, List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
         this.market = market;
         this.symbol = symbol;
         this.name = name;
         this.type = type;
         this.sector = sector;
+        this.assetClass = assetClass;
         this.universeTags = universeTags != null ? universeTags : new ArrayList<>();
         this.active = active != null ? active : false;
         this.asOf = asOf;

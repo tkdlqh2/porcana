@@ -125,7 +125,8 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 - `symbol`: String - 종목 코드 (US: AAPL, KR: 005930)
 - `name`: String - 종목명
 - `type`: ENUM (STOCK | ETF) - 상품 유형
-- `sector`: ENUM (Sector) - GICS 표준 섹터 (MATERIALS, COMMUNICATION_SERVICES, CONSUMER_DISCRETIONARY, CONSUMER_STAPLES, ENERGY, FINANCIALS, HEALTH_CARE, INDUSTRIALS, REAL_ESTATE, INFORMATION_TECHNOLOGY, UTILITIES)
+- `sector`: ENUM (Sector) - GICS 표준 섹터 (주식 전용, ETF는 NULL)
+- `asset_class`: ENUM (AssetClass) - ETF 자산 클래스 (ETF 전용, STOCK은 NULL)
 - `universe_tags`: List<UniverseTag> - 유니버스 태그 (SP500, NASDAQ100, KOSPI200, KOSDAQ150 등)
 - `active`: Boolean - 활성화 여부 (카드 풀에 포함 여부)
 - `as_of`: LocalDate - 기준일 (이 레코드가 "언제 기준"인지)
@@ -150,7 +151,10 @@ public class Asset {
     private AssetType type;  // STOCK, ETF
 
     @Enumerated(EnumType.STRING)
-    private Sector sector;  // GICS 표준 섹터
+    private Sector sector;  // GICS 표준 섹터 (주식 전용)
+
+    @Enumerated(EnumType.STRING)
+    private AssetClass assetClass;  // ETF 자산 클래스 (ETF 전용)
 
     @ElementCollection
     @Enumerated(EnumType.STRING)
@@ -193,6 +197,21 @@ public enum Sector {
 - Real Estate → REAL_ESTATE
 - Technology → INFORMATION_TECHNOLOGY
 - Utilities → UTILITIES
+
+**AssetClass ENUM (ETF 분류):**
+```java
+public enum AssetClass {
+    EQUITY_INDEX,    // 주식 인덱스 ETF (SPY, KODEX 200)
+    SECTOR,          // 섹터별 ETF (XLK, KODEX 반도체)
+    DIVIDEND,        // 배당 ETF (SCHD, TIGER 고배당)
+    BOND,            // 채권 ETF (TLT, KODEX 국고채10년)
+    COMMODITY        // 원자재 ETF (GLD, KRX 금현물)
+}
+```
+
+**주의사항:**
+- `sector`는 주식(STOCK) 전용 필드로, ETF는 NULL
+- `assetClass`는 ETF 전용 필드로, 주식은 NULL
 
 ### Spring Batch 기반 종목 데이터 생성 전략
 
@@ -249,6 +268,64 @@ public enum Sector {
 - 초기 데이터 구축: 수동 실행 (./gradlew bootRun --args='--spring.batch.job.names=krAssetBatchJob')
 - 정기 업데이트: 주 1회 스케줄링 (매주 일요일 02:00 KST)
 
+### ETF 데이터 생성 전략
+
+**한국 ETF (KR Market):**
+1. **ETF 데이터 수집** (CSV 기반)
+   - CSV 파일 (`kr_etf.csv`)에서 ETF 목록 읽기
+   - 포맷: `symbol, name, asset_class`
+   - 예시: `069500, KODEX 200, EQUITY_INDEX`
+
+2. **데이터 처리**
+   - `type = ETF`
+   - `active = true` (CSV에 있는 ETF는 모두 활성화)
+   - `assetClass` 매핑: CSV의 asset_class 컬럼 값
+
+3. **Batch Job 구조**
+   ```
+   KrEtfBatchJob
+   ├─ Step 1: importKrEtfsStep
+   │   └─ kr_etf.csv 읽기 → assets 테이블 upsert
+   └─ Step 2: fetchKrEtfHistoricalPricesStep
+       └─ 과거 1년치 가격 데이터 수집 (24시간 이내 생성된 ETF만)
+   ```
+
+4. **가격 데이터 소스**
+   - API: data.go.kr `GetSecuritiesProductInfoService/getETFPriceInfo`
+   - 과거 1년치 일일 가격 데이터 수집
+
+**미국 ETF (US Market):**
+1. **ETF 데이터 수집** (CSV 기반)
+   - CSV 파일 (`us_etf.csv`)에서 ETF 목록 읽기
+   - 포맷: `symbol, name, asset_class`
+   - 예시: `SPY, S&P 500 ETF, EQUITY_INDEX`
+
+2. **데이터 처리**
+   - `type = ETF`
+   - `active = true`
+   - `assetClass` 매핑: CSV의 asset_class 컬럼 값
+
+3. **Batch Job 구조**
+   ```
+   UsEtfBatchJob
+   ├─ Step 1: importUsEtfsStep
+   │   └─ us_etf.csv 읽기 → assets 테이블 upsert
+   └─ Step 2: fetchUsEtfHistoricalPricesStep
+       └─ 과거 1년치 가격 데이터 수집 (24시간 이내 생성된 ETF만)
+   ```
+
+4. **가격 데이터 소스**
+   - API: FMP `historical-price-eod`
+   - 주식과 동일한 API 사용
+
+**배치 실행 주기:**
+- 초기 데이터 구축: 수동 실행
+  ```bash
+  ./gradlew bootRun --args='--spring.batch.job.names=krEtfJob'
+  ./gradlew bootRun --args='--spring.batch.job.names=usEtfJob'
+  ```
+- 정기 업데이트: 주 1회 스케줄링 (매주 일요일 02:00 KST, 주식과 함께)
+
 ---
 
 ## Spring Batch 기반 일일 가격 업데이트 전략
@@ -269,11 +346,11 @@ public enum Sector {
 
 ### 일일 가격 업데이트 배치 Job
 
-**한국 마켓 (krDailyPriceJob):**
-- **대상**: `active = true`인 모든 한국 종목
+**한국 주식 (krDailyPriceJob):**
+- **대상**: `active = true AND type = STOCK`인 모든 한국 주식
 - **데이터 소스**: data.go.kr API (`getStockPriceInfo`)
 - **처리 로직**:
-  1. active한 종목 목록 조회
+  1. active한 주식 목록 조회
   2. 각 종목마다 최근 5일치 데이터 요청 (최신 거래일 확보)
   3. 최신 거래일 가격 추출
   4. 중복 체크 (`asset_id + price_date`)
@@ -281,17 +358,31 @@ public enum Sector {
 - **Rate Limiting**: 100ms 딜레이
 - **실행 주기**: 매 평일 18:00 KST (장 마감 15:30 이후)
 
-**미국 마켓 (usDailyPriceJob):**
-- **대상**: `active = true`인 모든 미국 종목
+**한국 ETF (krEtfDailyPriceJob):**
+- **대상**: `active = true AND type = ETF`인 모든 한국 ETF
+- **데이터 소스**: data.go.kr API (`getETFPriceInfo`)
+- **처리 로직**: 주식과 동일
+- **Rate Limiting**: 100ms 딜레이
+- **실행 주기**: 매 평일 18:00 KST (주식 가격 업데이트 직후)
+
+**미국 주식 (usDailyPriceJob):**
+- **대상**: `active = true AND type = STOCK`인 모든 미국 주식
 - **데이터 소스**: FMP API (`historical-price-eod`)
 - **처리 로직**:
-  1. active한 종목 목록 조회
+  1. active한 주식 목록 조회
   2. 각 종목마다 최근 3일치 데이터 요청 (최신 거래일 확보)
   3. 최신 거래일 가격 추출 (FMP는 최신순 정렬)
   4. 중복 체크 (`asset_id + price_date`)
   5. 신규 가격만 저장
 - **Rate Limiting**: 150ms 딜레이
 - **실행 주기**: 매 평일 07:00 KST (미국 장 마감 후, TUE-SAT KST = MON-FRI EST)
+
+**미국 ETF (usEtfDailyPriceJob):**
+- **대상**: `active = true AND type = ETF`인 모든 미국 ETF
+- **데이터 소스**: FMP API (`historical-price-eod`)
+- **처리 로직**: 주식과 동일 (FMP API는 주식/ETF 구분 없이 동일 엔드포인트)
+- **Rate Limiting**: 150ms 딜레이
+- **실행 주기**: 매 평일 07:00 KST (주식 가격 업데이트 직후)
 
 **배치 스케줄링 (BatchConfig):**
 ```java
@@ -306,11 +397,111 @@ public void runUsDailyPriceUpdate()
 
 **수동 실행:**
 ```bash
-# 한국 시장 일일 가격 업데이트
+# 한국 주식 일일 가격 업데이트
 ./gradlew bootRun --args='--spring.batch.job.names=krDailyPriceJob'
 
-# 미국 시장 일일 가격 업데이트
+# 한국 ETF 일일 가격 업데이트
+./gradlew bootRun --args='--spring.batch.job.names=krEtfDailyPriceJob'
+
+# 미국 주식 일일 가격 업데이트
 ./gradlew bootRun --args='--spring.batch.job.names=usDailyPriceJob'
+
+# 미국 ETF 일일 가격 업데이트
+./gradlew bootRun --args='--spring.batch.job.names=usEtfDailyPriceJob'
+```
+
+---
+
+## 환율 데이터 관리
+
+### ExchangeRate (환율) Entity
+
+일일 환율 정보를 저장합니다.
+
+**필드 설계:**
+- `id`: UUID (Primary Key)
+- `currency_code`: ENUM (CurrencyCode) - 통화 코드
+- `currency_name`: String - 통화명
+- `base_rate`: BigDecimal - 매매기준율 (KRW 기준)
+- `buy_rate`: BigDecimal - 송금 받을 때 환율 (살 때)
+- `sell_rate`: BigDecimal - 송금 보낼 때 환율 (팔 때)
+- `exchange_date`: LocalDate - 환율 기준일
+- `created_at`: LocalDateTime
+
+**Unique Index:** `(currency_code, exchange_date)` - 중복 방지
+
+**CurrencyCode ENUM:**
+```java
+public enum CurrencyCode {
+    // 주요 통화
+    USD, EUR, JPY, GBP, CNY,
+    // 아시아/오세아니아
+    HKD, TWD, SGD, THB, MYR, IDR, PHP, VND, INR, AUD, NZD,
+    // 중동
+    SAR, KWD, BHD, AED, QAR, OMR,
+    // 유럽
+    CHF, SEK, NOK, DKK, CZK, HUF, PLN, RUB,
+    // 기타
+    CAD, MXN, BRL, ZAR, TRY, ILS, EGP, JOD
+    // ... 총 43개 통화
+}
+```
+
+### 일일 환율 업데이트 배치 Job
+
+**환율 업데이트 (exchangeRateJob):**
+- **대상**: 한국수출입은행이 제공하는 모든 통화
+- **데이터 소스**: 한국수출입은행 API
+  - API: `https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON`
+  - 파라미터: `authkey`, `searchdate` (YYYYMMDD), `data=AP01`
+- **처리 로직**:
+  1. 오늘 날짜 기준으로 환율 데이터 요청
+  2. API 응답에서 통화 코드 파싱 (예: "JPY(100)" → "JPY")
+  3. CurrencyCode enum에 정의된 통화만 필터링 (지원하지 않는 통화는 자동 스킵)
+  4. 중복 체크 (`currency_code + exchange_date`)
+  5. Upsert 처리
+- **실행 주기**: 매 평일 11:00 KST
+  - 한국수출입은행은 평일 10시경 환율 업데이트
+  - 11시에 배치 실행하여 최신 데이터 수집
+
+**수동 실행:**
+```bash
+./gradlew bootRun --args='--spring.batch.job.names=exchangeRateJob'
+```
+
+---
+
+## 배치 스케줄 전체 요약
+
+### 주간 스케줄 (일요일 02:00 KST)
+```
+runWeeklyAssetUpdate()
+├─ krAssetJob - 한국 주식 종목 업데이트
+├─ krEtfJob - 한국 ETF 종목 업데이트 + 과거 가격
+├─ usAssetJob - 미국 주식 종목 업데이트
+└─ usEtfJob - 미국 ETF 종목 업데이트 + 과거 가격
+```
+
+### 일일 스케줄 (평일)
+
+**07:00 KST (화-토)** - 미국 시장 가격 업데이트
+```
+runUsDailyPriceUpdate()
+├─ usDailyPriceJob - 미국 주식 가격
+└─ usEtfDailyPriceJob - 미국 ETF 가격
+```
+
+**11:00 KST (월-금)** - 환율 업데이트
+```
+runExchangeRateUpdate()
+└─ exchangeRateJob - 환율 데이터
+```
+
+**18:00 KST (월-금)** - 한국 시장 가격 업데이트
+```
+runKrDailyPriceUpdate()
+├─ krDailyPriceJob - 한국 주식 가격
+└─ krEtfDailyPriceJob - 한국 ETF 가격
 ```
 
 ---
