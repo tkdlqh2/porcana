@@ -16,6 +16,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Provider for fetching exchange rates from Korea Exim Bank API
@@ -77,16 +79,16 @@ public class KoreaEximProvider {
                         continue;
                     }
 
-                    // Parse currency code (e.g., "USD" from "USD")
-                    String currencyCodeStr = parseCurrencyCodeString(response.getCurUnit());
-                    if (currencyCodeStr == null) {
+                    // Parse currency code and multiplier (e.g., "USD" -> ("USD", 1), "JPY(100)" -> ("JPY", 100))
+                    CurrencyParseResult parseResult = parseCurrencyUnit(response.getCurUnit());
+                    if (parseResult == null) {
                         continue;
                     }
 
                     // Convert to CurrencyCode enum
-                    CurrencyCode currencyCode = CurrencyCode.fromCode(currencyCodeStr);
+                    CurrencyCode currencyCode = CurrencyCode.fromCode(parseResult.code());
                     if (currencyCode == null) {
-                        log.debug("Unsupported currency code: {}. Skipping.", currencyCodeStr);
+                        log.debug("Unsupported currency code: {}. Skipping.", parseResult.code());
                         continue;
                     }
 
@@ -98,6 +100,19 @@ public class KoreaEximProvider {
                     if (baseRate == null) {
                         log.warn("Invalid base rate for currency: {}", currencyCode);
                         continue;
+                    }
+
+                    // Apply multiplier if present (e.g., JPY(100) means rate is for 100 units)
+                    // Divide by multiplier to get rate per single unit
+                    int multiplier = parseResult.multiplier();
+                    if (multiplier > 1) {
+                        baseRate = baseRate.divide(BigDecimal.valueOf(multiplier), 4, java.math.RoundingMode.HALF_UP);
+                        if (buyRate != null) {
+                            buyRate = buyRate.divide(BigDecimal.valueOf(multiplier), 4, java.math.RoundingMode.HALF_UP);
+                        }
+                        if (sellRate != null) {
+                            sellRate = sellRate.divide(BigDecimal.valueOf(multiplier), 4, java.math.RoundingMode.HALF_UP);
+                        }
                     }
 
                     ExchangeRate exchangeRate = ExchangeRate.builder()
@@ -126,21 +141,29 @@ public class KoreaEximProvider {
     }
 
     /**
-     * Parse currency code string from cur_unit field
-     * Examples: "USD" -> "USD", "JPY(100)" -> "JPY", "EUR" -> "EUR"
+     * Parse currency code and multiplier from cur_unit field
+     * Examples: "USD" -> ("USD", 1), "JPY(100)" -> ("JPY", 100)
      */
-    private String parseCurrencyCodeString(String curUnit) {
+    private CurrencyParseResult parseCurrencyUnit(String curUnit) {
         if (curUnit == null || curUnit.trim().isEmpty()) {
             return null;
         }
 
-        // Remove parentheses and numbers (e.g., "JPY(100)" -> "JPY")
-        String code = curUnit.replaceAll("\\(.*\\)", "").trim();
+        int multiplier = 1;
+        String code = curUnit.trim();
+
+        // Extract multiplier from parentheses (e.g., "JPY(100)" -> multiplier=100)
+        Pattern pattern = Pattern.compile("\\((\\d+)\\)");
+        Matcher matcher = pattern.matcher(curUnit);
+        if (matcher.find()) {
+            multiplier = Integer.parseInt(matcher.group(1));
+            code = curUnit.replaceAll("\\(.*\\)", "").trim();
+        }
 
         // Some currencies might have spaces
         code = code.split("\\s+")[0];
 
-        return code;
+        return new CurrencyParseResult(code, multiplier);
     }
 
     /**
@@ -200,5 +223,14 @@ public class KoreaEximProvider {
 
         @JsonProperty("kftc_bkpr")
         private String kftcBkpr;  // 서울외국환중개 장부가격
+    }
+
+    /**
+     * Result of parsing currency unit string
+     *
+     * @param code       Currency code (e.g., "USD", "JPY")
+     * @param multiplier Multiplier for the rate (e.g., 1 for USD, 100 for JPY)
+     */
+    private record CurrencyParseResult(String code, int multiplier) {
     }
 }
