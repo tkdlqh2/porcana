@@ -1,6 +1,8 @@
 package com.porcana.domain.asset.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
@@ -44,6 +46,8 @@ public class AssetRiskHistory {
      * 1: Low, 2-4: Medium, 5: High
      */
     @Column(name = "risk_level", nullable = false)
+    @Min(1)
+    @Max(5)
     private Integer riskLevel;
 
     /**

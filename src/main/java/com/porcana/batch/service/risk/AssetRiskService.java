@@ -51,7 +51,9 @@ public class AssetRiskService {
         }
 
         // 2. 각 자산별 가격 데이터 조회 및 위험도 메트릭 계산
-        Map<UUID, RiskMetrics> assetMetricsMap = new HashMap<>();
+        // LinkedHashMap을 사용하여 순서 유지
+        Map<UUID, RiskMetrics> assetMetricsMap = new LinkedHashMap<>();
+        Map<UUID, Asset> validAssetMap = new LinkedHashMap<>();
         List<RiskMetrics> allMetrics = new ArrayList<>();
 
         for (Asset asset : activeAssets) {
@@ -74,6 +76,7 @@ public class AssetRiskService {
 
                 if (metrics != null) {
                     assetMetricsMap.put(asset.getId(), metrics);
+                    validAssetMap.put(asset.getId(), asset);
                     allMetrics.add(metrics);
                 }
 
@@ -92,10 +95,9 @@ public class AssetRiskService {
         // 3. 퍼센타일 기반 위험도 점수 및 레벨 계산
         List<RiskMetrics> metricsWithScores = riskCalculator.calculateRiskScoresWithPercentiles(allMetrics);
 
-        if (metricsWithScores.size() != assetMetricsMap.size()) {
-            log.error("Mismatch in metrics count: calculated={}, original={}",
-                    metricsWithScores.size(), assetMetricsMap.size());
-            return;
+        if (metricsWithScores.size() != allMetrics.size()) {
+            log.warn("Some metrics were filtered during percentile calculation: input={}, output={}",
+                    allMetrics.size(), metricsWithScores.size());
         }
 
         // 4. 각 자산의 위험도 업데이트 및 이력 저장
@@ -103,19 +105,13 @@ public class AssetRiskService {
         int savedCount = 0;
         int updatedCount = 0;
 
-        // metricsWithScores와 activeAssets를 동일한 순서로 매칭
-        Iterator<Asset> assetIterator = activeAssets.iterator();
-        Iterator<RiskMetrics> metricsIterator = metricsWithScores.iterator();
+        // LinkedHashMap의 순서를 사용하여 자산 ID와 메트릭 매칭
+        List<UUID> assetIds = new ArrayList<>(validAssetMap.keySet());
 
-        while (assetIterator.hasNext() && metricsIterator.hasNext()) {
-            Asset asset = assetIterator.next();
-
-            // 해당 자산의 메트릭이 있는지 확인
-            if (!assetMetricsMap.containsKey(asset.getId())) {
-                continue;
-            }
-
-            RiskMetrics metrics = metricsIterator.next();
+        for (int i = 0; i < metricsWithScores.size() && i < assetIds.size(); i++) {
+            UUID assetId = assetIds.get(i);
+            Asset asset = validAssetMap.get(assetId);
+            RiskMetrics metrics = metricsWithScores.get(i);
 
             try {
                 // Asset의 currentRiskLevel 업데이트
@@ -124,7 +120,7 @@ public class AssetRiskService {
                 updatedCount++;
 
                 // AssetRiskHistory 저장 (중복 체크)
-                if (!assetRiskHistoryRepository.existsByAssetIdAndWeek(asset.getId(), currentWeek)) {
+                if (!assetRiskHistoryRepository.existsByAssetIdAndWeek(assetId, currentWeek)) {
                     AssetRiskHistory history = AssetRiskHistory.builder()
                             .asset(asset)
                             .week(currentWeek)

@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Jackson ObjectMapper 설정
- * LocalDateTime/LocalDate를 ISO-8601 문자열로 직렬화/역직렬화
+ * LocalDateTime/LocalDate를 커스텀 문자열 형식으로 직렬화/역직렬화
  */
 @Configuration
 public class JacksonConfig {
