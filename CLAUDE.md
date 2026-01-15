@@ -128,6 +128,7 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 - `sector`: ENUM (Sector) - GICS 표준 섹터 (주식 전용, ETF는 NULL)
 - `asset_class`: ENUM (AssetClass) - ETF 자산 클래스 (ETF 전용, STOCK은 NULL)
 - `universe_tags`: List<UniverseTag> - 유니버스 태그 (SP500, NASDAQ100, KOSPI200, KOSDAQ150 등)
+- `current_risk_level`: Integer (1~5) - 현재 위험도 (1: Low, 5: High)
 - `active`: Boolean - 활성화 여부 (카드 풀에 포함 여부)
 - `as_of`: LocalDate - 기준일 (이 레코드가 "언제 기준"인지)
 - `created_at`: LocalDateTime
@@ -471,15 +472,142 @@ public enum CurrencyCode {
 
 ---
 
+## 종목 위험도 관리
+
+### AssetRiskHistory (위험도 이력) Entity
+
+종목의 위험도 계산 이력을 주 단위로 저장합니다.
+
+**필드 설계:**
+- `id`: UUID (Primary Key)
+- `asset_id`: UUID (Foreign Key → assets)
+- `week`: String (YYYY-WW 포맷, 예: "2025-W03")
+- `risk_level`: Integer (1~5) - 위험도 레벨
+- `risk_score`: BigDecimal - 위험도 점수 (0~100)
+- `volatility`: BigDecimal - 변동성 (연율화)
+- `max_drawdown`: BigDecimal - 최대낙폭 (MDD)
+- `worst_day_return`: BigDecimal - 1일 최악 하락률
+- `factors_snapshot`: JSON - 계산에 사용된 추가 요소 스냅샷
+- `created_at`: LocalDateTime
+
+**Unique Index:** `(asset_id, week)` - 중복 방지
+
+### 위험도 저장 전략
+
+**설계 원칙:**
+- **현재 위험도**: `Asset.currentRiskLevel` 필드에 저장 (1~5)
+- **과거 이력**: `AssetRiskHistory` 테이블에 주 단위로 저장
+- **위험도는 계산 결과물**: 수익률처럼 정밀 시계열 데이터가 아님
+- **서비스에서 필요한 것**: "지금 위험도"
+- **히스토리는 설명·분석·메타 리포트용**
+
+### 위험도 계산 방식
+
+**전제 조건:**
+- 위험도는 **수익률(returns) 기반**으로 계산
+- 환율/가격 단위와 무관하게 미장/한국장 통합 가능
+- 일간 로그수익률: `r_t = ln(P_t / P_{t-1})`
+
+**핵심 지표 3개:**
+
+1. **변동성 (Volatility)** - 최근 60 거래일
+   - 표준편차를 연율화: `vol = std(r_{t-59..t}) × √252`
+   - 의미: "평소에 흔들림이 얼마나 큰가"
+
+2. **최대낙폭 (MDD)** - 최근 252 거래일
+   - 누적 가격의 고점 대비 저점 하락 최대치
+   - `mdd = max_t(1 - P_t / max(P_{0..t}))`
+   - 의미: "한번 무너지면 얼마나 크게 무너졌나"
+
+3. **1일 최악 하락 (Worst Day)** - 최근 252 거래일
+   - `worst = min(r_{t-251..t})`
+   - 의미: "갭하락/급락 같은 꼬리리스크"
+
+**점수화 (스케일 통일): 퍼센타일 정규화**
+
+미장/한국장/ETF/주식을 같은 스케일로 만들기 위해 퍼센타일 사용:
+
+```
+각 자산 i에 대해:
+- volPct = percentile_rank(vol_i)
+- mddPct = percentile_rank(mdd_i)
+- worstPct = percentile_rank(-worst_i)  // worst가 더 큰 급락일수록 위험↑
+
+퍼센타일 범위: 0~1
+```
+
+**최종 RiskScore (0~100):**
+
+```
+riskScore = 100 × (0.45 × volPct + 0.45 × mddPct + 0.10 × worstPct)
+
+가중치:
+- 변동성: 45%
+- 최대낙폭: 45%
+- 꼬리리스크: 10%
+```
+
+**RiskLevel 1~5 매핑 (퀸타일 기준):**
+
+- 0~20 → 1 (Low)
+- 20~40 → 2
+- 40~60 → 3
+- 60~80 → 4
+- 80~100 → 5 (High)
+
+**설계 특징:**
+- **모든 자산에 동일한 위험도 규칙 적용** (마켓/ETF/주식 구분 없음)
+- **위험도는 절대 스케일**: "위험도 4"는 어떤 자산이든 동일한 의미
+- **ETF는 자연스럽게 저위험**으로 계산됨 (별도 규칙 불필요)
+- **퍼센타일 기반**이라 시장 전체가 불안해져도 "상대적 위험"이 유지
+
+### 주간 위험도 계산 배치 Job
+
+**위험도 계산 (assetRiskJob):**
+- **대상**: `active = true`인 모든 종목 (주식 + ETF, 한국 + 미국)
+- **데이터 소스**: `asset_prices` 테이블 (일봉 종가)
+- **처리 로직**:
+  1. 전 자산의 최근 252일 가격 데이터 로딩
+  2. 각 자산별로 returns 계산
+  3. Volatility, MDD, Worst Day 계산
+  4. 전체 자산 기준 퍼센타일 산출
+  5. riskScore 계산 (0~100)
+  6. riskLevel 매핑 (1~5)
+  7. `Asset.currentRiskLevel` 업데이트
+  8. `AssetRiskHistory` insert (week, riskLevel, riskScore, volatility, mdd, worstDayReturn)
+- **실행 주기**: 매주 일요일 03:00 KST
+  - 주간 종목 업데이트 (02:00) 직후 실행
+  - 최근 8~12주 데이터 rolling window로 위험도 재계산
+
+**수동 실행:**
+```bash
+./gradlew bootRun --args='--spring.batch.job.names=assetRiskJob'
+```
+
+**데이터 요구사항:**
+- **필요한 데이터**: 일봉 종가만 (최소 252일, 부족하면 가능한 범위 내 계산)
+- **저장 주기**: 주 1회
+- **히스토리 관리**: week(YYYY-WW) 기준으로 과거 위험도 조회 가능
+
+---
+
 ## 배치 스케줄 전체 요약
 
-### 주간 스케줄 (일요일 02:00 KST)
+### 주간 스케줄 (일요일)
+
+**02:00 KST** - 종목 데이터 업데이트
 ```
 runWeeklyAssetUpdate()
 ├─ krAssetJob - 한국 주식 종목 업데이트
 ├─ krEtfJob - 한국 ETF 종목 업데이트 + 과거 가격
 ├─ usAssetJob - 미국 주식 종목 업데이트
 └─ usEtfJob - 미국 ETF 종목 업데이트 + 과거 가격
+```
+
+**03:00 KST** - 위험도 계산
+```
+runWeeklyRiskUpdate()
+└─ assetRiskJob - 종목 위험도 계산 및 업데이트
 ```
 
 ### 일일 스케줄 (평일)

@@ -62,6 +62,9 @@ public class Asset {
     @Column(nullable = false)
     private Boolean active;
 
+    @Column(name = "current_risk_level")
+    private Integer currentRiskLevel;
+
     @Column(nullable = false)
     private LocalDate asOf;
 
@@ -111,6 +114,13 @@ public class Asset {
 
     public void updateAsOf(LocalDate asOf) {
         this.asOf = asOf;
+    }
+
+    public void updateCurrentRiskLevel(Integer riskLevel) {
+        if (riskLevel != null && (riskLevel < 1 || riskLevel > 5)) {
+            throw new IllegalArgumentException("Risk level must be between 1 and 5");
+        }
+        this.currentRiskLevel = riskLevel;
     }
 
     public enum Market {
