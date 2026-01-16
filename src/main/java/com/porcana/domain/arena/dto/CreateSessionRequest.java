@@ -1,10 +1,11 @@
 package com.porcana.domain.arena.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
 
-@Getter
-@NoArgsConstructor
-public class CreateSessionRequest {
-    private String portfolioId;
+import java.util.UUID;
+
+public record CreateSessionRequest(
+        @NotNull(message = "Portfolio ID is required")
+        UUID portfolioId
+) {
 }

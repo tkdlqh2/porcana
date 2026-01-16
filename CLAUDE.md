@@ -829,58 +829,508 @@ Response
 # 5) Arena (Hearthstone-style drafting)
 
 ## POST /arena/sessions
+**Description**: 포트폴리오에 대한 새로운 아레나 드래프트 세션을 시작합니다. 이미 진행 중인 세션이 있으면 해당 세션을 반환합니다.
+
+**Auth**: Required (JWT)
+
 Request
 {
 "portfolioId": "uuid"
 }
-Response
+
+Response (200 OK)
 {
 "sessionId": "uuid",
 "portfolioId": "uuid",
-"status": "IN_PROGRESS|COMPLETED",
+"status": "IN_PROGRESS",
 "currentRound": 1
 }
 
-## GET /arena/sessions/{sessionId}/rounds/current
-Response
-{
-"sessionId": "uuid",
-"round": 1,
-"assets": [
-{
-"assetId": "uuid",
-"ticker": "string",
-"name": "string",
-"oneLineThesis": "string",
-"tags": ["string"]
-}
-]
-}
+Error Responses
+- 400: 포트폴리오를 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
 
-## POST /arena/sessions/{sessionId}/rounds/current/pick
-Request
-{
-"pickedAssetId": "uuid"
-}
-Response
-{
-"sessionId": "uuid",
-"status": "IN_PROGRESS|COMPLETED",
-"currentRound": 2,
-"picked": {
-"assetId": "uuid"
-}
-}
+---
 
 ## GET /arena/sessions/{sessionId}
-Response
+**Description**: 진행 중이거나 완료된 아레나 세션의 상세 정보를 조회합니다.
+
+**Auth**: Required (JWT)
+
+Response (200 OK)
 {
 "sessionId": "uuid",
 "portfolioId": "uuid",
 "status": "IN_PROGRESS|COMPLETED",
 "currentRound": 3,
-"totalRounds": 10
+"totalRounds": 12,
+"riskProfile": "BALANCED",
+"selectedSectors": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"],
+"selectedAssetIds": ["uuid1", "uuid2"]
 }
+
+Error Responses
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## GET /arena/sessions/{sessionId}/rounds/current
+**Description**: 현재 진행 중인 라운드의 선택지를 조회합니다.
+- Round 1: 리스크 프로필 선택
+- Round 2: 섹터 선택
+- Round 3-12: 자산 선택
+
+**Auth**: Required (JWT)
+
+Response for Round 1 (Risk Profile)
+{
+"sessionId": "uuid",
+"round": 1,
+"roundType": "RISK_PROFILE",
+"options": [
+{
+"value": "SAFE",
+"displayName": "안전 추구형",
+"description": "낮은 변동성, 안정적인 수익 추구"
+},
+{
+"value": "BALANCED",
+"displayName": "균형형",
+"description": "중간 수준의 위험과 수익 균형"
+},
+{
+"value": "AGGRESSIVE",
+"displayName": "공격 투자형",
+"description": "높은 변동성, 높은 수익 추구"
+}
+]
+}
+
+Response for Round 2 (Sector Selection)
+{
+"sessionId": "uuid",
+"round": 2,
+"roundType": "SECTOR",
+"sectors": [
+{
+"sector": "INFORMATION_TECHNOLOGY",
+"displayName": "정보기술",
+"description": "소프트웨어, 하드웨어, IT 서비스"
+},
+// ... more sectors
+],
+"minSelection": 0,
+"maxSelection": 3
+}
+
+Response for Round 3-12 (Asset Selection)
+{
+"sessionId": "uuid",
+"round": 3,
+"roundType": "ASSET",
+"assets": [
+{
+"assetId": "uuid",
+"ticker": "AAPL",
+"name": "Apple Inc.",
+"sector": "INFORMATION_TECHNOLOGY",
+"riskLevel": 3,
+"market": "US"
+},
+{
+"assetId": "uuid",
+"ticker": "MSFT",
+"name": "Microsoft Corp.",
+"sector": "INFORMATION_TECHNOLOGY",
+"riskLevel": 2,
+"market": "US"
+},
+{
+"assetId": "uuid",
+"ticker": "JNJ",
+"name": "Johnson & Johnson",
+"sector": "HEALTH_CARE",
+"riskLevel": 2,
+"market": "US"
+}
+]
+}
+
+Error Responses
+- 400: 세션이 이미 완료됨
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## POST /arena/sessions/{sessionId}/rounds/current/pick-risk-profile
+**Description**: 아레나 Round 1에서 리스크 프로필을 선택합니다.
+
+**Auth**: Required (JWT)
+
+Request
+{
+"riskProfile": "SAFE|BALANCED|AGGRESSIVE"
+}
+
+Response (200 OK)
+{
+"sessionId": "uuid",
+"status": "IN_PROGRESS",
+"currentRound": 2,
+"picked": "BALANCED"
+}
+
+Error Responses
+- 400: Round 1이 아니거나 유효하지 않은 리스크 프로필
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## POST /arena/sessions/{sessionId}/rounds/current/pick-sectors
+**Description**: 아레나 Round 2에서 관심 섹터를 선택합니다. 0-3개의 섹터를 선택해야 합니다.
+
+**Auth**: Required (JWT)
+
+Request
+{
+"sectors": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"]
+}
+
+Response (200 OK)
+{
+"sessionId": "uuid",
+"status": "IN_PROGRESS",
+"currentRound": 3,
+"picked": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"]
+}
+
+Error Responses
+- 400: Round 2가 아니거나 섹터 개수가 2-3개가 아님
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## POST /arena/sessions/{sessionId}/rounds/current/pick-asset
+**Description**: 아레나 Round 3-12에서 제시된 3개의 자산 중 1개를 선택합니다. Round 12 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.
+
+**Auth**: Required (JWT)
+
+Request
+{
+"pickedAssetId": "uuid"
+}
+
+Response (200 OK)
+{
+"sessionId": "uuid",
+"status": "IN_PROGRESS|COMPLETED",
+"currentRound": 4,
+"picked": "uuid"
+}
+
+Error Responses
+- 400: Round 3-12가 아니거나 제시된 자산 목록에 없는 자산 선택
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+# 5-1) Arena Asset Recommendation Logic
+
+## Overview
+Arena는 Hearthstone-style의 드래프트 시스템으로, 사용자가 3개의 선택지 중 1개를 선택하여 포트폴리오를 구성합니다.
+
+## Round Structure
+- **Round 1**: Risk Profile 선택 (SAFE, BALANCED, AGGRESSIVE)
+- **Round 2**: Sector 선택 (0-3개 섹터, 중복 불가)
+- **Rounds 3-12**: Asset 선택 (라운드당 3개 중 1개)
+
+## Asset Recommendation Algorithm
+
+### Entry Point
+```java
+List<Asset> generateRoundOptions(ArenaSession session, int roundNo)
+```
+
+### Input Context
+- `riskProfile`: SAFE | BALANCED | AGGRESSIVE
+- `preferredSectors`: 사용자가 선택한 2-3개 섹터
+- `deckAssetIds`: 이미 선택된 자산 (중복 방지)
+- `shownAssetIds`: 이전 라운드에 제시된 자산 (재사용 방지, 후보 부족 시 완화)
+
+### Optimization Strategy
+**메모리 효율성을 위해 전체 ~1000개 assets를 로드하지 않고, 필요한 subset만 조회:**
+
+1. **Preferred Candidates (Normal Picks용)**
+   ```java
+   List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);
+   // 선호 섹터 (2-3개)에 속한 자산만 로드 (약 200-300개)
+   ```
+
+2. **Wild Candidates (Wild Pick용)**
+   ```java
+   List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
+   // 선호 섹터가 아닌 자산들 (의외성 보장)
+   ```
+
+3. **Filter Excluded Assets**
+   ```java
+   candidates = filterExcludedAssets(candidates, deckAssetIds + shownAssetIds);
+   ```
+
+### Selection Process
+
+#### 1) Normal Picks (2개)
+선호 섹터 + 리스크 프로필 + 다양성 패널티 반영
+
+```java
+for i in 1..2:
+  next = weightedPickOne(preferredCandidates, riskProfile, preferredSectors, alreadyPicked, useSectorPreference=true);
+  picked.add(next);
+  preferredCandidates.remove(next);
+  wildCandidates.remove(next);
+```
+
+#### 2) Wild Pick (1개)
+섹터 선호 무시, 다양성만 유지 (의외성 보장)
+
+```java
+wild = weightedPickOne(wildCandidates, riskProfile, preferredSectors, alreadyPicked, useSectorPreference=false);
+picked.add(wild);
+```
+
+### Weighted Selection Logic
+
+#### Weight Calculation
+```java
+w = 1.0
+w *= riskWeight(riskProfile, asset.currentRiskLevel);
+w *= sectorWeight(preferredSectors, asset.sector);  // normal picks만
+w *= typeWeight(asset.type);
+w *= diversityPenalty(asset, alreadyPicked);
+w = max(w, 0.0001);  // 안전장치
+```
+
+#### Risk Weight
+```java
+riskWeight(RiskProfile profile, Integer riskScore):
+  if profile == SAFE:
+    if riskScore in [1,2]: return 1.4
+    if riskScore == 3: return 1.0
+    return 0.6  // 4~5
+  if profile == BALANCED:
+    if riskScore in [2,3,4]: return 1.2
+    return 0.8  // 1 or 5
+  if profile == AGGRESSIVE:
+    if riskScore in [4,5]: return 1.4
+    if riskScore == 3: return 1.0
+    return 0.7  // 1~2
+```
+
+#### Sector Weight
+```java
+sectorWeight(Set<Sector> preferredSectors, Sector sector):
+  if preferredSectors.isEmpty(): return 1.0
+  return preferredSectors.contains(sector) ? 1.5 : 1.0
+```
+
+#### Type Weight
+```java
+typeWeight(AssetType assetType):
+  return assetType == ETF ? 1.05 : 1.0
+  // ETF를 "가볍게" 선호 (과도하지 않게)
+```
+
+#### Diversity Penalty
+```java
+diversityPenalty(Asset candidate, List<Asset> alreadyPicked):
+  penalty = 1.0
+
+  // 같은 섹터면 확률 크게 다운
+  if alreadyPicked.any(p => p.sector == candidate.sector):
+    penalty *= 0.35
+
+  // 리스크 밴드 겹치면 조금 다운
+  candBand = riskBand(candidate.riskScore)  // LOW(1-2) | MID(3) | HIGH(4-5)
+  if alreadyPicked.any(p => riskBand(p.riskScore) == candBand):
+    penalty *= 0.70
+
+  return penalty
+```
+
+### Diversity Condition
+라운드당 3개 선택지는 다음 조건을 만족해야 함:
+
+```java
+isDiverseEnough(List<Asset> picked):
+  // 최소 2개 섹터
+  distinctSectors = picked.map(p => p.sector).distinct().size
+  if distinctSectors < 2: return false
+
+  // 최소 2개 리스크 밴드
+  distinctBands = picked.map(p => riskBand(p.riskScore)).distinct().size
+  return distinctBands >= 2
+```
+
+**Retry Logic:**
+- 다양성 조건 실패 시 최대 5회 재시도
+- 재시도 시 `shownAssetIds` 제약 완화
+
+### Fallback Strategy
+후보 부족 시 제약 조건을 단계적으로 완화:
+
+1. **First Try**: `shownAssetIds` 제외
+2. **Fallback**: `shownAssetIds` 제약 완화, `deckAssetIds`만 제외
+3. **Last Resort**: 다양성 조건 완화 (경고 로그)
+
+### Memory Efficiency
+**Before (비효율):**
+```java
+List<Asset> allAssets = assetRepository.findByActiveTrue();  // ~1000개
+// 메모리: ~100-200KB per round
+```
+
+**After (효율):**
+```java
+List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);  // ~200-300개
+List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
+// 메모리: 30-50% 절감
+```
+
+### Example Flow
+```
+Round 3:
+  preferredSectors = [INFORMATION_TECHNOLOGY, HEALTH_CARE]
+  riskProfile = BALANCED
+  deckAssetIds = []
+  shownAssetIds = []
+
+1. Load preferredCandidates (IT + Healthcare assets, ~150개)
+2. Load wildCandidates (other sectors, ~650개)
+3. Pick 2 normal from preferredCandidates (섹터 선호 1.5배, 리스크 가중치)
+4. Pick 1 wild from wildCandidates (섹터 무시, 의외성)
+5. Check diversity (2+ sectors, 2+ risk bands)
+6. Return 3 assets
+
+Result:
+  [
+    { assetId: "...", ticker: "AAPL", sector: "INFORMATION_TECHNOLOGY", riskLevel: 3 },
+    { assetId: "...", ticker: "JNJ", sector: "HEALTH_CARE", riskLevel: 2 },
+    { assetId: "...", ticker: "XOM", sector: "ENERGY", riskLevel: 4 }  // wild pick
+  ]
+```
+
+### Query Optimization (Bucket Sampling)
+
+**Problem:**
+전체 active assets (~1000개)를 로드하는 것조차 여전히 비효율적. 특히 `ORDER BY random()`은 대용량에서 성능 저하.
+
+**Solution: Bucket Sampling**
+DB에서 **선호 섹터 버킷 + 비선호 버킷 + 와일드 버킷**으로 각각 소량 샘플링 → 앱에서 가중치 계산
+
+#### Bucket Sizes (Default)
+- **Preferred Sector Candidates**: 80개
+- **Non-Preferred Sector Candidates**: 40개
+- **Wild Candidates**: 20개
+- **Total**: ~140개 (전체 1000개 대비 86% 절감)
+
+#### 1) Preferred Sector Bucket (80개)
+```sql
+SELECT a.id, a.sector, a.current_risk_level, a.type, a.market
+FROM assets a
+WHERE a.active = true
+  AND a.sector = ANY(:preferred_sectors)
+  AND a.id <> ALL(:deck_asset_ids)
+  AND a.id <> ALL(:shown_asset_ids)
+  AND a.id >= :rand_id
+ORDER BY a.id
+LIMIT 80;
+```
+
+#### 2) Non-Preferred Sector Bucket (40개)
+```sql
+SELECT a.id, a.sector, a.current_risk_level, a.type, a.market
+FROM assets a
+WHERE a.active = true
+  AND (a.sector <> ALL(:preferred_sectors) OR :preferred_sectors_is_empty = true)
+  AND a.id <> ALL(:deck_asset_ids)
+  AND a.id <> ALL(:shown_asset_ids)
+  AND a.id >= :rand_id
+ORDER BY a.id
+LIMIT 40;
+```
+
+#### 3) Wild Bucket (20개)
+```sql
+SELECT a.id, a.sector, a.current_risk_level, a.type, a.market
+FROM assets a
+WHERE a.active = true
+  AND a.id <> ALL(:deck_asset_ids)
+  AND a.id <> ALL(:shown_asset_ids)
+  AND a.id >= :rand_id
+ORDER BY a.id
+LIMIT 20;
+```
+
+#### Random Sampling Strategy (PK Range Random)
+
+**ORDER BY random() 금지**: 대용량 테이블에서 성능 최악
+
+### MVP 추천: PK 범위 랜덤
+1. 앱에서 `minId ~ maxId` 캐시 (또는 하드코딩)
+2. `rand_id = random(minId, maxId)` 생성
+3. `WHERE a.id >= :rand_id ORDER BY a.id LIMIT N`
+4. 부족하면 wrap-around: `WHERE a.id < :rand_id ORDER BY a.id LIMIT N`
+
+**장점:**
+- 빠름 (인덱스 활용)
+- 구현 간단
+- MVP에 충분
+
+**단점:**
+- ID 분포가 매우 불균형이면 편향 가능 (대부분 괜찮음)
+
+**Advanced (운영 단계):**
+- `assets` 테이블에 `rand_key DOUBLE PRECISION` (0~1) 컬럼 추가
+- 배치로 주기적으로 랜덤 값 갱신
+- 인덱스: `(sector, rand_key)`
+- 쿼리: `WHERE a.rand_key >= :rk ORDER BY a.rand_key LIMIT N`
+- 진짜 빠르고 깔끔함
+
+#### Required Indexes
+```sql
+CREATE INDEX idx_asset_sector_active ON assets(sector, active);
+CREATE INDEX idx_asset_active_id ON assets(active, id);
+CREATE INDEX idx_asset_risk_level ON assets(current_risk_level);
+```
+
+#### Optimization Benefits
+- **메모리**: 1000개 → 140개 (86% 절감)
+- **쿼리 성능**: ORDER BY random() 제거 → PK range scan
+- **네트워크**: 데이터 전송량 86% 감소
+
+#### Implementation Flow
+```
+1. DB에서 3개 버킷 샘플링 (총 140개)
+   - Preferred: 80
+   - Non-Preferred: 40
+   - Wild: 20
+
+2. App에서 가중치 계산 (140개에 대해)
+   - riskWeight × sectorWeight × diversityPenalty
+
+3. Weighted sampling으로 최종 3개 선택
+   - Normal picks: 2개 (preferred 우선)
+   - Wild pick: 1개 (wild bucket 우선)
+
+4. Diversity check (최대 5회 재시도)
+
+5. Round에 저장 및 반환
+```
 
 ---
 

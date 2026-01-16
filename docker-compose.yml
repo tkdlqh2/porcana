@@ -11,7 +11,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
     volumes:
-      - ./config/application-prod.yaml:/app/config/application-prod.yaml:ro
+      - ./config/:/app/config/:ro
     depends_on:
       - redis
 

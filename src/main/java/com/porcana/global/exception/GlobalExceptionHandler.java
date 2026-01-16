@@ -66,6 +66,54 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFoundException(NotFoundException ex) {
+        log.warn("NotFoundException occurred: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.NOT_FOUND,
+                "NOT_FOUND",
+                ex.getMessage(),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbiddenException(ForbiddenException ex) {
+        log.warn("ForbiddenException occurred: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.FORBIDDEN,
+                "FORBIDDEN",
+                ex.getMessage(),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    @ExceptionHandler(InvalidOperationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidOperationException(InvalidOperationException ex) {
+        log.warn("InvalidOperationException occurred: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_OPERATION",
+                ex.getMessage(),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(InsufficientAssetsException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientAssetsException(InsufficientAssetsException ex) {
+        log.warn("InsufficientAssetsException occurred: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST,
+                "INSUFFICIENT_ASSETS",
+                ex.getMessage(),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
