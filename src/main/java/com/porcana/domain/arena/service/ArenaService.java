@@ -11,8 +11,10 @@ import com.porcana.domain.arena.repository.ArenaSessionRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.Sector;
+import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioAsset;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
+import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import com.porcana.global.exception.ForbiddenException;
 import com.porcana.global.exception.InvalidOperationException;
 import com.porcana.global.exception.NotFoundException;
@@ -38,6 +40,7 @@ public class ArenaService {
     private final ArenaRoundRepository roundRepository;
     private final AssetRepository assetRepository;
     private final PortfolioAssetRepository portfolioAssetRepository;
+    private final PortfolioRepository portfolioRepository;
     private final AssetRecommendationService recommendationService;
 
     /**
@@ -45,6 +48,14 @@ public class ArenaService {
      */
     @Transactional
     public CreateSessionResponse createSession(CreateSessionCommand command) {
+        // Validate portfolio exists and user owns it
+        Portfolio portfolio = portfolioRepository.findById(command.getPortfolioId())
+                .orElseThrow(() -> new NotFoundException("Portfolio not found"));
+
+        if (!portfolio.getUserId().equals(command.getUserId())) {
+            throw new ForbiddenException("Not authorized to access this portfolio");
+        }
+
         // Check if session already exists for this portfolio
         Optional<ArenaSession> existing = sessionRepository
                 .findByPortfolioIdAndStatus(command.getPortfolioId(), SessionStatus.IN_PROGRESS);
@@ -96,6 +107,7 @@ public class ArenaService {
     /**
      * Get current round data
      */
+    @Transactional
     public RoundResponse getCurrentRound(UUID sessionId, UUID userId) {
         ArenaSession session = getSessionAndValidateOwnership(sessionId, userId);
 
