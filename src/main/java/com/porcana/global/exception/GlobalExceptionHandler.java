@@ -70,12 +70,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotFoundException(NotFoundException ex) {
         log.warn("NotFoundException occurred: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.of(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.NOT_FOUND,
                 "NOT_FOUND",
                 ex.getMessage(),
                 null
         );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     @ExceptionHandler(ForbiddenException.class)

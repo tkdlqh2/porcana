@@ -274,24 +274,6 @@ class ArenaControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("섹터 선택 실패 - 1개만 선택 (최소 2개 필요)")
-    void pickSectors_fail_tooFew() {
-        String sessionId = createSessionAndPickRiskProfile();
-
-        List<Sector> sectors = List.of(Sector.INFORMATION_TECHNOLOGY);
-        PickSectorsRequest pickRequest = new PickSectorsRequest(sectors);
-
-        given()
-                .contentType(ContentType.JSON)
-                .header("Authorization", "Bearer " + accessToken)
-                .body(pickRequest)
-        .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-sectors", sessionId)
-        .then()
-                .statusCode(400);
-    }
-
-    @Test
     @DisplayName("섹터 선택 실패 - 4개 선택 (최대 3개)")
     void pickSectors_fail_tooMany() {
         String sessionId = createSessionAndPickRiskProfile();

@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +51,7 @@ public class ArenaService {
     public CreateSessionResponse createSession(CreateSessionCommand command) {
         // Validate portfolio exists and user owns it
         Portfolio portfolio = portfolioRepository.findById(command.getPortfolioId())
-                .orElseThrow(() -> new NotFoundException("Portfolio not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Portfolio not found"));
 
         if (!portfolio.getUserId().equals(command.getUserId())) {
             throw new ForbiddenException("Not authorized to access this portfolio");
@@ -215,7 +216,7 @@ public class ArenaService {
         // Get the round entity (should already exist with presented choices)
         ArenaRound round = roundRepository
                 .findBySessionIdAndRoundNumber(session.getId(), currentRound)
-                .orElseThrow(() -> new NotFoundException("Round not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Round not found"));
 
         // Validate picked asset was in the presented choices
         if (!round.getPresentedAssetIds().contains(command.getPickedAssetId())) {
@@ -373,13 +374,13 @@ public class ArenaService {
         List<UUID> selectedAssetIds = assetRounds.stream()
                 .map(ArenaRound::getSelectedAssetId)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
 
         // Create PortfolioAsset entries with equal weighting
         // 10 assets = 10% each
         if (!selectedAssetIds.isEmpty()) {
             BigDecimal equalWeight = new BigDecimal("100.00")
-                    .divide(new BigDecimal(selectedAssetIds.size()), 2, BigDecimal.ROUND_HALF_UP);
+                    .divide(new BigDecimal(selectedAssetIds.size()), 2, RoundingMode.HALF_UP);
 
             for (UUID assetId : selectedAssetIds) {
                 PortfolioAsset portfolioAsset = PortfolioAsset.builder()

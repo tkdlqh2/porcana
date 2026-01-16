@@ -70,9 +70,13 @@ CREATE UNIQUE INDEX idx_arena_round_session_round ON arena_rounds(session_id, ro
 -- Indexes for arena_round_choices
 CREATE INDEX idx_arena_round_choices_round_id ON arena_round_choices(round_id);
 CREATE INDEX idx_arena_round_choices_asset_id ON arena_round_choices(asset_id);
+CREATE UNIQUE INDEX idx_arena_round_choices_round_asset
+    ON arena_round_choices(round_id, asset_id);
 
 -- Index for arena_session_sectors
 CREATE INDEX idx_arena_session_sectors_session_id ON arena_session_sectors(session_id);
+CREATE UNIQUE INDEX idx_arena_session_sectors_session_sector
+    ON arena_session_sectors(session_id, sector);
 
 -- Trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_arena_sessions_updated_at()

@@ -90,6 +90,13 @@ public class AssetRecommendationService {
             picked = rerollWithRelaxation(preferredSectors, deckAssetIds, riskProfile);
         }
 
+        // Throw exception if still not enough assets after relaxation
+        if (picked.size() < 3) {
+            throw new InsufficientAssetsException(
+                        String.format("Unable to generate 3 asset options. Only %d assets available. SessionId: %s",
+                                picked.size(), session.getId()));
+        }
+
         // 3) Diversity check with retry
         int retry = 0;
         while (retry < MAX_RETRY && !isDiverseEnough(picked)) {
