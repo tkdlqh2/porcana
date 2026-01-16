@@ -9,6 +9,6 @@ import java.util.List;
 public record PickSectorsRequest(
         @NotNull(message = "Sectors list cannot be null")
         @Size(max = 3, message = "Must select 0-3 sectors")
-        List<Sector> sectors
+        List<@NotNull Sector> sectors
 ) {
 }

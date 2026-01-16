@@ -990,7 +990,7 @@ Error Responses
 ---
 
 ## POST /arena/sessions/{sessionId}/rounds/current/pick-sectors
-**Description**: 아레나 Round 2에서 관심 섹터를 선택합니다. 2-3개의 섹터를 선택해야 합니다.
+**Description**: 아레나 Round 2에서 관심 섹터를 선택합니다. 0-3개의 섹터를 선택해야 합니다.
 
 **Auth**: Required (JWT)
 
@@ -1087,32 +1087,32 @@ List<Asset> generateRoundOptions(ArenaSession session, int roundNo)
 #### 1) Normal Picks (2개)
 선호 섹터 + 리스크 프로필 + 다양성 패널티 반영
 
-```
+```java
 for i in 1..2:
-  next = weightedPickOne(preferredCandidates, riskProfile, preferredSectors, alreadyPicked, useSectorPreference=true)
-  picked.add(next)
-  preferredCandidates.remove(next)
-  wildCandidates.remove(next)
+  next = weightedPickOne(preferredCandidates, riskProfile, preferredSectors, alreadyPicked, useSectorPreference=true);
+  picked.add(next);
+  preferredCandidates.remove(next);
+  wildCandidates.remove(next);
 ```
 
 #### 2) Wild Pick (1개)
 섹터 선호 무시, 다양성만 유지 (의외성 보장)
 
-```
-wild = weightedPickOne(wildCandidates, riskProfile, preferredSectors, alreadyPicked, useSectorPreference=false)
-picked.add(wild)
+```java
+wild = weightedPickOne(wildCandidates, riskProfile, preferredSectors, alreadyPicked, useSectorPreference=false);
+picked.add(wild);
 ```
 
 ### Weighted Selection Logic
 
 #### Weight Calculation
-```
+```java
 w = 1.0
-w *= riskWeight(riskProfile, asset.currentRiskLevel)
-w *= sectorWeight(preferredSectors, asset.sector)  // normal picks만
-w *= typeWeight(asset.type)
-w *= diversityPenalty(asset, alreadyPicked)
-w = max(w, 0.0001)  // 안전장치
+w *= riskWeight(riskProfile, asset.currentRiskLevel);
+w *= sectorWeight(preferredSectors, asset.sector);  // normal picks만
+w *= typeWeight(asset.type);
+w *= diversityPenalty(asset, alreadyPicked);
+w = max(w, 0.0001);  // 안전장치
 ```
 
 #### Risk Weight
@@ -1280,7 +1280,7 @@ LIMIT 20;
 
 **ORDER BY random() 금지**: 대용량 테이블에서 성능 최악
 
-**MVP 추천: PK 범위 랜덤**
+### MVP 추천: PK 범위 랜덤
 1. 앱에서 `minId ~ maxId` 캐시 (또는 하드코딩)
 2. `rand_id = random(minId, maxId)` 생성
 3. `WHERE a.id >= :rand_id ORDER BY a.id LIMIT N`
