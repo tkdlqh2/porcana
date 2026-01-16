@@ -829,58 +829,213 @@ Response
 # 5) Arena (Hearthstone-style drafting)
 
 ## POST /arena/sessions
+**Description**: 포트폴리오에 대한 새로운 아레나 드래프트 세션을 시작합니다. 이미 진행 중인 세션이 있으면 해당 세션을 반환합니다.
+
+**Auth**: Required (JWT)
+
 Request
 {
 "portfolioId": "uuid"
 }
-Response
+
+Response (200 OK)
 {
 "sessionId": "uuid",
 "portfolioId": "uuid",
-"status": "IN_PROGRESS|COMPLETED",
+"status": "IN_PROGRESS",
 "currentRound": 1
 }
 
-## GET /arena/sessions/{sessionId}/rounds/current
-Response
-{
-"sessionId": "uuid",
-"round": 1,
-"assets": [
-{
-"assetId": "uuid",
-"ticker": "string",
-"name": "string",
-"oneLineThesis": "string",
-"tags": ["string"]
-}
-]
-}
+Error Responses
+- 400: 포트폴리오를 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
 
-## POST /arena/sessions/{sessionId}/rounds/current/pick
-Request
-{
-"pickedAssetId": "uuid"
-}
-Response
-{
-"sessionId": "uuid",
-"status": "IN_PROGRESS|COMPLETED",
-"currentRound": 2,
-"picked": {
-"assetId": "uuid"
-}
-}
+---
 
 ## GET /arena/sessions/{sessionId}
-Response
+**Description**: 진행 중이거나 완료된 아레나 세션의 상세 정보를 조회합니다.
+
+**Auth**: Required (JWT)
+
+Response (200 OK)
 {
 "sessionId": "uuid",
 "portfolioId": "uuid",
 "status": "IN_PROGRESS|COMPLETED",
 "currentRound": 3,
-"totalRounds": 10
+"totalRounds": 12,
+"riskProfile": "BALANCED",
+"selectedSectors": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"],
+"selectedAssetIds": ["uuid1", "uuid2"]
 }
+
+Error Responses
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## GET /arena/sessions/{sessionId}/rounds/current
+**Description**: 현재 진행 중인 라운드의 선택지를 조회합니다.
+- Round 1: 리스크 프로필 선택
+- Round 2: 섹터 선택
+- Round 3-12: 자산 선택
+
+**Auth**: Required (JWT)
+
+Response for Round 1 (Risk Profile)
+{
+"sessionId": "uuid",
+"round": 1,
+"roundType": "RISK_PROFILE",
+"options": [
+{
+"value": "SAFE",
+"displayName": "안전 추구형",
+"description": "낮은 변동성, 안정적인 수익 추구"
+},
+{
+"value": "BALANCED",
+"displayName": "균형형",
+"description": "중간 수준의 위험과 수익 균형"
+},
+{
+"value": "AGGRESSIVE",
+"displayName": "공격 투자형",
+"description": "높은 변동성, 높은 수익 추구"
+}
+]
+}
+
+Response for Round 2 (Sector Selection)
+{
+"sessionId": "uuid",
+"round": 2,
+"roundType": "SECTOR",
+"sectors": [
+{
+"sector": "INFORMATION_TECHNOLOGY",
+"displayName": "정보기술",
+"description": "소프트웨어, 하드웨어, IT 서비스"
+},
+// ... more sectors
+],
+"minSelection": 2,
+"maxSelection": 3
+}
+
+Response for Round 3-12 (Asset Selection)
+{
+"sessionId": "uuid",
+"round": 3,
+"roundType": "ASSET",
+"assets": [
+{
+"assetId": "uuid",
+"ticker": "AAPL",
+"name": "Apple Inc.",
+"sector": "INFORMATION_TECHNOLOGY",
+"riskLevel": 3,
+"market": "US"
+},
+{
+"assetId": "uuid",
+"ticker": "MSFT",
+"name": "Microsoft Corp.",
+"sector": "INFORMATION_TECHNOLOGY",
+"riskLevel": 2,
+"market": "US"
+},
+{
+"assetId": "uuid",
+"ticker": "JNJ",
+"name": "Johnson & Johnson",
+"sector": "HEALTH_CARE",
+"riskLevel": 2,
+"market": "US"
+}
+]
+}
+
+Error Responses
+- 400: 세션이 이미 완료됨
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## POST /arena/sessions/{sessionId}/rounds/current/pick-risk-profile
+**Description**: 아레나 Round 1에서 리스크 프로필을 선택합니다.
+
+**Auth**: Required (JWT)
+
+Request
+{
+"riskProfile": "SAFE|BALANCED|AGGRESSIVE"
+}
+
+Response (200 OK)
+{
+"sessionId": "uuid",
+"status": "IN_PROGRESS",
+"currentRound": 2,
+"picked": "BALANCED"
+}
+
+Error Responses
+- 400: Round 1이 아니거나 유효하지 않은 리스크 프로필
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## POST /arena/sessions/{sessionId}/rounds/current/pick-sectors
+**Description**: 아레나 Round 2에서 관심 섹터를 선택합니다. 2-3개의 섹터를 선택해야 합니다.
+
+**Auth**: Required (JWT)
+
+Request
+{
+"sectors": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"]
+}
+
+Response (200 OK)
+{
+"sessionId": "uuid",
+"status": "IN_PROGRESS",
+"currentRound": 3,
+"picked": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"]
+}
+
+Error Responses
+- 400: Round 2가 아니거나 섹터 개수가 2-3개가 아님
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+---
+
+## POST /arena/sessions/{sessionId}/rounds/current/pick-asset
+**Description**: 아레나 Round 3-12에서 제시된 3개의 자산 중 1개를 선택합니다. Round 12 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.
+
+**Auth**: Required (JWT)
+
+Request
+{
+"pickedAssetId": "uuid"
+}
+
+Response (200 OK)
+{
+"sessionId": "uuid",
+"status": "IN_PROGRESS|COMPLETED",
+"currentRound": 4,
+"picked": "uuid"
+}
+
+Error Responses
+- 400: Round 3-12가 아니거나 제시된 자산 목록에 없는 자산 선택
+- 403: 세션을 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
 
 ---
 
