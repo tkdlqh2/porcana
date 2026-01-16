@@ -46,6 +46,10 @@ public class Asset {
     @Column(length = 50)
     private Sector sector;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private AssetClass assetClass;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "asset_universe_tags",
@@ -57,6 +61,9 @@ public class Asset {
 
     @Column(nullable = false)
     private Boolean active;
+
+    @Column(name = "current_risk_level")
+    private Integer currentRiskLevel;
 
     @Column(nullable = false)
     private LocalDate asOf;
@@ -71,12 +78,13 @@ public class Asset {
 
     @Builder
     public Asset(Market market, String symbol, String name, AssetType type, Sector sector,
-                 List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
+                 AssetClass assetClass, List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
         this.market = market;
         this.symbol = symbol;
         this.name = name;
         this.type = type;
         this.sector = sector;
+        this.assetClass = assetClass;
         this.universeTags = universeTags != null ? universeTags : new ArrayList<>();
         this.active = active != null ? active : false;
         this.asOf = asOf;
@@ -106,6 +114,13 @@ public class Asset {
 
     public void updateAsOf(LocalDate asOf) {
         this.asOf = asOf;
+    }
+
+    public void updateCurrentRiskLevel(Integer riskLevel) {
+        if (riskLevel != null && (riskLevel < 1 || riskLevel > 5)) {
+            throw new IllegalArgumentException("Risk level must be between 1 and 5");
+        }
+        this.currentRiskLevel = riskLevel;
     }
 
     public enum Market {

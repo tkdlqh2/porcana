@@ -46,4 +46,15 @@ public interface AssetPriceRepository extends JpaRepository<AssetPrice, UUID> {
      * Used to avoid re-fetching historical data
      */
     boolean existsByAsset(Asset asset);
+
+    /**
+     * Find recent N price data for an asset (ordered by date ascending)
+     * Used for risk calculation
+     */
+    List<AssetPrice> findTop252ByAssetOrderByPriceDateDesc(Asset asset);
+
+    /**
+     * Find recent price data for an asset by asset ID
+     */
+    List<AssetPrice> findByAssetIdOrderByPriceDateAsc(UUID assetId);
 }

@@ -1,6 +1,7 @@
 package com.porcana.batch.dto;
 
 import com.porcana.domain.asset.entity.Asset;
+import com.porcana.domain.asset.entity.AssetClass;
 import com.porcana.domain.asset.entity.Sector;
 import com.porcana.domain.asset.entity.UniverseTag;
 import lombok.Builder;
@@ -23,6 +24,7 @@ public class AssetBatchDto {
     private final String name;
     private final Asset.AssetType type;
     private final Sector sector;
+    private final AssetClass assetClass;
 
     @Builder.Default
     private final List<UniverseTag> universeTags = new ArrayList<>();
@@ -42,6 +44,7 @@ public class AssetBatchDto {
                 .name(name)
                 .type(type)
                 .sector(sector)
+                .assetClass(assetClass)
                 .universeTags(universeTags)
                 .active(active)
                 .asOf(asOf)
