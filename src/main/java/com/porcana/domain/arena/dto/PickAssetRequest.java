@@ -1,10 +1,11 @@
 package com.porcana.domain.arena.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
 
-@Getter
-@NoArgsConstructor
-public class PickAssetRequest {
-    private String pickedAssetId;
+import java.util.UUID;
+
+public record PickAssetRequest(
+        @NotNull(message = "Asset ID is required")
+        UUID pickedAssetId
+) {
 }
