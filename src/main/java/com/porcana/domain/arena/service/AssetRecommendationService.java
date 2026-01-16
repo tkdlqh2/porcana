@@ -31,65 +31,60 @@ public class AssetRecommendationService {
     private final ArenaRoundRepository roundRepository;
 
     private static final int WILD_COUNT = 1;
-    private static final int NORMAL_COUNT = 2;
+    private static final int ENTRY_COUNT = 3;
+    private static final int NORMAL_COUNT = ENTRY_COUNT - WILD_COUNT;
     private static final int MAX_RETRY = 5;
     private static final double MIN_WEIGHT = 0.0001;
 
     /**
      * Generate round options (3 assets) based on session context
+     * Optimized to load only necessary assets from DB
      */
     public List<Asset> generateRoundOptions(ArenaSession session, int roundNo) {
         RiskProfile riskProfile = session.getRiskProfile();
-        Set<Sector> preferredSectors = new HashSet<>(session.getSelectedSectors());
+        List<Sector> preferredSectors = session.getSelectedSectors();
         Set<UUID> deckAssetIds = getDeckAssetIds(session.getId());
         Set<UUID> shownAssetIds = getShownAssetIds(session.getId());
-        List<Asset> allAssets = assetRepository.findByActiveTrue();
+        Set<UUID> excludeIds = new HashSet<>();
+        excludeIds.addAll(deckAssetIds);
+        excludeIds.addAll(shownAssetIds);
 
-        if (allAssets.isEmpty()) {
-            throw new InsufficientAssetsException("No active assets available");
-        }
+        // Load only preferred sector assets (for normal picks)
+        List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);
+        preferredCandidates = filterExcludedAssets(preferredCandidates, excludeIds);
 
-        // Filter candidates
-        List<Asset> candidates = allAssets.stream()
-                .filter(a -> !deckAssetIds.contains(a.getId()))
-                .filter(a -> !shownAssetIds.contains(a.getId()))
-                .collect(Collectors.toList());
-
-        // Fallback: relax shown constraint if not enough candidates
-        if (candidates.size() < 3) {
-            log.warn("Not enough candidates with shown filter. Relaxing constraint. SessionId: {}", session.getId());
-            candidates = allAssets.stream()
-                    .filter(a -> !deckAssetIds.contains(a.getId()))
-                    .collect(Collectors.toList());
-        }
-
-        if (candidates.size() < 3) {
-            throw new InsufficientAssetsException(
-                    String.format("Not enough assets available. Required: 3, Available: %d", candidates.size())
-            );
-        }
+        // Load wild candidates (other sectors) - for diversity
+        List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
+        wildCandidates = filterExcludedAssets(wildCandidates, excludeIds);
 
         List<Asset> picked = new ArrayList<>();
 
         // 1) Normal picks: sector/risk preference + diversity penalty
-        for (int i = 0; i < NORMAL_COUNT && !candidates.isEmpty(); i++) {
-            Asset next = weightedPickOne(candidates, riskProfile, preferredSectors, picked, true);
+        for (int i = 0; i < NORMAL_COUNT && !preferredCandidates.isEmpty(); i++) {
+            Asset next = weightedPickOne(preferredCandidates, riskProfile, new HashSet<>(preferredSectors), picked, true);
             picked.add(next);
-            candidates.remove(next);
+            preferredCandidates.remove(next);
+            wildCandidates.remove(next); // Also remove from wild pool
         }
 
         // 2) Wild pick: ignore sector preference, diversity only
-        if (picked.size() < 3 && !candidates.isEmpty()) {
-            Asset wild = weightedPickOne(candidates, riskProfile, preferredSectors, picked, false);
+        if (picked.size() < 3 && !wildCandidates.isEmpty()) {
+            Asset wild = weightedPickOne(wildCandidates, riskProfile, new HashSet<>(preferredSectors), picked, false);
             picked.add(wild);
-            candidates.remove(wild);
+            wildCandidates.remove(wild);
+        }
+
+        // Fallback: if not enough picked, relax constraints
+        if (picked.size() < 3) {
+            log.warn("Not enough candidates. Relaxing shown constraint. SessionId: {}", session.getId());
+            picked = rerollWithRelaxation(preferredSectors, deckAssetIds, riskProfile);
         }
 
         // 3) Diversity check with retry
         int retry = 0;
         while (retry < MAX_RETRY && !isDiverseEnough(picked)) {
             log.debug("Diversity check failed. Retrying... Attempt: {}/{}", retry + 1, MAX_RETRY);
-            picked = rerollWithRelaxation(allAssets, deckAssetIds, shownAssetIds, riskProfile, preferredSectors);
+            picked = rerollWithRelaxation(preferredSectors, deckAssetIds, riskProfile);
             retry++;
         }
 
@@ -99,6 +94,18 @@ public class AssetRecommendationService {
         }
 
         return picked;
+    }
+
+    /**
+     * Filter out excluded asset IDs
+     */
+    private List<Asset> filterExcludedAssets(List<Asset> assets, Set<UUID> excludeIds) {
+        if (excludeIds.isEmpty()) {
+            return new ArrayList<>(assets);
+        }
+        return assets.stream()
+                .filter(a -> !excludeIds.contains(a.getId()))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -261,22 +268,30 @@ public class AssetRecommendationService {
     }
 
     /**
-     * Reroll with relaxed constraints
+     * Reroll with relaxed constraints (ignore shown constraint)
      */
-    private List<Asset> rerollWithRelaxation(List<Asset> allAssets, Set<UUID> deckAssetIds,
-                                              Set<UUID> shownAssetIds, RiskProfile riskProfile,
-                                              Set<Sector> preferredSectors) {
-        // Relax shown constraint
-        List<Asset> candidates = allAssets.stream()
-                .filter(a -> !deckAssetIds.contains(a.getId()))
-                .collect(Collectors.toList());
+    private List<Asset> rerollWithRelaxation(List<Sector> preferredSectors, Set<UUID> deckAssetIds,
+                                              RiskProfile riskProfile) {
+        // Relax shown constraint - only exclude deck assets
+        List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);
+        preferredCandidates = filterExcludedAssets(preferredCandidates, deckAssetIds);
+
+        List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
+        wildCandidates = filterExcludedAssets(wildCandidates, deckAssetIds);
 
         List<Asset> picked = new ArrayList<>();
 
-        while (picked.size() < 3 && !candidates.isEmpty()) {
-            Asset next = weightedPickOne(candidates, riskProfile, preferredSectors, picked, true);
+        // Try to pick 2 normal + 1 wild
+        while (picked.size() < NORMAL_COUNT && !preferredCandidates.isEmpty()) {
+            Asset next = weightedPickOne(preferredCandidates, riskProfile, new HashSet<>(preferredSectors), picked, true);
             picked.add(next);
-            candidates.remove(next);
+            preferredCandidates.remove(next);
+            wildCandidates.remove(next);
+        }
+
+        if (picked.size() < 3 && !wildCandidates.isEmpty()) {
+            Asset wild = weightedPickOne(wildCandidates, riskProfile, new HashSet<>(preferredSectors), picked, false);
+            picked.add(wild);
         }
 
         return picked;

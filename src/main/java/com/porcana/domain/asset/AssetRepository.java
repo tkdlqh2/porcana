@@ -55,6 +55,18 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
     List<Asset> findBySectorInAndActiveTrue(List<Sector> sectors);
 
     /**
+     * Find all active assets NOT in the specified sectors
+     * Used for wild card recommendations in arena
+     */
+    List<Asset> findBySectorNotInAndActiveTrue(List<Sector> sectors);
+
+    /**
+     * Find all active assets excluding specified IDs
+     * Used for arena recommendations to avoid duplicates
+     */
+    List<Asset> findByActiveTrueAndIdNotIn(List<UUID> excludeIds);
+
+    /**
      * Count active assets in a specific sector
      * Used to validate sector selection (ensure enough assets available)
      */
