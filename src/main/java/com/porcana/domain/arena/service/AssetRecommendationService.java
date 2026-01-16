@@ -18,8 +18,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Asset recommendation service with weighted selection logic
- * Based on risk profile, sector preferences, and diversity constraints
+ * Asset recommendation service with bucket sampling optimization
+ * Loads only ~140 assets instead of ~1000 for memory efficiency
  */
 @Slf4j
 @Service
@@ -30,6 +30,11 @@ public class AssetRecommendationService {
     private final AssetRepository assetRepository;
     private final ArenaRoundRepository roundRepository;
 
+    // Bucket sizes
+    private static final int PREFERRED_BUCKET_SIZE = 80;
+    private static final int NON_PREFERRED_BUCKET_SIZE = 40;
+    private static final int WILD_BUCKET_SIZE = 20;
+
     private static final int WILD_COUNT = 1;
     private static final int ENTRY_COUNT = 3;
     private static final int NORMAL_COUNT = ENTRY_COUNT - WILD_COUNT;
@@ -37,8 +42,8 @@ public class AssetRecommendationService {
     private static final double MIN_WEIGHT = 0.0001;
 
     /**
-     * Generate round options (3 assets) based on session context
-     * Optimized to load only necessary assets from DB
+     * Generate round options (3 assets) using bucket sampling
+     * Memory optimized: loads ~140 assets instead of ~1000
      */
     public List<Asset> generateRoundOptions(ArenaSession session, int roundNo) {
         RiskProfile riskProfile = session.getRiskProfile();
@@ -49,22 +54,27 @@ public class AssetRecommendationService {
         excludeIds.addAll(deckAssetIds);
         excludeIds.addAll(shownAssetIds);
 
-        // Load only preferred sector assets (for normal picks)
-        List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);
-        preferredCandidates = filterExcludedAssets(preferredCandidates, excludeIds);
+        // Bucket sampling: load only necessary candidates (~140 total)
+        UUID randId = generateRandomId();
+        List<Asset> preferredCandidates = samplePreferredBucket(preferredSectors, randId, excludeIds);
+        List<Asset> nonPreferredCandidates = sampleNonPreferredBucket(preferredSectors, randId, excludeIds);
+        List<Asset> wildCandidates = sampleWildBucket(randId, excludeIds);
 
-        // Load wild candidates (other sectors) - for diversity
-        List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
-        wildCandidates = filterExcludedAssets(wildCandidates, excludeIds);
+        log.debug("Bucket sizes - Preferred: {}, NonPreferred: {}, Wild: {}",
+                preferredCandidates.size(), nonPreferredCandidates.size(), wildCandidates.size());
 
         List<Asset> picked = new ArrayList<>();
 
-        // 1) Normal picks: sector/risk preference + diversity penalty
-        for (int i = 0; i < NORMAL_COUNT && !preferredCandidates.isEmpty(); i++) {
-            Asset next = weightedPickOne(preferredCandidates, riskProfile, new HashSet<>(preferredSectors), picked, true);
+        // 1) Normal picks: prefer from preferred bucket, allow non-preferred for diversity
+        List<Asset> normalPool = new ArrayList<>();
+        normalPool.addAll(preferredCandidates);
+        normalPool.addAll(nonPreferredCandidates);
+
+        for (int i = 0; i < NORMAL_COUNT && !normalPool.isEmpty(); i++) {
+            Asset next = weightedPickOne(normalPool, riskProfile, new HashSet<>(preferredSectors), picked, true);
             picked.add(next);
-            preferredCandidates.remove(next);
-            wildCandidates.remove(next); // Also remove from wild pool
+            normalPool.remove(next);
+            wildCandidates.remove(next);
         }
 
         // 2) Wild pick: ignore sector preference, diversity only
@@ -97,15 +107,87 @@ public class AssetRecommendationService {
     }
 
     /**
-     * Filter out excluded asset IDs
+     * Generate random UUID for PK range sampling
      */
-    private List<Asset> filterExcludedAssets(List<Asset> assets, Set<UUID> excludeIds) {
-        if (excludeIds.isEmpty()) {
-            return new ArrayList<>(assets);
+    private UUID generateRandomId() {
+        // Simple random UUID generation
+        // In production, could cache min/max and generate within range
+        return UUID.randomUUID();
+    }
+
+    /**
+     * Sample preferred sector bucket (80 assets)
+     */
+    private List<Asset> samplePreferredBucket(List<Sector> preferredSectors, UUID randId, Set<UUID> excludeIds) {
+        if (preferredSectors == null || preferredSectors.isEmpty()) {
+            return new ArrayList<>();
         }
-        return assets.stream()
-                .filter(a -> !excludeIds.contains(a.getId()))
-                .collect(Collectors.toList());
+
+        String[] sectorsArray = preferredSectors.stream()
+                .map(Enum::name)
+                .toArray(String[]::new);
+        UUID[] excludeArray = excludeIds.toArray(new UUID[0]);
+
+        List<Asset> result = assetRepository.findPreferredSectorBucket(
+                sectorsArray, randId, excludeArray, PREFERRED_BUCKET_SIZE
+        );
+
+        // Wrap-around if not enough
+        if (result.size() < PREFERRED_BUCKET_SIZE / 2) {
+            List<Asset> wrapAround = assetRepository.findPreferredSectorBucketWrapAround(
+                    sectorsArray, randId, excludeArray, PREFERRED_BUCKET_SIZE
+            );
+            result.addAll(wrapAround);
+        }
+
+        return result;
+    }
+
+    /**
+     * Sample non-preferred sector bucket (40 assets)
+     */
+    private List<Asset> sampleNonPreferredBucket(List<Sector> preferredSectors, UUID randId, Set<UUID> excludeIds) {
+        if (preferredSectors == null || preferredSectors.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String[] sectorsArray = preferredSectors.stream()
+                .map(Enum::name)
+                .toArray(String[]::new);
+        UUID[] excludeArray = excludeIds.toArray(new UUID[0]);
+
+        List<Asset> result = assetRepository.findNonPreferredSectorBucket(
+                sectorsArray, randId, excludeArray, NON_PREFERRED_BUCKET_SIZE
+        );
+
+        // Wrap-around if not enough
+        if (result.size() < NON_PREFERRED_BUCKET_SIZE / 2) {
+            List<Asset> wrapAround = assetRepository.findNonPreferredSectorBucketWrapAround(
+                    sectorsArray, randId, excludeArray, NON_PREFERRED_BUCKET_SIZE
+            );
+            result.addAll(wrapAround);
+        }
+
+        return result;
+    }
+
+    /**
+     * Sample wild bucket (20 assets)
+     */
+    private List<Asset> sampleWildBucket(UUID randId, Set<UUID> excludeIds) {
+        UUID[] excludeArray = excludeIds.toArray(new UUID[0]);
+
+        List<Asset> result = assetRepository.findWildBucket(randId, excludeArray, WILD_BUCKET_SIZE);
+
+        // Wrap-around if not enough
+        if (result.size() < WILD_BUCKET_SIZE / 2) {
+            List<Asset> wrapAround = assetRepository.findWildBucketWrapAround(
+                    randId, excludeArray, WILD_BUCKET_SIZE
+            );
+            result.addAll(wrapAround);
+        }
+
+        return result;
     }
 
     /**
@@ -273,19 +355,21 @@ public class AssetRecommendationService {
     private List<Asset> rerollWithRelaxation(List<Sector> preferredSectors, Set<UUID> deckAssetIds,
                                               RiskProfile riskProfile) {
         // Relax shown constraint - only exclude deck assets
-        List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);
-        preferredCandidates = filterExcludedAssets(preferredCandidates, deckAssetIds);
-
-        List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
-        wildCandidates = filterExcludedAssets(wildCandidates, deckAssetIds);
+        UUID randId = generateRandomId();
+        List<Asset> preferredCandidates = samplePreferredBucket(preferredSectors, randId, deckAssetIds);
+        List<Asset> nonPreferredCandidates = sampleNonPreferredBucket(preferredSectors, randId, deckAssetIds);
+        List<Asset> wildCandidates = sampleWildBucket(randId, deckAssetIds);
 
         List<Asset> picked = new ArrayList<>();
+        List<Asset> normalPool = new ArrayList<>();
+        normalPool.addAll(preferredCandidates);
+        normalPool.addAll(nonPreferredCandidates);
 
         // Try to pick 2 normal + 1 wild
-        while (picked.size() < NORMAL_COUNT && !preferredCandidates.isEmpty()) {
-            Asset next = weightedPickOne(preferredCandidates, riskProfile, new HashSet<>(preferredSectors), picked, true);
+        while (picked.size() < NORMAL_COUNT && !normalPool.isEmpty()) {
+            Asset next = weightedPickOne(normalPool, riskProfile, new HashSet<>(preferredSectors), picked, true);
             picked.add(next);
-            preferredCandidates.remove(next);
+            normalPool.remove(next);
             wildCandidates.remove(next);
         }
 
