@@ -303,8 +303,8 @@ public class ArenaService {
             List<UUID> assetIds = existingRound.get().getPresentedAssetIds();
             assets = assetRepository.findAllById(assetIds);
         } else {
-            // Generate new recommendations
-            assets = recommendationService.recommendAssets(session, 3);
+            // Generate new recommendations using weighted selection logic
+            assets = recommendationService.generateRoundOptions(session, currentRound);
 
             // Save the round with presented choices
             ArenaRound newRound = ArenaRound.builder()
