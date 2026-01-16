@@ -335,7 +335,7 @@ public class ArenaService {
                         .assetId(asset.getId())
                         .ticker(asset.getSymbol())
                         .name(asset.getName())
-                        .sector(asset.getSector() != null ? asset.getSector().getDescription() : null)
+                        .sector(asset.getSector() != null ? asset.getSector() : null)
                         .tags(asset.getUniverseTags().stream()
                                 .map(Enum::name)
                                 .collect(Collectors.toList()))

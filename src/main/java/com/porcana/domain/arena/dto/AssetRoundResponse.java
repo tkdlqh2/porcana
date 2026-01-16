@@ -1,6 +1,7 @@
 package com.porcana.domain.arena.dto;
 
 import com.porcana.domain.arena.entity.RoundType;
+import com.porcana.domain.asset.entity.Sector;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -21,7 +22,7 @@ public class AssetRoundResponse implements RoundResponse {
         private UUID assetId;
         private String ticker;
         private String name;
-        private String sector;
+        private Sector sector;
         private List<String> tags;
     }
 }
