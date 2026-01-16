@@ -110,10 +110,10 @@ public class ArenaController {
 
     @Operation(
             summary = "섹터 선택 (Round 2)",
-            description = "아레나 Round 2에서 관심 섹터를 선택합니다. 2-3개의 섹터를 선택해야 합니다.",
+            description = "아레나 Round 2에서 관심 섹터를 선택합니다. 0-3개의 섹터를 선택할 수 있으며, 중복은 허용되지 않습니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "선택 성공, Round 3로 진행"),
-                    @ApiResponse(responseCode = "400", description = "Round 2가 아니거나 섹터 개수가 2-3개가 아님", content = @Content),
+                    @ApiResponse(responseCode = "400", description = "Round 2가 아니거나 섹터 개수가 3개 초과 또는 중복된 섹터 포함", content = @Content),
                     @ApiResponse(responseCode = "403", description = "세션을 찾을 수 없거나 권한이 없음", content = @Content),
                     @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
             }

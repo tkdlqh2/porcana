@@ -166,9 +166,15 @@ public class ArenaService {
             throw new InvalidOperationException("Sectors can only be selected in round 2");
         }
 
-        // Validate 2-3 sectors
-        if (command.getSectors().size() < 2 || command.getSectors().size() > 3) {
-            throw new IllegalArgumentException("Must select 2-3 sectors");
+        // Validate 0-3 sectors
+        if (command.getSectors().size() > 3) {
+            throw new IllegalArgumentException("Must select 0-3 sectors");
+        }
+
+        // Validate no duplicate sectors
+        long distinctCount = command.getSectors().stream().distinct().count();
+        if (distinctCount != command.getSectors().size()) {
+            throw new IllegalArgumentException("Duplicate sectors are not allowed");
         }
 
         // Validate each sector has enough assets (at least 3 for one round)
@@ -293,7 +299,7 @@ public class ArenaService {
                 .round(2)
                 .roundType(RoundType.SECTOR)
                 .sectors(sectorOptions)
-                .minSelection(2)
+                .minSelection(0)
                 .maxSelection(3)
                 .build();
     }

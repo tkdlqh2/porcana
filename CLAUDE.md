@@ -920,7 +920,7 @@ Response for Round 2 (Sector Selection)
 },
 // ... more sectors
 ],
-"minSelection": 2,
+"minSelection": 0,
 "maxSelection": 3
 }
 
@@ -1046,7 +1046,7 @@ Arena는 Hearthstone-style의 드래프트 시스템으로, 사용자가 3개의
 
 ## Round Structure
 - **Round 1**: Risk Profile 선택 (SAFE, BALANCED, AGGRESSIVE)
-- **Round 2**: Sector 선택 (2-3개 섹터)
+- **Round 2**: Sector 선택 (0-3개 섹터, 중복 불가)
 - **Rounds 3-12**: Asset 선택 (라운드당 3개 중 1개)
 
 ## Asset Recommendation Algorithm
