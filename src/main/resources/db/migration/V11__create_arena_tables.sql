@@ -8,7 +8,7 @@ CREATE TABLE arena_sessions (
     status VARCHAR(20) NOT NULL CHECK (status IN ('IN_PROGRESS', 'COMPLETED', 'ABANDONED')),
     current_round INTEGER NOT NULL CHECK (current_round >= 1 AND current_round <= 12),
     total_rounds INTEGER NOT NULL DEFAULT 12,
-    risk_profile VARCHAR(20) CHECK (risk_profile IN ('AGGRESSIVE', 'BALANCED', 'CONSERVATIVE')),
+    risk_profile VARCHAR(20) CHECK (risk_profile IN ('AGGRESSIVE', 'BALANCED', 'SAFE')),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP
