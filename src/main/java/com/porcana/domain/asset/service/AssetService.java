@@ -15,6 +15,7 @@ import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,16 +40,9 @@ public class AssetService {
             return Collections.emptyList();
         }
 
-        List<Asset> assets = assetRepository.findByActiveTrue();
-
-        String lowerQuery = query.toLowerCase();
+        List<Asset> assets = assetRepository.searchBySymbolOrName(query, PageRequest.of(0, 20));
 
         return assets.stream()
-                .filter(asset ->
-                        asset.getSymbol().toLowerCase().contains(lowerQuery) ||
-                                asset.getName().toLowerCase().contains(lowerQuery)
-                )
-                .limit(20)
                 .map(asset -> AssetSearchResponse.builder()
                         .assetId(asset.getId().toString())
                         .ticker(asset.getSymbol())

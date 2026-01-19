@@ -74,6 +74,21 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
      */
     Integer countBySectorAndActiveTrue(Sector sector);
 
+    /**
+     * Search active assets by symbol or name (case-insensitive)
+     * Used for asset search API
+     */
+    @Query("SELECT a FROM Asset a WHERE a.active = true " +
+           "AND (LOWER(a.symbol) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "OR LOWER(a.name) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY " +
+           "CASE WHEN LOWER(a.symbol) = LOWER(:query) THEN 0 " +
+           "     WHEN LOWER(a.symbol) LIKE LOWER(CONCAT(:query, '%')) THEN 1 " +
+           "     WHEN LOWER(a.name) LIKE LOWER(CONCAT(:query, '%')) THEN 2 " +
+           "     ELSE 3 END, " +
+           "a.symbol")
+    List<Asset> searchBySymbolOrName(@Param("query") String query, org.springframework.data.domain.Pageable pageable);
+
     // ========================================
     // Arena Bucket Sampling Queries
     // ========================================
