@@ -1,6 +1,7 @@
 package com.porcana.domain.portfolio;
 
 import com.porcana.domain.portfolio.command.CreatePortfolioCommand;
+import com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand;
 import com.porcana.domain.portfolio.dto.*;
 import com.porcana.domain.portfolio.service.PortfolioService;
 import com.porcana.global.security.CurrentUser;
@@ -145,8 +146,7 @@ public class PortfolioController {
             @Parameter(description = "포트폴리오 ID", required = true) @PathVariable UUID portfolioId,
             @Valid @RequestBody UpdateAssetWeightsRequest request,
             @CurrentUser UUID userId) {
-        com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand command =
-                com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand.from(request, portfolioId, userId);
+        UpdateAssetWeightsCommand command = UpdateAssetWeightsCommand.from(request, portfolioId, userId);
         UpdateAssetWeightsResponse response = portfolioService.updateAssetWeights(command);
         return ResponseEntity.ok(response);
     }

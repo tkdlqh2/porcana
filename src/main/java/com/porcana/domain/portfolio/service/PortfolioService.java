@@ -3,6 +3,8 @@ package com.porcana.domain.portfolio.service;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.portfolio.command.CreatePortfolioCommand;
+import com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand;
+import com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand;
 import com.porcana.domain.portfolio.dto.*;
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioAsset;
@@ -197,7 +199,7 @@ public class PortfolioService {
     }
 
     @Transactional
-    public UpdatePortfolioNameResponse updatePortfolioName(com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand command) {
+    public UpdatePortfolioNameResponse updatePortfolioName(UpdatePortfolioNameCommand command) {
         Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.getPortfolioId(), command.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
 
@@ -211,13 +213,13 @@ public class PortfolioService {
     }
 
     @Transactional
-    public UpdateAssetWeightsResponse updateAssetWeights(com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand command) {
+    public UpdateAssetWeightsResponse updateAssetWeights(UpdateAssetWeightsCommand command) {
         Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.getPortfolioId(), command.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
 
         // 비중 합계 검증 (100%가 되어야 함)
         java.math.BigDecimal totalWeight = command.getWeights().stream()
-                .map(com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand.AssetWeightUpdate::getWeightPct)
+                .map(UpdateAssetWeightsCommand.AssetWeightUpdate::getWeightPct)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
         if (totalWeight.compareTo(java.math.BigDecimal.valueOf(100.0)) != 0) {
@@ -231,7 +233,7 @@ public class PortfolioService {
 
         // 새로운 비중으로 업데이트
         List<UpdateAssetWeightsResponse.AssetWeightInfo> updatedWeights = new ArrayList<>();
-        for (com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand.AssetWeightUpdate weightUpdate : command.getWeights()) {
+        for (UpdateAssetWeightsCommand.AssetWeightUpdate weightUpdate : command.getWeights()) {
             PortfolioAsset portfolioAsset = existingAssetMap.get(weightUpdate.getAssetId());
             if (portfolioAsset == null) {
                 throw new IllegalArgumentException("Asset not found in portfolio: " + weightUpdate.getAssetId());
