@@ -37,9 +37,4 @@ public interface PortfolioSnapshotRepository extends JpaRepository<PortfolioSnap
      * Check if snapshot exists for portfolio and effective date
      */
     boolean existsByPortfolioIdAndEffectiveDate(UUID portfolioId, LocalDate effectiveDate);
-
-    /**
-     * Find all portfolios that have snapshots
-     */
-    List<UUID> findDistinctPortfolioId();
 }
