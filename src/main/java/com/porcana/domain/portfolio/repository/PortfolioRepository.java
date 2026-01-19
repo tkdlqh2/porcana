@@ -2,6 +2,8 @@ package com.porcana.domain.portfolio.repository;
 
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -26,4 +28,14 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
      * Find portfolios by user and status
      */
     List<Portfolio> findByUserIdAndStatus(UUID userId, PortfolioStatus status);
+
+    /**
+     * Find portfolios by status (for batch processing)
+     */
+    List<Portfolio> findByStatus(PortfolioStatus status);
+
+    /**
+     * Find portfolios by status with pagination (for chunk-based batch processing)
+     */
+    Page<Portfolio> findByStatus(PortfolioStatus status, Pageable pageable);
 }

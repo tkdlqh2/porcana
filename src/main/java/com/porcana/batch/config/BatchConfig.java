@@ -37,6 +37,7 @@ public class BatchConfig {
     private final Job usEtfDailyPriceJob;
     private final Job exchangeRateJob;
     private final Job assetRiskJob;
+    private final Job portfolioPerformanceJob;
 
     public BatchConfig(
             JobLauncher jobLauncher,
@@ -49,7 +50,8 @@ public class BatchConfig {
             @Qualifier("krEtfDailyPriceJob") Job krEtfDailyPriceJob,
             @Qualifier("usEtfDailyPriceJob") Job usEtfDailyPriceJob,
             @Qualifier("exchangeRateJob") Job exchangeRateJob,
-            @Qualifier("assetRiskJob") Job assetRiskJob
+            @Qualifier("assetRiskJob") Job assetRiskJob,
+            @Qualifier("portfolioPerformanceJob") Job portfolioPerformanceJob
     ) {
         this.jobLauncher = jobLauncher;
         this.krAssetJob = krAssetJob;
@@ -62,6 +64,7 @@ public class BatchConfig {
         this.usEtfDailyPriceJob = usEtfDailyPriceJob;
         this.exchangeRateJob = exchangeRateJob;
         this.assetRiskJob = assetRiskJob;
+        this.portfolioPerformanceJob = portfolioPerformanceJob;
     }
 
     /**
@@ -249,6 +252,28 @@ public class BatchConfig {
 
         } catch (Exception e) {
             log.error("Failed to execute weekly asset risk calculation batch job", e);
+        }
+    }
+
+    /**
+     * Scheduled portfolio performance calculation job
+     * Runs every day at 08:00 KST (after US market price update at 07:00)
+     * Calculates daily returns for all ACTIVE portfolios
+     */
+    @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Seoul")
+    public void runPortfolioPerformanceCalculation() {
+        log.info("Starting scheduled portfolio performance calculation");
+
+        try {
+            JobParameters params = new JobParametersBuilder()
+                    .addLong("time", System.currentTimeMillis())
+                    .toJobParameters();
+            jobLauncher.run(portfolioPerformanceJob, params);
+            log.info("Portfolio performance calculation completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to run portfolio performance calculation", e);
+            // In production, you might want to send alerts here
         }
     }
 }

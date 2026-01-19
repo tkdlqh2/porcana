@@ -70,4 +70,14 @@ public class Portfolio {
     public void finish() {
         this.status = PortfolioStatus.FINISHED;
     }
+
+    public void updateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name must not be blank");
+        }
+        if (name.length() > 100) {
+            throw new IllegalArgumentException("name must be <= 100 characters");
+        }
+        this.name = name;
+    }
 }
