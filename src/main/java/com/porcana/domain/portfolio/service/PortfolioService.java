@@ -195,6 +195,62 @@ public class PortfolioService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public UpdatePortfolioNameResponse updatePortfolioName(com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand command) {
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.getPortfolioId(), command.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
+
+        portfolio.updateName(command.getName());
+        Portfolio saved = portfolioRepository.save(portfolio);
+
+        return UpdatePortfolioNameResponse.builder()
+                .portfolioId(saved.getId().toString())
+                .name(saved.getName())
+                .build();
+    }
+
+    @Transactional
+    public UpdateAssetWeightsResponse updateAssetWeights(com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand command) {
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.getPortfolioId(), command.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
+
+        // 비중 합계 검증 (100%가 되어야 함)
+        java.math.BigDecimal totalWeight = command.getWeights().stream()
+                .map(com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand.AssetWeightUpdate::getWeightPct)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        if (totalWeight.compareTo(java.math.BigDecimal.valueOf(100.0)) != 0) {
+            throw new IllegalArgumentException("Total weight must be 100%. Current total: " + totalWeight + "%");
+        }
+
+        // 기존 자산들 조회
+        List<PortfolioAsset> existingAssets = portfolioAssetRepository.findByPortfolioId(command.getPortfolioId());
+        Map<UUID, PortfolioAsset> existingAssetMap = existingAssets.stream()
+                .collect(Collectors.toMap(PortfolioAsset::getAssetId, pa -> pa));
+
+        // 새로운 비중으로 업데이트
+        List<UpdateAssetWeightsResponse.AssetWeightInfo> updatedWeights = new ArrayList<>();
+        for (com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand.AssetWeightUpdate weightUpdate : command.getWeights()) {
+            PortfolioAsset portfolioAsset = existingAssetMap.get(weightUpdate.getAssetId());
+            if (portfolioAsset == null) {
+                throw new IllegalArgumentException("Asset not found in portfolio: " + weightUpdate.getAssetId());
+            }
+
+            portfolioAsset.setWeightPct(weightUpdate.getWeightPct());
+            portfolioAssetRepository.save(portfolioAsset);
+
+            updatedWeights.add(UpdateAssetWeightsResponse.AssetWeightInfo.builder()
+                    .assetId(portfolioAsset.getAssetId().toString())
+                    .weightPct(portfolioAsset.getWeightPct().doubleValue())
+                    .build());
+        }
+
+        return UpdateAssetWeightsResponse.builder()
+                .portfolioId(portfolio.getId().toString())
+                .weights(updatedWeights)
+                .build();
+    }
+
     private LocalDate calculateStartDate(LocalDate endDate, String range) {
         return switch (range) {
             case "1M" -> endDate.minusMonths(1);

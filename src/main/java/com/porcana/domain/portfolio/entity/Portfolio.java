@@ -70,4 +70,8 @@ public class Portfolio {
     public void finish() {
         this.status = PortfolioStatus.FINISHED;
     }
+
+    public void updateName(String name) {
+        this.name = name;
+    }
 }

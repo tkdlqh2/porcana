@@ -110,4 +110,44 @@ public class PortfolioController {
         PortfolioPerformanceResponse response = portfolioService.getPortfolioPerformance(portfolioId, userId, range);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(
+            summary = "포트폴리오 이름 수정",
+            description = "포트폴리오의 이름을 수정합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "수정 성공"),
+                    @ApiResponse(responseCode = "400", description = "포트폴리오를 찾을 수 없거나 권한이 없음", content = @Content),
+                    @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+            }
+    )
+    @PatchMapping("/{portfolioId}/name")
+    public ResponseEntity<UpdatePortfolioNameResponse> updatePortfolioName(
+            @Parameter(description = "포트폴리오 ID", required = true) @PathVariable UUID portfolioId,
+            @Valid @RequestBody UpdatePortfolioNameRequest request,
+            @CurrentUser UUID userId) {
+        com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand command =
+                com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand.from(request, portfolioId, userId);
+        UpdatePortfolioNameResponse response = portfolioService.updatePortfolioName(command);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "자산 비중 수정",
+            description = "포트폴리오 내 자산들의 비중을 일괄 수정합니다. 비중의 합계는 반드시 100%가 되어야 합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "수정 성공"),
+                    @ApiResponse(responseCode = "400", description = "포트폴리오를 찾을 수 없거나 비중 합계가 100%가 아님", content = @Content),
+                    @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+            }
+    )
+    @PutMapping("/{portfolioId}/weights")
+    public ResponseEntity<UpdateAssetWeightsResponse> updateAssetWeights(
+            @Parameter(description = "포트폴리오 ID", required = true) @PathVariable UUID portfolioId,
+            @Valid @RequestBody UpdateAssetWeightsRequest request,
+            @CurrentUser UUID userId) {
+        com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand command =
+                com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand.from(request, portfolioId, userId);
+        UpdateAssetWeightsResponse response = portfolioService.updateAssetWeights(command);
+        return ResponseEntity.ok(response);
+    }
 }
