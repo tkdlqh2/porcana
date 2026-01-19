@@ -89,7 +89,7 @@ public class SnapshotAssetDailyReturn {
     @Column(nullable = false, updatable = false, name = "calculated_at")
     private LocalDateTime calculatedAt;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     public SnapshotAssetDailyReturn(UUID portfolioId, UUID snapshotId, UUID assetId, LocalDate returnDate,
                                     BigDecimal weightUsed, BigDecimal assetReturnLocal, BigDecimal assetReturnTotal,
                                     BigDecimal fxReturn, BigDecimal contributionTotal) {
@@ -102,5 +102,22 @@ public class SnapshotAssetDailyReturn {
         this.assetReturnTotal = assetReturnTotal;
         this.fxReturn = fxReturn;
         this.contributionTotal = contributionTotal;
+    }
+
+    public static SnapshotAssetDailyReturn from(UUID portfolioId, UUID snapshotId, UUID assetId, LocalDate returnDate,
+                                                BigDecimal weightUsed, BigDecimal assetReturnLocal,
+                                                BigDecimal assetReturnTotal, BigDecimal fxReturn,
+                                                BigDecimal contributionTotal) {
+        return SnapshotAssetDailyReturn.builder()
+                .portfolioId(portfolioId)
+                .snapshotId(snapshotId)
+                .assetId(assetId)
+                .returnDate(returnDate)
+                .weightUsed(weightUsed)
+                .assetReturnLocal(assetReturnLocal)
+                .assetReturnTotal(assetReturnTotal)
+                .fxReturn(fxReturn)
+                .contributionTotal(contributionTotal)
+                .build();
     }
 }

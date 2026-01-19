@@ -189,13 +189,24 @@ public class PortfolioPerformanceBatchJob {
         BigDecimal totalReturnLocal = BigDecimal.ZERO;
         BigDecimal totalReturnFx = BigDecimal.ZERO;
 
+        // Fetch all assets at once to avoid N+1 query
+        List<UUID> assetIds = snapshotAssets.stream()
+                .map(PortfolioSnapshotAsset::getAssetId)
+                .toList();
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Asset::getId, asset -> asset));
+
+        // Verify all assets were found
+        if (assetMap.size() != assetIds.size()) {
+            List<UUID> missingAssetIds = assetIds.stream()
+                    .filter(id -> !assetMap.containsKey(id))
+                    .toList();
+            log.warn("Some assets not found: {}", missingAssetIds);
+            return Optional.empty();
+        }
+
         for (PortfolioSnapshotAsset snapshotAsset : snapshotAssets) {
-            Optional<Asset> assetOpt = assetRepository.findById(snapshotAsset.getAssetId());
-            if (assetOpt.isEmpty()) {
-                log.warn("Asset {} not found", snapshotAsset.getAssetId());
-                return Optional.empty();
-            }
-            Asset asset = assetOpt.get();
+            Asset asset = assetMap.get(snapshotAsset.getAssetId());
 
             // Calculate asset return
             Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate);
@@ -213,17 +224,17 @@ public class PortfolioPerformanceBatchJob {
                     .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
             // Build asset daily return record
-            SnapshotAssetDailyReturn assetReturn = SnapshotAssetDailyReturn.builder()
-                    .portfolioId(portfolio.getId())
-                    .snapshotId(snapshot.getId())
-                    .assetId(asset.getId())
-                    .returnDate(targetDate)
-                    .weightUsed(weight)
-                    .assetReturnLocal(result.assetReturnLocal)
-                    .assetReturnTotal(result.assetReturnTotal)
-                    .fxReturn(result.fxReturn)
-                    .contributionTotal(contributionTotal)
-                    .build();
+            SnapshotAssetDailyReturn assetReturn = SnapshotAssetDailyReturn.from(
+                    portfolio.getId(),
+                    snapshot.getId(),
+                    asset.getId(),
+                    targetDate,
+                    weight,
+                    result.assetReturnLocal,
+                    result.assetReturnTotal,
+                    result.fxReturn,
+                    contributionTotal
+            );
 
             assetReturns.add(assetReturn);
 
@@ -248,14 +259,14 @@ public class PortfolioPerformanceBatchJob {
         BigDecimal totalReturn = totalReturnLocal.add(totalReturnFx);
 
         // Build portfolio daily return record
-        PortfolioDailyReturn dailyReturn = PortfolioDailyReturn.builder()
-                .portfolioId(portfolio.getId())
-                .snapshotId(snapshot.getId())
-                .returnDate(targetDate)
-                .returnTotal(totalReturn)
-                .returnLocal(totalReturnLocal)
-                .returnFx(totalReturnFx)
-                .build();
+        PortfolioDailyReturn dailyReturn = PortfolioDailyReturn.from(
+                portfolio.getId(),
+                snapshot.getId(),
+                targetDate,
+                totalReturn,
+                totalReturnLocal,
+                totalReturnFx
+        );
 
         log.info("Calculated performance for portfolio {}: total={}% (local={}%, fx={}%)",
                 portfolio.getId(), totalReturn, totalReturnLocal, totalReturnFx);

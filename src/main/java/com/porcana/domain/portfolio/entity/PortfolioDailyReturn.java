@@ -74,7 +74,7 @@ public class PortfolioDailyReturn {
     @Column(nullable = false, updatable = false, name = "calculated_at")
     private LocalDateTime calculatedAt;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     public PortfolioDailyReturn(UUID portfolioId, UUID snapshotId, LocalDate returnDate,
                                 BigDecimal returnTotal, BigDecimal returnLocal, BigDecimal returnFx) {
         this.portfolioId = portfolioId;
@@ -83,5 +83,17 @@ public class PortfolioDailyReturn {
         this.returnTotal = returnTotal;
         this.returnLocal = returnLocal;
         this.returnFx = returnFx;
+    }
+
+    public static PortfolioDailyReturn from(UUID portfolioId, UUID snapshotId, LocalDate returnDate,
+                                            BigDecimal returnTotal, BigDecimal returnLocal, BigDecimal returnFx) {
+        return PortfolioDailyReturn.builder()
+                .portfolioId(portfolioId)
+                .snapshotId(snapshotId)
+                .returnDate(returnDate)
+                .returnTotal(returnTotal)
+                .returnLocal(returnLocal)
+                .returnFx(returnFx)
+                .build();
     }
 }
