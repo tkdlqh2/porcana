@@ -43,6 +43,7 @@ public class ArenaService {
     private final PortfolioAssetRepository portfolioAssetRepository;
     private final PortfolioRepository portfolioRepository;
     private final AssetRecommendationService recommendationService;
+    private final com.porcana.domain.portfolio.service.PortfolioSnapshotService portfolioSnapshotService;
 
     /**
      * Create a new arena session for portfolio drafting
@@ -382,6 +383,8 @@ public class ArenaService {
             BigDecimal equalWeight = new BigDecimal("100.00")
                     .divide(new BigDecimal(selectedAssetIds.size()), 2, RoundingMode.HALF_UP);
 
+            java.util.Map<UUID, BigDecimal> assetWeights = new java.util.HashMap<>();
+
             for (UUID assetId : selectedAssetIds) {
                 PortfolioAsset portfolioAsset = PortfolioAsset.builder()
                         .portfolioId(session.getPortfolioId())
@@ -390,7 +393,17 @@ public class ArenaService {
                         .build();
 
                 portfolioAssetRepository.save(portfolioAsset);
+                assetWeights.put(assetId, equalWeight);
             }
+
+            // Create initial snapshot
+            java.time.LocalDate today = java.time.LocalDate.now();
+            portfolioSnapshotService.createSnapshotWithAssets(
+                    session.getPortfolioId(),
+                    assetWeights,
+                    today,
+                    "Initial portfolio creation via Arena"
+            );
         }
     }
 

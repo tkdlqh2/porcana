@@ -32,6 +32,7 @@ public class PortfolioService {
     private final AssetRepository assetRepository;
     private final UserRepository userRepository;
     private final PortfolioReturnCalculator portfolioReturnCalculator;
+    private final PortfolioSnapshotService portfolioSnapshotService;
 
     public List<PortfolioListResponse> getPortfolios(UUID userId) {
         User user = userRepository.findById(userId)
@@ -244,6 +245,14 @@ public class PortfolioService {
                     .weightPct(portfolioAsset.getWeightPct().doubleValue())
                     .build());
         }
+
+        // Create snapshot for the weight update
+        LocalDate today = LocalDate.now();
+        portfolioSnapshotService.createSnapshot(
+                command.getPortfolioId(),
+                today,
+                "Portfolio rebalancing"
+        );
 
         return UpdateAssetWeightsResponse.builder()
                 .portfolioId(portfolio.getId().toString())
