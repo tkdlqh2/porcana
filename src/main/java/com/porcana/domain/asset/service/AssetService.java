@@ -19,9 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +32,7 @@ public class AssetService {
     private final UserRepository userRepository;
     private final PortfolioRepository portfolioRepository;
     private final PortfolioAssetRepository portfolioAssetRepository;
+    private final com.porcana.domain.portfolio.service.PortfolioReturnCalculator portfolioReturnCalculator;
 
     public List<AssetSearchResponse> searchAssets(String query) {
         List<Asset> assets = assetRepository.findByActiveTrue();
@@ -123,8 +122,10 @@ public class AssetService {
 
         PortfolioAsset portfolioAsset = portfolioAssetOpt.get();
 
-        // TODO: Calculate actual return percentage
-        Double returnPct = 0.0;
+        // Calculate actual return percentage
+        Map<UUID, Double> assetReturns = portfolioReturnCalculator.calculateAssetReturns(
+                mainPortfolioId, Set.of(assetId));
+        Double returnPct = assetReturns.getOrDefault(assetId, 0.0);
 
         return AssetInMainPortfolioResponse.builder()
                 .included(true)

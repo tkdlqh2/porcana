@@ -10,6 +10,7 @@ import com.porcana.domain.portfolio.entity.PortfolioDailyReturn;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioDailyReturnRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
+import com.porcana.domain.portfolio.service.PortfolioReturnCalculator;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class HomeService {
     private final PortfolioAssetRepository portfolioAssetRepository;
     private final PortfolioDailyReturnRepository portfolioDailyReturnRepository;
     private final AssetRepository assetRepository;
+    private final PortfolioReturnCalculator portfolioReturnCalculator;
 
     public HomeResponse getHome(UUID userId) {
         User user = userRepository.findById(userId)
@@ -104,20 +106,7 @@ public class HomeService {
     }
 
     private Double calculateTotalReturn(UUID portfolioId) {
-        List<PortfolioDailyReturn> returns = portfolioDailyReturnRepository.findByPortfolioIdOrderByReturnDateAsc(portfolioId);
-
-        if (returns.isEmpty()) {
-            return 0.0;
-        }
-
-        // Calculate cumulative return: (1 + r1) * (1 + r2) * ... - 1
-        double cumulativeReturn = 1.0;
-        for (PortfolioDailyReturn dailyReturn : returns) {
-            double dailyReturnValue = dailyReturn.getReturnTotal().doubleValue() / 100.0;
-            cumulativeReturn *= (1.0 + dailyReturnValue);
-        }
-
-        return (cumulativeReturn - 1.0) * 100.0;
+        return portfolioReturnCalculator.calculateTotalReturn(portfolioId);
     }
 
     private List<HomeResponse.ChartPoint> buildChartData(UUID portfolioId) {
@@ -194,10 +183,6 @@ public class HomeService {
     }
 
     private Map<UUID, Double> calculateAssetReturns(UUID portfolioId, Set<UUID> assetIds) {
-        // This is a simplified version. For accurate calculation, you would need to use
-        // SnapshotAssetDailyReturn data. For MVP, we'll return zeros.
-        // TODO: Implement accurate asset-level return calculation using SnapshotAssetDailyReturn
-        return assetIds.stream()
-                .collect(Collectors.toMap(assetId -> assetId, assetId -> 0.0));
+        return portfolioReturnCalculator.calculateAssetReturns(portfolioId, assetIds);
     }
 }

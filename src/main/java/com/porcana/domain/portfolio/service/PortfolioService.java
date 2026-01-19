@@ -31,6 +31,7 @@ public class PortfolioService {
     private final PortfolioDailyReturnRepository portfolioDailyReturnRepository;
     private final AssetRepository assetRepository;
     private final UserRepository userRepository;
+    private final PortfolioReturnCalculator portfolioReturnCalculator;
 
     public List<PortfolioListResponse> getPortfolios(UUID userId) {
         User user = userRepository.findById(userId)
@@ -152,20 +153,7 @@ public class PortfolioService {
     }
 
     private Double calculateTotalReturn(UUID portfolioId) {
-        List<PortfolioDailyReturn> returns = portfolioDailyReturnRepository.findByPortfolioIdOrderByReturnDateAsc(portfolioId);
-
-        if (returns.isEmpty()) {
-            return 0.0;
-        }
-
-        // Calculate cumulative return: (1 + r1) * (1 + r2) * ... - 1
-        double cumulativeReturn = 1.0;
-        for (PortfolioDailyReturn dailyReturn : returns) {
-            double dailyReturnValue = dailyReturn.getReturnTotal().doubleValue() / 100.0;
-            cumulativeReturn *= (1.0 + dailyReturnValue);
-        }
-
-        return (cumulativeReturn - 1.0) * 100.0;
+        return portfolioReturnCalculator.calculateTotalReturn(portfolioId);
     }
 
     private List<PortfolioDetailResponse.PositionInfo> buildPositions(UUID portfolioId) {
@@ -183,9 +171,8 @@ public class PortfolioService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, asset -> asset));
 
-        // Calculate individual asset returns (simplified for MVP)
-        Map<UUID, Double> assetReturns = assetIds.stream()
-                .collect(Collectors.toMap(assetId -> assetId, assetId -> 0.0));
+        // Calculate individual asset returns
+        Map<UUID, Double> assetReturns = portfolioReturnCalculator.calculateAssetReturns(portfolioId, assetIds);
 
         return portfolioAssets.stream()
                 .map(pa -> {
