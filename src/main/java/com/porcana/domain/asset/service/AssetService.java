@@ -35,6 +35,10 @@ public class AssetService {
     private final com.porcana.domain.portfolio.service.PortfolioReturnCalculator portfolioReturnCalculator;
 
     public List<AssetSearchResponse> searchAssets(String query) {
+        if (query == null || query.isBlank()) {
+            return Collections.emptyList();
+        }
+
         List<Asset> assets = assetRepository.findByActiveTrue();
 
         String lowerQuery = query.toLowerCase();
@@ -136,6 +140,10 @@ public class AssetService {
     }
 
     private LocalDate calculateStartDate(LocalDate endDate, String range) {
+        if (range == null || range.isBlank()) {
+            return endDate.minusMonths(1);
+        }
+
         return switch (range) {
             case "1M" -> endDate.minusMonths(1);
             case "3M" -> endDate.minusMonths(3);

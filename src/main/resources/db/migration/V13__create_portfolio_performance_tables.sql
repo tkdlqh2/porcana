@@ -46,7 +46,7 @@ CREATE TABLE snapshot_asset_daily_returns (
     snapshot_id UUID NOT NULL,
     asset_id UUID NOT NULL,
     return_date DATE NOT NULL,
-    weight_used DECIMAL(5, 2) NOT NULL,
+    weight_used DECIMAL(5, 2) NOT NULL CHECK (weight_used >= 0 AND weight_used <= 100),
     asset_return_local DECIMAL(10, 4) NOT NULL,
     asset_return_total DECIMAL(10, 4) NOT NULL,
     fx_return DECIMAL(10, 4) NOT NULL,

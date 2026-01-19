@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -132,13 +133,20 @@ public class PortfolioService {
 
         // Start with 100 at the start date
         double cumulativeValue = 100.0;
+        LocalDate initialDate = startDate;
+        if (portfolio.getStartedAt() != null && portfolio.getStartedAt().isAfter(startDate)) {
+            initialDate = portfolio.getStartedAt();
+        }
         points.add(PortfolioPerformanceResponse.PerformancePoint.builder()
-                .date(portfolio.getStartedAt() != null ? portfolio.getStartedAt() : startDate)
+                .date(initialDate)
                 .value(100.0)
                 .build());
 
         // Calculate cumulative values
         for (PortfolioDailyReturn dailyReturn : returns) {
+            if (dailyReturn.getReturnDate().isBefore(initialDate)) {
+                continue;
+            }
             double dailyReturnValue = dailyReturn.getReturnTotal().doubleValue() / 100.0;
             cumulativeValue *= (1.0 + dailyReturnValue);
 
@@ -250,8 +258,14 @@ public class PortfolioService {
 
         // Create snapshot for the weight update
         LocalDate today = LocalDate.now();
-        portfolioSnapshotService.createSnapshot(
+        Map<UUID, BigDecimal> weightMap = command.getWeights().stream()
+                .collect(Collectors.toMap(
+                        UpdateAssetWeightsCommand.AssetWeightUpdate::getAssetId,
+                        UpdateAssetWeightsCommand.AssetWeightUpdate::getWeightPct
+                ));
+        portfolioSnapshotService.createSnapshotWithAssets(
                 command.getPortfolioId(),
+                weightMap,
                 today,
                 "Portfolio rebalancing"
         );
@@ -263,8 +277,11 @@ public class PortfolioService {
     }
 
     private LocalDate calculateStartDate(LocalDate endDate, String range) {
+        if (range == null || range.isBlank()) {
+            return endDate.minusMonths(1);
+        }
+
         return switch (range) {
-            case "1M" -> endDate.minusMonths(1);
             case "3M" -> endDate.minusMonths(3);
             case "1Y" -> endDate.minusYears(1);
             default -> endDate.minusMonths(1);

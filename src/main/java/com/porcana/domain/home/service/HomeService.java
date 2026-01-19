@@ -122,7 +122,7 @@ public class HomeService {
         // Start with 100 at the first date
         Portfolio portfolio = portfolioRepository.findById(portfolioId).orElseThrow();
         LocalDate startDate = portfolio.getStartedAt();
-        if (startDate != null) {
+        if (startDate != null && (returns.isEmpty() || !returns.get(0).getReturnDate().equals(startDate))) {
             chartPoints.add(HomeResponse.ChartPoint.builder()
                     .date(startDate)
                     .value(100.0)
