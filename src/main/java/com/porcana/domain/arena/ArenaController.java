@@ -2,8 +2,7 @@ package com.porcana.domain.arena;
 
 import com.porcana.domain.arena.command.CreateSessionCommand;
 import com.porcana.domain.arena.command.PickAssetCommand;
-import com.porcana.domain.arena.command.PickRiskProfileCommand;
-import com.porcana.domain.arena.command.PickSectorsCommand;
+import com.porcana.domain.arena.command.PickPreferencesCommand;
 import com.porcana.domain.arena.dto.*;
 import com.porcana.domain.arena.service.ArenaService;
 import com.porcana.global.security.CurrentUser;
@@ -69,7 +68,7 @@ public class ArenaController {
 
     @Operation(
             summary = "현재 라운드 조회",
-            description = "현재 진행 중인 라운드의 선택지를 조회합니다. Round 1은 리스크 프로필, Round 2는 섹터, Round 3-12는 자산 선택입니다.",
+            description = "현재 진행 중인 라운드의 선택지를 조회합니다. Round 0은 투자성향+섹터 동시 선택, Round 1-10은 자산 선택입니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "조회 성공"),
                     @ApiResponse(responseCode = "400", description = "세션이 이미 완료됨", content = @Content),
@@ -87,55 +86,33 @@ public class ArenaController {
     }
 
     @Operation(
-            summary = "리스크 프로필 선택 (Round 1)",
-            description = "아레나 Round 1에서 리스크 프로필을 선택합니다. SAFE, BALANCED, AGGRESSIVE 중 선택 가능합니다.",
+            summary = "투자 성향 및 섹터 선택 (Round 0 - Pre Round)",
+            description = "아레나 Round 0에서 투자 성향(리스크 프로필)과 관심 섹터를 동시에 선택합니다. 섹터는 0-3개 선택 가능하며, 중복은 허용되지 않습니다.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "선택 성공, Round 2로 진행"),
-                    @ApiResponse(responseCode = "400", description = "Round 1이 아니거나 유효하지 않은 리스크 프로필", content = @Content),
+                    @ApiResponse(responseCode = "200", description = "선택 성공, Round 1로 진행"),
+                    @ApiResponse(responseCode = "400", description = "Round 0이 아니거나 섹터 개수가 3개 초과 또는 중복된 섹터 포함", content = @Content),
                     @ApiResponse(responseCode = "403", description = "세션을 찾을 수 없거나 권한이 없음", content = @Content),
                     @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
             }
     )
-    @PostMapping("/sessions/{sessionId}/rounds/current/pick-risk-profile")
-    public ResponseEntity<PickResponse> pickRiskProfile(
+    @PostMapping("/sessions/{sessionId}/rounds/current/pick-preferences")
+    public ResponseEntity<PickResponse> pickPreferences(
             @Parameter(description = "세션 ID", required = true) @PathVariable UUID sessionId,
-            @RequestBody @Valid PickRiskProfileRequest request,
+            @RequestBody @Valid PickPreferencesRequest request,
             @CurrentUser UUID userId) {
 
-        PickRiskProfileCommand command = PickRiskProfileCommand.from(request);
-        PickResponse response = arenaService.pickRiskProfile(sessionId, userId, command);
+        PickPreferencesCommand command = PickPreferencesCommand.from(request);
+        PickResponse response = arenaService.pickPreferences(sessionId, userId, command);
 
         return ResponseEntity.ok(response);
     }
 
     @Operation(
-            summary = "섹터 선택 (Round 2)",
-            description = "아레나 Round 2에서 관심 섹터를 선택합니다. 0-3개의 섹터를 선택할 수 있으며, 중복은 허용되지 않습니다.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "선택 성공, Round 3로 진행"),
-                    @ApiResponse(responseCode = "400", description = "Round 2가 아니거나 섹터 개수가 3개 초과 또는 중복된 섹터 포함", content = @Content),
-                    @ApiResponse(responseCode = "403", description = "세션을 찾을 수 없거나 권한이 없음", content = @Content),
-                    @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
-            }
-    )
-    @PostMapping("/sessions/{sessionId}/rounds/current/pick-sectors")
-    public ResponseEntity<PickResponse> pickSectors(
-            @Parameter(description = "세션 ID", required = true) @PathVariable UUID sessionId,
-            @RequestBody @Valid PickSectorsRequest request,
-            @CurrentUser UUID userId) {
-
-        PickSectorsCommand command = PickSectorsCommand.from(request);
-        PickResponse response = arenaService.pickSectors(sessionId, userId, command);
-
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "자산 선택 (Round 3-12)",
-            description = "아레나 Round 3-12에서 제시된 3개의 자산 중 1개를 선택합니다. Round 12 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.",
+            summary = "자산 선택 (Round 1-10)",
+            description = "아레나 Round 1-10에서 제시된 3개의 자산 중 1개를 선택합니다. Round 10 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "선택 성공, 다음 라운드로 진행 또는 세션 완료"),
-                    @ApiResponse(responseCode = "400", description = "Round 3-12가 아니거나 제시된 자산 목록에 없는 자산 선택", content = @Content),
+                    @ApiResponse(responseCode = "400", description = "Round 1-10이 아니거나 제시된 자산 목록에 없는 자산 선택", content = @Content),
                     @ApiResponse(responseCode = "403", description = "세션을 찾을 수 없거나 권한이 없음", content = @Content),
                     @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
             }

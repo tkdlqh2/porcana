@@ -435,16 +435,19 @@ public void runUsDailyPriceUpdate()
 ```java
 public enum CurrencyCode {
     // 주요 통화
-    USD, EUR, JPY, GBP, CNY,
+    USD, JPY, EUR, CNY,
+    // 유럽
+    GBP, CHF, SEK, CZK, DKK, NOK, HUF, PLN, RUB, TRY,
     // 아시아/오세아니아
     HKD, TWD, SGD, THB, MYR, IDR, PHP, VND, INR, AUD, NZD,
+    PKR, BDT, MNT, KZT, BND, FJD,
     // 중동
-    SAR, KWD, BHD, AED, QAR, OMR,
-    // 유럽
-    CHF, SEK, NOK, DKK, CZK, HUF, PLN, RUB,
-    // 기타
-    CAD, MXN, BRL, ZAR, TRY, ILS, EGP, JOD
-    // ... 총 43개 통화
+    SAR, KWD, BHD, AED, QAR, OMR, JOD, ILS, EGP,
+    // 아메리카
+    CAD, MXN, BRL, CLP,
+    // 아프리카
+    ZAR
+    // 총 44개 통화
 }
 ```
 
@@ -667,7 +670,12 @@ Request
 Response
 {
 "accessToken": "string",
-"refreshToken": "string"
+"refreshToken": "string",
+"user": {
+"userId": "uuid",
+"nickname": "string",
+"mainPortfolioId": null
+}
 }
 
 ## GET /auth/check-email?email=string
@@ -679,17 +687,36 @@ Response
 }
 
 ## POST /auth/login
-Request
+**지원 Provider**: EMAIL, GOOGLE, APPLE
+
+Request (EMAIL provider)
 {
 "provider": "EMAIL",
 "email": "string",
 "password": "string"
 }
+
+Request (OAuth providers - GOOGLE, APPLE)
+{
+"provider": "GOOGLE|APPLE",
+"code": "string"
+}
+
 Response
 {
 "accessToken": "string",
-"refreshToken": "string"
+"refreshToken": "string",
+"user": {
+"userId": "uuid",
+"nickname": "string",
+"mainPortfolioId": "uuid|null"
 }
+}
+
+**Validation Notes:**
+- EMAIL provider: email, password 필수
+- GOOGLE/APPLE provider: code 필수 (OAuth authorization code)
+- 커스텀 validator (@ValidLoginRequest)로 provider별 필수 필드 검증
 
 ## POST /auth/refresh
 Request
@@ -703,6 +730,9 @@ Response
 }
 
 ## GET /me
+**Description**: 현재 인증된 사용자의 최신 정보를 조회합니다. 로그인/회원가입 시 user 정보가 응답에 포함되지만, 이 API는 토큰으로 최신 유저 정보를 조회할 때 사용합니다.
+
+**Auth**: Required (JWT)
 Response
 {
 "userId": "uuid",
@@ -711,6 +741,8 @@ Response
 }
 
 ## PATCH /me
+**Auth**: Required (JWT)
+
 Request
 {
 "nickname": "string"
@@ -843,7 +875,7 @@ Response (200 OK)
 "sessionId": "uuid",
 "portfolioId": "uuid",
 "status": "IN_PROGRESS",
-"currentRound": 1
+"currentRound": 0
 }
 
 Error Responses
@@ -863,7 +895,7 @@ Response (200 OK)
 "portfolioId": "uuid",
 "status": "IN_PROGRESS|COMPLETED",
 "currentRound": 3,
-"totalRounds": 12,
+"totalRounds": 11,
 "riskProfile": "BALANCED",
 "selectedSectors": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"],
 "selectedAssetIds": ["uuid1", "uuid2"]
@@ -877,54 +909,58 @@ Error Responses
 
 ## GET /arena/sessions/{sessionId}/rounds/current
 **Description**: 현재 진행 중인 라운드의 선택지를 조회합니다.
-- Round 1: 리스크 프로필 선택
-- Round 2: 섹터 선택
-- Round 3-12: 자산 선택
+- Round 0: 투자 성향 + 섹터 동시 선택 (Pre Round)
+- Round 1-10: 자산 선택
 
 **Auth**: Required (JWT)
 
-Response for Round 1 (Risk Profile)
+Response for Round 0 (Pre Round - Risk Profile + Sector Selection)
 {
 "sessionId": "uuid",
-"round": 1,
-"roundType": "RISK_PROFILE",
-"options": [
+"round": 0,
+"roundType": "PRE_ROUND",
+"riskProfileOptions": [
 {
-"value": "SAFE",
-"displayName": "안전 추구형",
-"description": "낮은 변동성, 안정적인 수익 추구"
+"value": "AGGRESSIVE",
+"displayName": "공격적",
+"description": "고위험 고수익을 추구하는 투자 성향"
 },
 {
 "value": "BALANCED",
-"displayName": "균형형",
-"description": "중간 수준의 위험과 수익 균형"
+"displayName": "균형",
+"description": "위험과 수익의 균형을 추구하는 투자 성향"
 },
 {
-"value": "AGGRESSIVE",
-"displayName": "공격 투자형",
-"description": "높은 변동성, 높은 수익 추구"
+"value": "SAFE",
+"displayName": "보수적",
+"description": "안정적인 수익을 추구하는 저위험 투자 성향"
 }
-]
-}
-
-Response for Round 2 (Sector Selection)
+],
+"sectorOptions": [
 {
-"sessionId": "uuid",
-"round": 2,
-"roundType": "SECTOR",
-"sectors": [
-{
-"sector": "INFORMATION_TECHNOLOGY",
+"value": "INFORMATION_TECHNOLOGY",
 "displayName": "정보기술",
-"description": "소프트웨어, 하드웨어, IT 서비스"
+"assetCount": 45
+},
+{
+"value": "HEALTH_CARE",
+"displayName": "헬스케어",
+"assetCount": 38
 },
 // ... more sectors
 ],
-"minSelection": 0,
-"maxSelection": 3
+"minSectorSelection": 0,
+"maxSectorSelection": 3
 }
 
-Response for Round 3-12 (Asset Selection)
+**Field Notes:**
+- `riskProfileOptions`: 투자 성향 선택지 (SAFE/BALANCED/AGGRESSIVE 중 1개 필수 선택)
+- `sectorOptions`: 섹터 선택지 (0-3개 선택 가능)
+- `value`: Sector enum 값
+- `displayName`: 한국어 섹터명
+- `assetCount`: 해당 섹터에 속한 활성 자산 개수
+
+Response for Round 1-10 (Asset Selection)
 {
 "sessionId": "uuid",
 "round": 3,
@@ -935,27 +971,38 @@ Response for Round 3-12 (Asset Selection)
 "ticker": "AAPL",
 "name": "Apple Inc.",
 "sector": "INFORMATION_TECHNOLOGY",
-"riskLevel": 3,
-"market": "US"
+"market": "US",
+"assetClass": null,
+"impactHint": "성장 비중 ↑ · 변동성 ↑"
 },
 {
 "assetId": "uuid",
 "ticker": "MSFT",
 "name": "Microsoft Corp.",
 "sector": "INFORMATION_TECHNOLOGY",
-"riskLevel": 2,
-"market": "US"
+"market": "US",
+"assetClass": null,
+"impactHint": "성장 비중 ↑ · 균형"
 },
 {
 "assetId": "uuid",
-"ticker": "JNJ",
-"name": "Johnson & Johnson",
-"sector": "HEALTH_CARE",
-"riskLevel": 2,
-"market": "US"
+"ticker": "SPY",
+"name": "SPDR S&P 500 ETF",
+"sector": null,
+"market": "US",
+"assetClass": "EQUITY_INDEX",
+"impactHint": "분산 효과 · 균형"
 }
 ]
 }
+
+**Field Notes:**
+- `sector`: 주식(STOCK)의 경우 GICS 섹터, ETF는 null
+- `market`: 시장 구분 (KR | US)
+- `assetClass`: ETF의 경우 자산 클래스 (EQUITY_INDEX, DIVIDEND, BOND 등), 주식은 null
+- `impactHint`: 포트폴리오에 미치는 영향 힌트 (역할 · 리스크)
+  - 역할: ETF는 assetClass 기반 ("분산 효과", "배당 기여", "방어 역할"), 주식은 sector 기반 ("성장 비중 ↑", "경기 민감", "방어적")
+  - 리스크: currentRiskLevel 기반 ("변동성 ↑", "균형", "안정성 ↑")
 
 Error Responses
 - 400: 세션이 이미 완료됨
@@ -964,38 +1011,14 @@ Error Responses
 
 ---
 
-## POST /arena/sessions/{sessionId}/rounds/current/pick-risk-profile
-**Description**: 아레나 Round 1에서 리스크 프로필을 선택합니다.
+## POST /arena/sessions/{sessionId}/rounds/current/pick-preferences
+**Description**: 아레나 Round 0 (Pre Round)에서 투자 성향(리스크 프로필)과 관심 섹터를 동시에 선택합니다. 0-3개의 섹터를 선택할 수 있으며, 중복은 허용되지 않습니다.
 
 **Auth**: Required (JWT)
 
 Request
 {
-"riskProfile": "SAFE|BALANCED|AGGRESSIVE"
-}
-
-Response (200 OK)
-{
-"sessionId": "uuid",
-"status": "IN_PROGRESS",
-"currentRound": 2,
-"picked": "BALANCED"
-}
-
-Error Responses
-- 400: Round 1이 아니거나 유효하지 않은 리스크 프로필
-- 403: 세션을 찾을 수 없거나 권한이 없음
-- 401: 인증 필요
-
----
-
-## POST /arena/sessions/{sessionId}/rounds/current/pick-sectors
-**Description**: 아레나 Round 2에서 관심 섹터를 선택합니다. 0-3개의 섹터를 선택해야 합니다.
-
-**Auth**: Required (JWT)
-
-Request
-{
+"riskProfile": "SAFE|BALANCED|AGGRESSIVE",
 "sectors": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"]
 }
 
@@ -1003,19 +1026,22 @@ Response (200 OK)
 {
 "sessionId": "uuid",
 "status": "IN_PROGRESS",
-"currentRound": 3,
-"picked": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"]
+"currentRound": 1,
+"picked": {
+"riskProfile": "BALANCED",
+"sectors": ["INFORMATION_TECHNOLOGY", "HEALTH_CARE"]
+}
 }
 
 Error Responses
-- 400: Round 2가 아니거나 섹터 개수가 2-3개가 아님
+- 400: Round 0이 아니거나 섹터 개수가 3개 초과 또는 중복된 섹터 포함
 - 403: 세션을 찾을 수 없거나 권한이 없음
 - 401: 인증 필요
 
 ---
 
 ## POST /arena/sessions/{sessionId}/rounds/current/pick-asset
-**Description**: 아레나 Round 3-12에서 제시된 3개의 자산 중 1개를 선택합니다. Round 12 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.
+**Description**: 아레나 Round 1-10에서 제시된 3개의 자산 중 1개를 선택합니다. Round 10 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.
 
 **Auth**: Required (JWT)
 
@@ -1028,12 +1054,12 @@ Response (200 OK)
 {
 "sessionId": "uuid",
 "status": "IN_PROGRESS|COMPLETED",
-"currentRound": 4,
+"currentRound": 2,
 "picked": "uuid"
 }
 
 Error Responses
-- 400: Round 3-12가 아니거나 제시된 자산 목록에 없는 자산 선택
+- 400: Round 1-10이 아니거나 제시된 자산 목록에 없는 자산 선택
 - 403: 세션을 찾을 수 없거나 권한이 없음
 - 401: 인증 필요
 
@@ -1045,9 +1071,8 @@ Error Responses
 Arena는 Hearthstone-style의 드래프트 시스템으로, 사용자가 3개의 선택지 중 1개를 선택하여 포트폴리오를 구성합니다.
 
 ## Round Structure
-- **Round 1**: Risk Profile 선택 (SAFE, BALANCED, AGGRESSIVE)
-- **Round 2**: Sector 선택 (0-3개 섹터, 중복 불가)
-- **Rounds 3-12**: Asset 선택 (라운드당 3개 중 1개)
+- **Round 0 (Pre Round)**: Risk Profile + Sector 동시 선택 (SAFE/BALANCED/AGGRESSIVE + 0-3개 섹터)
+- **Rounds 1-10**: Asset 선택 (라운드당 3개 중 1개)
 
 ## Asset Recommendation Algorithm
 
@@ -1218,9 +1243,9 @@ Round 3:
 
 Result:
   [
-    { assetId: "...", ticker: "AAPL", sector: "INFORMATION_TECHNOLOGY", riskLevel: 3 },
-    { assetId: "...", ticker: "JNJ", sector: "HEALTH_CARE", riskLevel: 2 },
-    { assetId: "...", ticker: "XOM", sector: "ENERGY", riskLevel: 4 }  // wild pick
+    { assetId: "...", ticker: "AAPL", name: "Apple Inc.", sector: "INFORMATION_TECHNOLOGY" },
+    { assetId: "...", ticker: "JNJ", name: "Johnson & Johnson", sector: "HEALTH_CARE" },
+    { assetId: "...", ticker: "XOM", name: "Exxon Mobil", sector: "ENERGY" }  // wild pick
   ]
 ```
 
