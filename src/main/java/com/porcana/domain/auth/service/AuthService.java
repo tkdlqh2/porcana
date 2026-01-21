@@ -80,6 +80,6 @@ public class AuthService {
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId());
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        return new AuthResponse(newAccessToken, newRefreshToken);
+        return new AuthResponse(newAccessToken, newRefreshToken, UserResponse.from(user));
     }
 }
