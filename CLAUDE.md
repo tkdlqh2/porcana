@@ -799,12 +799,14 @@ Response
 # 3) Portfolio List
 
 ## GET /portfolios
+**Note**: DRAFT 상태의 포트폴리오는 리스트에 표시되지 않습니다. ACTIVE 및 FINISHED 상태만 조회됩니다.
+
 Response
 [
 {
 "portfolioId": "uuid",
 "name": "string",
-"status": "DRAFT|ACTIVE|FINISHED",
+"status": "ACTIVE|FINISHED",
 "isMain": true,
 "totalReturnPct": 12.34,
 "createdAt": "YYYY-MM-DD"
@@ -816,6 +818,8 @@ Response
 # 4) Portfolio (CRUD minimal for MVP)
 
 ## POST /portfolios
+**Note**: 이 API는 DRAFT 포트폴리오를 생성합니다. Arena를 통해 자산을 선택하면 자동으로 ACTIVE 상태로 변경됩니다.
+
 Request
 {
 "name": "string"
@@ -874,13 +878,6 @@ Response
   - 모든 레벨 (1-5)이 항상 포함되며, 없는 레벨은 0.0%
   - 합계는 100%가 되어야 함 (riskLevel이 null인 자산 제외)
 
-## POST /portfolios/{portfolioId}/start
-Response
-{
-"portfolioId": "uuid",
-"status": "ACTIVE",
-"startedAt": "YYYY-MM-DD"
-}
 
 ---
 
@@ -1072,6 +1069,12 @@ Error Responses
 
 ## POST /arena/sessions/{sessionId}/rounds/current/pick-asset
 **Description**: 아레나 Round 1-10에서 제시된 3개의 자산 중 1개를 선택합니다. Round 10 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.
+
+**Auto Actions on Round 10 Completion:**
+1. 포트폴리오에 선택된 10개 자산 추가 (균등 비중 10% 씩)
+2. 포트폴리오 스냅샷 생성
+3. **포트폴리오 자동 시작** (DRAFT → ACTIVE, startedAt = today)
+4. **메인 포트폴리오 자동 설정** (사용자의 mainPortfolioId가 null인 경우)
 
 **Auth**: Required (JWT)
 

@@ -41,7 +41,9 @@ public class PortfolioService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        List<Portfolio> portfolios = portfolioRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        // DRAFT 상태 제외 (ACTIVE, FINISHED만 조회)
+        List<Portfolio> portfolios = portfolioRepository.findByUserIdAndStatusNotOrderByCreatedAtDesc(
+                userId, PortfolioStatus.DRAFT);
 
         return portfolios.stream()
                 .map(portfolio -> {
