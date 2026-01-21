@@ -215,6 +215,7 @@ public class PortfolioService {
                             .build();
                 })
                 .filter(Objects::nonNull)
+                .sorted((p1, p2) -> Double.compare(p2.getWeightPct(), p1.getWeightPct())) // Sort by weight descending
                 .collect(Collectors.toList());
     }
 
