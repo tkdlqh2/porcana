@@ -193,8 +193,8 @@ erDiagram
         UUID portfolio_id FK "NOT NULL, indexed"
         UUID user_id FK "NOT NULL, indexed"
         enum status "IN_PROGRESS, COMPLETED, ABANDONED"
-        integer current_round "NOT NULL, default 1"
-        integer total_rounds "NOT NULL, default 12"
+        integer current_round "NOT NULL, default 0"
+        integer total_rounds "NOT NULL, default 11"
         enum risk_profile "SAFE, BALANCED, AGGRESSIVE"
         list selected_sectors "0-3 sectors"
         datetime created_at
@@ -206,7 +206,7 @@ erDiagram
         UUID id PK
         UUID session_id FK "NOT NULL, indexed"
         integer round_number "NOT NULL, unique per session"
-        enum round_type "RISK_PROFILE, SECTOR, ASSET"
+        enum round_type "PRE_ROUND, ASSET"
         list presented_asset_ids "UUIDs"
         UUID selected_asset_id FK "nullable"
         datetime created_at
@@ -329,7 +329,7 @@ SnapshotAssetDailyReturn (자산별 기여도)
 ### 6. Arena Drafting
 - **ArenaSession**: 포트폴리오 드래프트 세션
 - **ArenaRound**: 라운드별 선택지 및 선택 결과
-- **Flow**: Round 1 (Risk Profile) → Round 2 (Sectors) → Rounds 3-12 (Assets)
+- **Flow**: Round 0 (Pre Round: Risk Profile + Sectors) → Rounds 1-10 (Assets)
 
 ---
 
@@ -376,7 +376,7 @@ SnapshotAssetDailyReturn (자산별 기여도)
 | snapshot_asset_daily_returns | ~7,500,000/year | 750K returns × 10 assets |
 | asset_risk_history | ~52,000/year | 1,000 assets × 52 weeks |
 | arena_sessions | 300-3,000 | 포트폴리오 생성 시 1회 |
-| arena_rounds | 3,600-36,000 | 세션당 12 라운드 |
+| arena_rounds | 3,300-33,000 | 세션당 11 라운드 |
 
 ---
 

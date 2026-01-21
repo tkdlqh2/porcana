@@ -1243,9 +1243,9 @@ Round 3:
 
 Result:
   [
-    { assetId: "...", ticker: "AAPL", name: "Apple Inc.", sector: "INFORMATION_TECHNOLOGY", tags: ["SP500"] },
-    { assetId: "...", ticker: "JNJ", name: "Johnson & Johnson", sector: "HEALTH_CARE", tags: ["SP500"] },
-    { assetId: "...", ticker: "XOM", name: "Exxon Mobil", sector: "ENERGY", tags: ["SP500"] }  // wild pick
+    { assetId: "...", ticker: "AAPL", name: "Apple Inc.", sector: "INFORMATION_TECHNOLOGY" },
+    { assetId: "...", ticker: "JNJ", name: "Johnson & Johnson", sector: "HEALTH_CARE" },
+    { assetId: "...", ticker: "XOM", name: "Exxon Mobil", sector: "ENERGY" }  // wild pick
   ]
 ```
 
