@@ -413,6 +413,35 @@ public void runUsDailyPriceUpdate()
 
 ---
 
+## US 종목 이미지 업데이트
+
+### US 이미지 업데이트 배치 Job
+
+**이미지 업데이트 (usImageUpdateJob):**
+- **대상**: 모든 US STOCK 자산 (active/inactive 무관)
+- **데이터 소스**: FMP API (`/stable/profile`)
+- **처리 로직**:
+  1. 모든 US 주식 자산 조회
+  2. 각 종목마다 FMP profile API 호출
+  3. `image` 필드 추출
+  4. `imageUrl` 필드 업데이트
+  5. Rate limiting: 150ms 딜레이
+- **실행 주기**: 필요 시 수동 실행
+  - 초기 이미지 데이터 구축 또는 이미지 누락 종목 보완용
+
+**수동 실행:**
+```bash
+./gradlew bootRun --args='--spring.batch.job.names=usImageUpdateJob'
+```
+
+**참고:**
+- US 주식/ETF 생성 배치 (`usAssetJob`, `usEtfJob`)에서 이미지 URL이 자동으로 포함됨
+- 이 배치는 기존 자산의 이미지를 일괄 업데이트할 때만 사용
+- FMP API의 이미지 URL 포맷: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
+- 한국 종목은 이미지 소스가 없어 지원하지 않음
+
+---
+
 ## 환율 데이터 관리
 
 ### ExchangeRate (환율) Entity
