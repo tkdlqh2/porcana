@@ -308,6 +308,7 @@ public class ArenaService {
                         .sector(asset.getSector())
                         .market(asset.getMarket())
                         .assetClass(asset.getAssetClass())
+                        .currentRiskLevel(asset.getCurrentRiskLevel())
                         .impactHint(generateImpactHint(asset))
                         .build())
                 .collect(Collectors.toList());
