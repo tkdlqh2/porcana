@@ -435,16 +435,19 @@ public void runUsDailyPriceUpdate()
 ```java
 public enum CurrencyCode {
     // 주요 통화
-    USD, EUR, JPY, GBP, CNY,
+    USD, JPY, EUR, CNY,
+    // 유럽
+    GBP, CHF, SEK, CZK, DKK, NOK, HUF, PLN, RUB, TRY,
     // 아시아/오세아니아
     HKD, TWD, SGD, THB, MYR, IDR, PHP, VND, INR, AUD, NZD,
+    PKR, BDT, MNT, KZT, BND, FJD,
     // 중동
-    SAR, KWD, BHD, AED, QAR, OMR,
-    // 유럽
-    CHF, SEK, NOK, DKK, CZK, HUF, PLN, RUB,
-    // 기타
-    CAD, MXN, BRL, ZAR, TRY, ILS, EGP, JOD
-    // ... 총 43개 통화
+    SAR, KWD, BHD, AED, QAR, OMR, JOD, ILS, EGP,
+    // 아메리카
+    CAD, MXN, BRL, CLP,
+    // 아프리카
+    ZAR
+    // 총 44개 통화
 }
 ```
 
@@ -667,7 +670,12 @@ Request
 Response
 {
 "accessToken": "string",
-"refreshToken": "string"
+"refreshToken": "string",
+"user": {
+"userId": "uuid",
+"nickname": "string",
+"mainPortfolioId": null
+}
 }
 
 ## GET /auth/check-email?email=string
@@ -679,17 +687,36 @@ Response
 }
 
 ## POST /auth/login
-Request
+**지원 Provider**: EMAIL, GOOGLE, APPLE
+
+Request (EMAIL provider)
 {
 "provider": "EMAIL",
 "email": "string",
 "password": "string"
 }
+
+Request (OAuth providers - GOOGLE, APPLE)
+{
+"provider": "GOOGLE|APPLE",
+"code": "string"
+}
+
 Response
 {
 "accessToken": "string",
-"refreshToken": "string"
+"refreshToken": "string",
+"user": {
+"userId": "uuid",
+"nickname": "string",
+"mainPortfolioId": "uuid|null"
 }
+}
+
+**Validation Notes:**
+- EMAIL provider: email, password 필수
+- GOOGLE/APPLE provider: code 필수 (OAuth authorization code)
+- 커스텀 validator (@ValidLoginRequest)로 provider별 필수 필드 검증
 
 ## POST /auth/refresh
 Request
@@ -703,6 +730,9 @@ Response
 }
 
 ## GET /me
+**Description**: 현재 인증된 사용자의 최신 정보를 조회합니다. 로그인/회원가입 시 user 정보가 응답에 포함되지만, 이 API는 토큰으로 최신 유저 정보를 조회할 때 사용합니다.
+
+**Auth**: Required (JWT)
 Response
 {
 "userId": "uuid",
@@ -711,6 +741,8 @@ Response
 }
 
 ## PATCH /me
+**Auth**: Required (JWT)
+
 Request
 {
 "nickname": "string"
@@ -890,19 +922,19 @@ Response for Round 1 (Risk Profile)
 "roundType": "RISK_PROFILE",
 "options": [
 {
-"value": "SAFE",
-"displayName": "안전 추구형",
-"description": "낮은 변동성, 안정적인 수익 추구"
+"value": "AGGRESSIVE",
+"displayName": "공격적",
+"description": "고위험 고수익을 추구하는 투자 성향"
 },
 {
 "value": "BALANCED",
-"displayName": "균형형",
-"description": "중간 수준의 위험과 수익 균형"
+"displayName": "균형",
+"description": "위험과 수익의 균형을 추구하는 투자 성향"
 },
 {
-"value": "AGGRESSIVE",
-"displayName": "공격 투자형",
-"description": "높은 변동성, 높은 수익 추구"
+"value": "SAFE",
+"displayName": "보수적",
+"description": "안정적인 수익을 추구하는 저위험 투자 성향"
 }
 ]
 }
@@ -914,15 +946,25 @@ Response for Round 2 (Sector Selection)
 "roundType": "SECTOR",
 "sectors": [
 {
-"sector": "INFORMATION_TECHNOLOGY",
+"value": "INFORMATION_TECHNOLOGY",
 "displayName": "정보기술",
-"description": "소프트웨어, 하드웨어, IT 서비스"
+"assetCount": 45
+},
+{
+"value": "HEALTH_CARE",
+"displayName": "헬스케어",
+"assetCount": 38
 },
 // ... more sectors
 ],
 "minSelection": 0,
 "maxSelection": 3
 }
+
+**Field Notes:**
+- `value`: Sector enum 값
+- `displayName`: 한국어 섹터명
+- `assetCount`: 해당 섹터에 속한 활성 자산 개수
 
 Response for Round 3-12 (Asset Selection)
 {
@@ -935,27 +977,28 @@ Response for Round 3-12 (Asset Selection)
 "ticker": "AAPL",
 "name": "Apple Inc.",
 "sector": "INFORMATION_TECHNOLOGY",
-"riskLevel": 3,
-"market": "US"
+"tags": ["SP500", "NASDAQ100"]
 },
 {
 "assetId": "uuid",
 "ticker": "MSFT",
 "name": "Microsoft Corp.",
 "sector": "INFORMATION_TECHNOLOGY",
-"riskLevel": 2,
-"market": "US"
+"tags": ["SP500"]
 },
 {
 "assetId": "uuid",
 "ticker": "JNJ",
 "name": "Johnson & Johnson",
 "sector": "HEALTH_CARE",
-"riskLevel": 2,
-"market": "US"
+"tags": ["SP500"]
 }
 ]
 }
+
+**Field Notes:**
+- `tags`: UniverseTag 목록 (예: SP500, NASDAQ100, KOSPI200, KOSDAQ150)
+- riskLevel, market 필드는 제외됨 (클라이언트 표시용 최소 정보만 제공)
 
 Error Responses
 - 400: 세션이 이미 완료됨
@@ -1218,9 +1261,9 @@ Round 3:
 
 Result:
   [
-    { assetId: "...", ticker: "AAPL", sector: "INFORMATION_TECHNOLOGY", riskLevel: 3 },
-    { assetId: "...", ticker: "JNJ", sector: "HEALTH_CARE", riskLevel: 2 },
-    { assetId: "...", ticker: "XOM", sector: "ENERGY", riskLevel: 4 }  // wild pick
+    { assetId: "...", ticker: "AAPL", name: "Apple Inc.", sector: "INFORMATION_TECHNOLOGY", tags: ["SP500"] },
+    { assetId: "...", ticker: "JNJ", name: "Johnson & Johnson", sector: "HEALTH_CARE", tags: ["SP500"] },
+    { assetId: "...", ticker: "XOM", name: "Exxon Mobil", sector: "ENERGY", tags: ["SP500"] }  // wild pick
   ]
 ```
 

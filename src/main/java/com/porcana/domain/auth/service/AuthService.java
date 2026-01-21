@@ -3,6 +3,7 @@ package com.porcana.domain.auth.service;
 import com.porcana.domain.auth.command.LoginCommand;
 import com.porcana.domain.auth.command.SignupCommand;
 import com.porcana.domain.auth.dto.AuthResponse;
+import com.porcana.domain.user.dto.UserResponse;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import com.porcana.global.security.JwtTokenProvider;
@@ -34,8 +35,9 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(savedUser.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(savedUser.getId());
+        UserResponse userResponse = UserResponse.from(savedUser);
 
-        return new AuthResponse(accessToken, refreshToken);
+        return new AuthResponse(accessToken, refreshToken, userResponse);
     }
 
     @Transactional(readOnly = true)
@@ -54,8 +56,9 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        UserResponse userResponse = UserResponse.from(user);
 
-        return new AuthResponse(accessToken, refreshToken);
+        return new AuthResponse(accessToken, refreshToken, userResponse);
     }
 
     @Transactional(readOnly = true)

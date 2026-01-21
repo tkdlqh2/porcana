@@ -27,7 +27,7 @@ public class UserController {
 
     @Operation(
             summary = "내 정보 조회",
-            description = "현재 로그인한 사용자의 정보를 조회합니다.",
+            description = "현재 인증된 사용자의 최신 정보를 조회합니다. 로그인/회원가입 시 user 정보가 응답에 포함되지만, 이 API는 토큰으로 최신 유저 정보를 조회할 때 사용합니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "조회 성공"),
                     @ApiResponse(responseCode = "401", description = "인증 실패")
