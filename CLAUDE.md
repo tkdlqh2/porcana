@@ -787,12 +787,10 @@ Response (when has main portfolio)
 }
 
 ## PUT /portfolios/{portfolioId}/main
+**Description**: 지정한 포트폴리오를 메인 포트폴리오로 설정합니다. 다른 포트폴리오가 이미 메인으로 설정되어 있다면 변경됩니다.
+
 Response
 { "mainPortfolioId": "uuid" }
-
-## DELETE /portfolios/main
-Response
-{ "mainPortfolioId": null }
 
 ---
 

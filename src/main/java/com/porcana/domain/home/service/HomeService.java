@@ -92,19 +92,6 @@ public class HomeService {
                 .build();
     }
 
-    @Transactional
-    public MainPortfolioIdResponse removeMainPortfolio(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        user.setMainPortfolioId(null);
-        userRepository.save(user);
-
-        return MainPortfolioIdResponse.builder()
-                .mainPortfolioId(null)
-                .build();
-    }
-
     private Double calculateTotalReturn(UUID portfolioId) {
         return portfolioReturnCalculator.calculateTotalReturn(portfolioId);
     }
