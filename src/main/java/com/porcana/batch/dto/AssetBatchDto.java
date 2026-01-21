@@ -33,6 +33,7 @@ public class AssetBatchDto {
     private final Boolean active = false;
 
     private final LocalDate asOf;
+    private final String imageUrl;
 
     /**
      * Convert to Asset entity for persistence
@@ -48,6 +49,7 @@ public class AssetBatchDto {
                 .universeTags(universeTags)
                 .active(active)
                 .asOf(asOf)
+                .imageUrl(imageUrl)
                 .build();
     }
 
@@ -57,6 +59,7 @@ public class AssetBatchDto {
     public void updateEntity(Asset entity) {
         entity.updateUniverseTags(universeTags);
         entity.updateAsOf(asOf);
+        entity.setImageUrl(imageUrl);
         if (active) {
             entity.activate();
         } else {

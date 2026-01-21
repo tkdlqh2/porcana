@@ -161,6 +161,7 @@ public class HomeService {
                             .assetId(asset.getId().toString())
                             .ticker(asset.getSymbol())
                             .name(asset.getName())
+                            .imageUrl(asset.getImageUrl())
                             .weightPct(pa.getWeightPct().doubleValue())
                             .returnPct(returnPct)
                             .build();

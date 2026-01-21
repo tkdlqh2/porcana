@@ -163,6 +163,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                     .universeTags(universeTags)
                     .active(true) // All fetched assets are active
                     .asOf(asOf)
+                    .imageUrl(profile.getImage())
                     .build();
 
         } catch (Exception e) {

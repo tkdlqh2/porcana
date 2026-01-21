@@ -995,6 +995,7 @@ Response for Round 1-10 (Asset Selection)
 "market": "US",
 "assetClass": null,
 "currentRiskLevel": 4,
+"imageUrl": "https://financialmodelingprep.com/image-stock/AAPL.png",
 "impactHint": "성장 비중 ↑ · 변동성 ↑"
 },
 {
@@ -1005,6 +1006,7 @@ Response for Round 1-10 (Asset Selection)
 "market": "US",
 "assetClass": null,
 "currentRiskLevel": 3,
+"imageUrl": "https://financialmodelingprep.com/image-stock/MSFT.png",
 "impactHint": "성장 비중 ↑ · 균형"
 },
 {
@@ -1015,6 +1017,7 @@ Response for Round 1-10 (Asset Selection)
 "market": "US",
 "assetClass": "EQUITY_INDEX",
 "currentRiskLevel": 2,
+"imageUrl": "https://financialmodelingprep.com/image-stock/SPY.png",
 "impactHint": "분산 효과 · 균형"
 }
 ]
@@ -1025,6 +1028,8 @@ Response for Round 1-10 (Asset Selection)
 - `market`: 시장 구분 (KR | US)
 - `assetClass`: ETF의 경우 자산 클래스 (EQUITY_INDEX, DIVIDEND, BOND 등), 주식은 null
 - `currentRiskLevel`: 위험도 레벨 (1-5, 1: Low, 5: High, null 가능)
+- `imageUrl`: 회사 로고 이미지 URL (미국 주식/ETF만 제공, 한국 종목은 null)
+  - FMP API 제공: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
 - `impactHint`: 포트폴리오에 미치는 영향 힌트 (역할 · 리스크)
   - 역할: ETF는 assetClass 기반 ("분산 효과", "배당 기여", "방어 역할"), 주식은 sector 기반 ("성장 비중 ↑", "경기 민감", "방어적")
   - 리스크: currentRiskLevel 기반 ("변동성 ↑", "균형", "안정성 ↑")

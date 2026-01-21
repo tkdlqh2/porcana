@@ -28,6 +28,7 @@ public class PortfolioDetailResponse {
         private final String ticker;
         private final String name;
         private final Integer currentRiskLevel;  // 1-5 (1: Low, 5: High)
+        private final String imageUrl;  // 로고 이미지 URL
         private final Double weightPct;
         private final Double returnPct;
     }

@@ -28,6 +28,7 @@ public class AssetRoundResponse implements RoundResponse {
         private Market market;
         private AssetClass assetClass;
         private Integer currentRiskLevel;  // 1-5 (1: Low, 5: High)
+        private String imageUrl;  // 로고 이미지 URL
         private String impactHint;
     }
 }

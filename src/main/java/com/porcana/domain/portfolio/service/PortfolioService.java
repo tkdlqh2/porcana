@@ -209,6 +209,7 @@ public class PortfolioService {
                             .ticker(asset.getSymbol())
                             .name(asset.getName())
                             .currentRiskLevel(asset.getCurrentRiskLevel())
+                            .imageUrl(asset.getImageUrl())
                             .weightPct(pa.getWeightPct().doubleValue())
                             .returnPct(returnPct)
                             .build();
