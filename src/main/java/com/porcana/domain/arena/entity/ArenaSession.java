@@ -75,8 +75,8 @@ public class ArenaSession {
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.status = status != null ? status : SessionStatus.IN_PROGRESS;
-        this.currentRound = currentRound != null ? currentRound : 1;
-        this.totalRounds = totalRounds != null ? totalRounds : 12;
+        this.currentRound = currentRound != null ? currentRound : 0;  // 0부터 시작 (0=Pre Round)
+        this.totalRounds = totalRounds != null ? totalRounds : 11;  // Pre Round(0) + Asset Rounds(1-10)
         this.riskProfile = riskProfile;
         this.selectedSectors = selectedSectors != null ? selectedSectors : new ArrayList<>();
     }

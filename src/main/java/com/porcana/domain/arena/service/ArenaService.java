@@ -2,8 +2,7 @@ package com.porcana.domain.arena.service;
 
 import com.porcana.domain.arena.command.CreateSessionCommand;
 import com.porcana.domain.arena.command.PickAssetCommand;
-import com.porcana.domain.arena.command.PickRiskProfileCommand;
-import com.porcana.domain.arena.command.PickSectorsCommand;
+import com.porcana.domain.arena.command.PickPreferencesCommand;
 import com.porcana.domain.arena.dto.*;
 import com.porcana.domain.arena.entity.*;
 import com.porcana.domain.arena.repository.ArenaRoundRepository;
@@ -17,7 +16,6 @@ import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import com.porcana.global.exception.ForbiddenException;
 import com.porcana.global.exception.InvalidOperationException;
-import com.porcana.global.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,13 +65,13 @@ public class ArenaService {
             return mapToCreateSessionResponse(existing.get());
         }
 
-        // Create new session
+        // Create new session (Round 0 = Pre Round, Rounds 1-10 = Asset selection)
         ArenaSession session = ArenaSession.builder()
                 .portfolioId(command.getPortfolioId())
                 .userId(command.getUserId())
                 .status(SessionStatus.IN_PROGRESS)
-                .currentRound(1)
-                .totalRounds(12)
+                .currentRound(0)  // Start at Pre Round
+                .totalRounds(11)   // Pre Round (0) + Asset Rounds (1-10)
                 .build();
 
         ArenaSession saved = sessionRepository.save(session);
@@ -119,53 +117,24 @@ public class ArenaService {
 
         int currentRound = session.getCurrentRound();
 
-        // Round 1: Risk Profile Selection
-        if (currentRound == 1) {
-            return buildRiskProfileRound(session);
+        // Round 0: Pre Round (Risk Profile + Sector Selection)
+        if (currentRound == 0) {
+            return buildPreRound(session);
         }
 
-        // Round 2: Sector Selection
-        if (currentRound == 2) {
-            return buildSectorRound(session);
-        }
-
-        // Rounds 3-12: Asset Selection
+        // Rounds 1-10: Asset Selection
         return buildAssetRound(session);
     }
 
     /**
-     * Pick risk profile (Round 1)
+     * Pick preferences (Round 0: Risk Profile + Sectors)
      */
     @Transactional
-    public PickResponse pickRiskProfile(UUID sessionId, UUID userId, PickRiskProfileCommand command) {
+    public PickResponse pickPreferences(UUID sessionId, UUID userId, PickPreferencesCommand command) {
         ArenaSession session = getSessionAndValidateOwnership(sessionId, userId);
 
-        if (session.getCurrentRound() != 1) {
-            throw new InvalidOperationException("Risk profile can only be selected in round 1");
-        }
-
-        // Save selection to session
-        session.setRiskProfile(command.getRiskProfile());
-        session.setCurrentRound(2);
-        sessionRepository.save(session);
-
-        return PickResponse.builder()
-                .sessionId(session.getId())
-                .status(session.getStatus())
-                .currentRound(2)
-                .picked(command.getRiskProfile())
-                .build();
-    }
-
-    /**
-     * Pick sectors (Round 2)
-     */
-    @Transactional
-    public PickResponse pickSectors(UUID sessionId, UUID userId, PickSectorsCommand command) {
-        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId);
-
-        if (session.getCurrentRound() != 2) {
-            throw new InvalidOperationException("Sectors can only be selected in round 2");
+        if (session.getCurrentRound() != 0) {
+            throw new InvalidOperationException("Preferences can only be selected in round 0 (Pre Round)");
         }
 
         // Validate 0-3 sectors
@@ -189,20 +158,24 @@ public class ArenaService {
         }
 
         // Save selections
+        session.setRiskProfile(command.getRiskProfile());
         session.setSelectedSectors(command.getSectors());
-        session.setCurrentRound(3);
+        session.setCurrentRound(1);  // Move to Round 1 (first asset selection)
         sessionRepository.save(session);
 
         return PickResponse.builder()
                 .sessionId(session.getId())
                 .status(session.getStatus())
-                .currentRound(3)
-                .picked(command.getSectors())
+                .currentRound(1)
+                .picked(java.util.Map.of(
+                        "riskProfile", command.getRiskProfile(),
+                        "sectors", command.getSectors()
+                ))
                 .build();
     }
 
     /**
-     * Pick asset (Rounds 3-12)
+     * Pick asset (Rounds 1-10)
      */
     @Transactional
     public PickResponse pickAsset(UUID sessionId, UUID userId, PickAssetCommand command) {
@@ -210,8 +183,8 @@ public class ArenaService {
 
         int currentRound = session.getCurrentRound();
 
-        if (currentRound < 3 || currentRound > 12) {
-            throw new InvalidOperationException("Assets can only be selected in rounds 3-12");
+        if (currentRound < 1 || currentRound > 10) {
+            throw new InvalidOperationException("Assets can only be selected in rounds 1-10");
         }
 
         // Get the round entity (should already exist with presented choices)
@@ -230,7 +203,7 @@ public class ArenaService {
         roundRepository.save(round);
 
         // Advance round
-        boolean isLastRound = (currentRound == 12);
+        boolean isLastRound = (currentRound == 10);
 
         if (isLastRound) {
             // Complete session and update portfolio
@@ -239,7 +212,7 @@ public class ArenaService {
             return PickResponse.builder()
                     .sessionId(session.getId())
                     .status(SessionStatus.COMPLETED)
-                    .currentRound(12)
+                    .currentRound(10)
                     .picked(command.getPickedAssetId())
                     .build();
         } else {
@@ -256,39 +229,27 @@ public class ArenaService {
     }
 
     /**
-     * Build risk profile round response (Round 1)
+     * Build pre round response (Round 0: Risk Profile + Sector Selection)
      */
-    private RoundResponse buildRiskProfileRound(ArenaSession session) {
-        List<RiskProfileRoundResponse.RiskProfileOption> options = new ArrayList<>();
-
+    private RoundResponse buildPreRound(ArenaSession session) {
+        // Risk Profile options
+        List<PreRoundResponse.RiskProfileOption> riskProfileOptions = new ArrayList<>();
         for (RiskProfile profile : RiskProfile.values()) {
-            options.add(RiskProfileRoundResponse.RiskProfileOption.builder()
+            riskProfileOptions.add(PreRoundResponse.RiskProfileOption.builder()
                     .value(profile)
                     .displayName(profile.getDisplayName())
                     .description(profile.getDescription())
                     .build());
         }
 
-        return RiskProfileRoundResponse.builder()
-                .sessionId(session.getId())
-                .round(1)
-                .roundType(RoundType.RISK_PROFILE)
-                .options(options)
-                .build();
-    }
-
-    /**
-     * Build sector round response (Round 2)
-     */
-    private RoundResponse buildSectorRound(ArenaSession session) {
-        List<SectorRoundResponse.SectorOption> sectorOptions = new ArrayList<>();
-
+        // Sector options
+        List<PreRoundResponse.SectorOption> sectorOptions = new ArrayList<>();
         for (Sector sector : Sector.values()) {
             Integer assetCount = recommendationService.getAssetCount(sector);
 
             // Only include sectors with enough assets (at least 3 for one round)
             if (assetCount >= 3) {
-                sectorOptions.add(SectorRoundResponse.SectorOption.builder()
+                sectorOptions.add(PreRoundResponse.SectorOption.builder()
                         .value(sector)
                         .displayName(sector.getDescription())
                         .assetCount(assetCount)
@@ -296,13 +257,14 @@ public class ArenaService {
             }
         }
 
-        return SectorRoundResponse.builder()
+        return PreRoundResponse.builder()
                 .sessionId(session.getId())
-                .round(2)
-                .roundType(RoundType.SECTOR)
-                .sectors(sectorOptions)
-                .minSelection(0)
-                .maxSelection(3)
+                .round(0)
+                .roundType(RoundType.PRE_ROUND)
+                .riskProfileOptions(riskProfileOptions)
+                .sectorOptions(sectorOptions)
+                .minSectorSelection(0)
+                .maxSectorSelection(3)
                 .build();
     }
 
