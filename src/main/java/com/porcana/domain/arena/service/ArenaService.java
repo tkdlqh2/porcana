@@ -324,26 +324,46 @@ public class ArenaService {
      * Generate impact hint for asset selection
      */
     private String generateImpactHint(Asset asset) {
-        String role = switch (asset.getType()) {
-            case ETF -> switch (asset.getAssetClass()) {
-                case EQUITY_INDEX -> "분산 효과";
-                case DIVIDEND -> "배당 기여";
-                case BOND -> "방어 역할";
-                default -> "자산 보완";
-            };
-            case STOCK -> switch (asset.getSector()) {
-                case INFORMATION_TECHNOLOGY -> "성장 비중 ↑";
-                case FINANCIALS -> "경기 민감";
-                case UTILITIES -> "방어적";
-                default -> "포트폴리오 보강";
-            };
-        };
+        String role;
 
-        String risk = asset.getCurrentRiskLevel() >= 4
-                ? "변동성 ↑"
-                : asset.getCurrentRiskLevel() <= 2
-                    ? "안정성 ↑"
-                    : "균형";
+        switch (asset.getType()) {
+            case ETF -> {
+                if (asset.getAssetClass() == null) {
+                    role = "자산 보완";
+                } else {
+                    role = switch (asset.getAssetClass()) {
+                        case EQUITY_INDEX -> "분산 효과";
+                        case DIVIDEND -> "배당 기여";
+                        case BOND -> "방어 역할";
+                        default -> "자산 보완";
+                    };
+                }
+            }
+            case STOCK -> {
+                if (asset.getSector() == null) {
+                    role = "포트폴리오 보강";
+                } else {
+                    role = switch (asset.getSector()) {
+                        case INFORMATION_TECHNOLOGY -> "성장 비중 ↑";
+                        case FINANCIALS -> "경기 민감";
+                        case UTILITIES -> "방어적";
+                        default -> "포트폴리오 보강";
+                    };
+                }
+            }
+            default -> role = "포트폴리오 보강";
+        }
+
+        String risk;
+        if (asset.getCurrentRiskLevel() == null) {
+            risk = "균형";
+        } else if (asset.getCurrentRiskLevel() >= 4) {
+            risk = "변동성 ↑";
+        } else if (asset.getCurrentRiskLevel() <= 2) {
+            risk = "안정성 ↑";
+        } else {
+            risk = "균형";
+        }
 
         return role + " · " + risk;
     }
