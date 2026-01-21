@@ -1196,8 +1196,15 @@ sectorWeight(Set<Sector> preferredSectors, Sector sector):
 #### Type Weight
 ```java
 typeWeight(AssetType assetType):
-  return assetType == ETF ? 1.05 : 1.0
-  // ETF를 "가볍게" 선호 (과도하지 않게)
+  return assetType == ETF ? 2.5 : 1.0
+  // ETF를 "강하게" 선호하여 포트폴리오 다양성 확보
+  // ETF는 sector가 null이므로 sectorWeight 1.0을 받음
+  // 주식은 선호 섹터 시 sectorWeight 1.5를 받음
+  // 따라서 ETF에 2.5x 부스트를 주어 균형 맞춤
+
+  // Wild Pick 추가 보정:
+  // Wild Pick(섹터 선호 무시)에서 ETF는 추가로 1.5x 보정
+  // 최종 Wild Pick ETF 가중치: 2.5 × 1.5 = 3.75x
 ```
 
 #### Diversity Penalty

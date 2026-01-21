@@ -214,6 +214,12 @@ public class AssetRecommendationService {
             }
 
             w *= typeWeight(asset.getType());
+
+            // Extra boost for ETF in wild picks to ensure at least some ETFs appear
+            if (!useSectorPreference && asset.getType() == Asset.AssetType.ETF) {
+                w *= 1.5;  // Additional 1.5x for wild ETF picks
+            }
+
             w *= diversityPenalty(asset, alreadyPicked);
 
             // Safety: prevent zero weight
@@ -262,13 +268,16 @@ public class AssetRecommendationService {
     }
 
     /**
-     * Type weight (slight preference for ETF)
+     * Type weight (strong preference for ETF to ensure diversity)
      */
     private double typeWeight(Asset.AssetType assetType) {
         if (assetType == null) {
             return 1.0;
         }
-        return assetType == Asset.AssetType.ETF ? 1.05 : 1.0;
+        // ETF gets 2.5x boost to ensure they appear in recommendations
+        // This compensates for ETFs having no sector (which would give them 1.0 sector weight
+        // while stocks in preferred sectors get 1.5x sector weight)
+        return assetType == Asset.AssetType.ETF ? 2.5 : 1.0;
     }
 
     /**
