@@ -971,28 +971,38 @@ Response for Round 1-10 (Asset Selection)
 "ticker": "AAPL",
 "name": "Apple Inc.",
 "sector": "INFORMATION_TECHNOLOGY",
-"tags": ["SP500", "NASDAQ100"]
+"market": "US",
+"assetClass": null,
+"impactHint": "성장 비중 ↑ · 변동성 ↑"
 },
 {
 "assetId": "uuid",
 "ticker": "MSFT",
 "name": "Microsoft Corp.",
 "sector": "INFORMATION_TECHNOLOGY",
-"tags": ["SP500"]
+"market": "US",
+"assetClass": null,
+"impactHint": "성장 비중 ↑ · 균형"
 },
 {
 "assetId": "uuid",
-"ticker": "JNJ",
-"name": "Johnson & Johnson",
-"sector": "HEALTH_CARE",
-"tags": ["SP500"]
+"ticker": "SPY",
+"name": "SPDR S&P 500 ETF",
+"sector": null,
+"market": "US",
+"assetClass": "EQUITY_INDEX",
+"impactHint": "분산 효과 · 균형"
 }
 ]
 }
 
 **Field Notes:**
-- `tags`: UniverseTag 목록 (예: SP500, NASDAQ100, KOSPI200, KOSDAQ150)
-- riskLevel, market 필드는 제외됨 (클라이언트 표시용 최소 정보만 제공)
+- `sector`: 주식(STOCK)의 경우 GICS 섹터, ETF는 null
+- `market`: 시장 구분 (KR | US)
+- `assetClass`: ETF의 경우 자산 클래스 (EQUITY_INDEX, DIVIDEND, BOND 등), 주식은 null
+- `impactHint`: 포트폴리오에 미치는 영향 힌트 (역할 · 리스크)
+  - 역할: ETF는 assetClass 기반 ("분산 효과", "배당 기여", "방어 역할"), 주식은 sector 기반 ("성장 비중 ↑", "경기 민감", "방어적")
+  - 리스크: currentRiskLevel 기반 ("변동성 ↑", "균형", "안정성 ↑")
 
 Error Responses
 - 400: 세션이 이미 완료됨

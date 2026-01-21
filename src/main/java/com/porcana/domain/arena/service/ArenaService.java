@@ -305,10 +305,10 @@ public class ArenaService {
                         .assetId(asset.getId())
                         .ticker(asset.getSymbol())
                         .name(asset.getName())
-                        .sector(asset.getSector() != null ? asset.getSector() : null)
-                        .tags(asset.getUniverseTags().stream()
-                                .map(Enum::name)
-                                .collect(Collectors.toList()))
+                        .sector(asset.getSector())
+                        .market(asset.getMarket())
+                        .assetClass(asset.getAssetClass())
+                        .impactHint(generateImpactHint(asset))
                         .build())
                 .collect(Collectors.toList());
 
@@ -318,6 +318,34 @@ public class ArenaService {
                 .roundType(RoundType.ASSET)
                 .assets(options)
                 .build();
+    }
+
+    /**
+     * Generate impact hint for asset selection
+     */
+    private String generateImpactHint(Asset asset) {
+        String role = switch (asset.getType()) {
+            case ETF -> switch (asset.getAssetClass()) {
+                case EQUITY_INDEX -> "분산 효과";
+                case DIVIDEND -> "배당 기여";
+                case BOND -> "방어 역할";
+                default -> "자산 보완";
+            };
+            case STOCK -> switch (asset.getSector()) {
+                case INFORMATION_TECHNOLOGY -> "성장 비중 ↑";
+                case FINANCIALS -> "경기 민감";
+                case UTILITIES -> "방어적";
+                default -> "포트폴리오 보강";
+            };
+        };
+
+        String risk = asset.getCurrentRiskLevel() >= 4
+                ? "변동성 ↑"
+                : asset.getCurrentRiskLevel() <= 2
+                    ? "안정성 ↑"
+                    : "균형";
+
+        return role + " · " + risk;
     }
 
     /**
