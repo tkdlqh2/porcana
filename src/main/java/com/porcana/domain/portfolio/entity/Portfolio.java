@@ -55,8 +55,11 @@ public class Portfolio {
     }
 
     public void start() {
-        this.status = PortfolioStatus.ACTIVE;
-        this.startedAt = LocalDate.now();
+        if (this.status == PortfolioStatus.DRAFT) {
+            this.status = PortfolioStatus.ACTIVE;
+            this.startedAt = LocalDate.now();
+        }
+        // If already ACTIVE or FINISHED, do nothing (idempotent)
     }
 
     public void finish() {
