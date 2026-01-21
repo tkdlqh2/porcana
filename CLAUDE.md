@@ -837,16 +837,42 @@ Response
 "isMain": true,
 "startedAt": "YYYY-MM-DD|null",
 "totalReturnPct": 12.34,
+"averageRiskLevel": 3.2,
+"diversityLevel": "HIGH",
+"riskDistribution": {
+"1": 10.0,
+"2": 20.0,
+"3": 30.0,
+"4": 25.0,
+"5": 15.0
+},
 "positions": [
 {
 "assetId": "uuid",
 "ticker": "string",
 "name": "string",
+"currentRiskLevel": 4,
 "weightPct": 25.0,
 "returnPct": 18.3
 }
 ]
 }
+
+**Portfolio-Level Risk Metrics:**
+- `averageRiskLevel`: 가중 평균 위험도 (1.0 - 5.0, null 가능)
+  - 각 자산의 currentRiskLevel × weightPct로 계산
+  - 예: (4 × 0.25) + (3 × 0.25) + (2 × 0.50) = 2.75
+- `diversityLevel`: 분산도 수준 ("HIGH" | "MEDIUM" | "LOW")
+  - 섹터 다양성 (50%), 위험도 밴드 다양성 (30%), 자산 타입 다양성 (20%) 종합
+  - HIGH: 70점 이상 (여러 섹터, 여러 위험도, 주식+ETF 혼합)
+  - MEDIUM: 40-70점
+  - LOW: 40점 미만 (단일 섹터, 단일 위험도, 단일 타입)
+- `riskDistribution`: 위험도별 비중 분포 (Map<Integer, Double>)
+  - Key: 위험도 레벨 (1-5)
+  - Value: 해당 위험도 자산들의 비중 합계 (%)
+  - 예: { "1": 10.0, "2": 20.0, "3": 30.0, "4": 25.0, "5": 15.0 }
+  - 모든 레벨 (1-5)이 항상 포함되며, 없는 레벨은 0.0%
+  - 합계는 100%가 되어야 함 (riskLevel이 null인 자산 제외)
 
 ## POST /portfolios/{portfolioId}/start
 Response
@@ -973,6 +999,7 @@ Response for Round 1-10 (Asset Selection)
 "sector": "INFORMATION_TECHNOLOGY",
 "market": "US",
 "assetClass": null,
+"currentRiskLevel": 4,
 "impactHint": "성장 비중 ↑ · 변동성 ↑"
 },
 {
@@ -982,6 +1009,7 @@ Response for Round 1-10 (Asset Selection)
 "sector": "INFORMATION_TECHNOLOGY",
 "market": "US",
 "assetClass": null,
+"currentRiskLevel": 3,
 "impactHint": "성장 비중 ↑ · 균형"
 },
 {
@@ -991,6 +1019,7 @@ Response for Round 1-10 (Asset Selection)
 "sector": null,
 "market": "US",
 "assetClass": "EQUITY_INDEX",
+"currentRiskLevel": 2,
 "impactHint": "분산 효과 · 균형"
 }
 ]
@@ -1000,6 +1029,7 @@ Response for Round 1-10 (Asset Selection)
 - `sector`: 주식(STOCK)의 경우 GICS 섹터, ETF는 null
 - `market`: 시장 구분 (KR | US)
 - `assetClass`: ETF의 경우 자산 클래스 (EQUITY_INDEX, DIVIDEND, BOND 등), 주식은 null
+- `currentRiskLevel`: 위험도 레벨 (1-5, 1: Low, 5: High, null 가능)
 - `impactHint`: 포트폴리오에 미치는 영향 힌트 (역할 · 리스크)
   - 역할: ETF는 assetClass 기반 ("분산 효과", "배당 기여", "방어 역할"), 주식은 sector 기반 ("성장 비중 ↑", "경기 민감", "방어적")
   - 리스크: currentRiskLevel 기반 ("변동성 ↑", "균형", "안정성 ↑")
