@@ -3,8 +3,7 @@ package com.porcana.domain.arena;
 import com.porcana.BaseIntegrationTest;
 import com.porcana.domain.arena.dto.CreateSessionRequest;
 import com.porcana.domain.arena.dto.PickAssetRequest;
-import com.porcana.domain.arena.dto.PickRiskProfileRequest;
-import com.porcana.domain.arena.dto.PickSectorsRequest;
+import com.porcana.domain.arena.dto.PickPreferencesRequest;
 import com.porcana.domain.arena.entity.RiskProfile;
 import com.porcana.domain.arena.repository.ArenaRoundRepository;
 import com.porcana.domain.arena.repository.ArenaSessionRepository;
@@ -69,7 +68,7 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .body("sessionId", notNullValue())
                 .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
                 .body("status", equalTo("IN_PROGRESS"))
-                .body("currentRound", equalTo(1));
+                .body("currentRound", equalTo(0));
     }
 
     @Test
@@ -129,8 +128,8 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .body("sessionId", equalTo(sessionId))
                 .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
                 .body("status", equalTo("IN_PROGRESS"))
-                .body("currentRound", equalTo(1))
-                .body("totalRounds", equalTo(12));
+                .body("currentRound", equalTo(0))
+                .body("totalRounds", equalTo(11));
     }
 
     @Test
@@ -147,8 +146,8 @@ class ArenaControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("현재 라운드 조회 성공 - Round 1 (Risk Profile)")
-    void getCurrentRound_success_round1() {
+    @DisplayName("현재 라운드 조회 성공 - Round 0 (Pre Round)")
+    void getCurrentRound_success_round0() {
         // Create session
         CreateSessionRequest createRequest = new CreateSessionRequest(TEST_PORTFOLIO_ID);
 
@@ -163,7 +162,7 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .extract()
                 .path("sessionId");
 
-        // Get current round (should be round 1)
+        // Get current round (should be round 0)
         given()
                 .header("Authorization", "Bearer " + accessToken)
         .when()
@@ -172,17 +171,20 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .log().all()
                 .body("sessionId", equalTo(sessionId))
-                .body("round", equalTo(1))
-                .body("roundType", equalTo("RISK_PROFILE"))
-                .body("options", hasSize(3))
-                .body("options[0].value", notNullValue())
-                .body("options[0].displayName", notNullValue())
-                .body("options[0].description", notNullValue());
+                .body("round", equalTo(0))
+                .body("roundType", equalTo("PRE_ROUND"))
+                .body("riskProfileOptions", hasSize(3))
+                .body("riskProfileOptions[0].value", notNullValue())
+                .body("riskProfileOptions[0].displayName", notNullValue())
+                .body("riskProfileOptions[0].description", notNullValue())
+                .body("sectorOptions", notNullValue())
+                .body("minSectorSelection", equalTo(0))
+                .body("maxSectorSelection", equalTo(3));
     }
 
     @Test
-    @DisplayName("리스크 프로필 선택 성공")
-    void pickRiskProfile_success() {
+    @DisplayName("Pre Round 선택 성공 - Risk Profile + Sectors")
+    void pickPreferences_success() {
         // Create session
         CreateSessionRequest createRequest = new CreateSessionRequest(TEST_PORTFOLIO_ID);
 
@@ -197,8 +199,12 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .extract()
                 .path("sessionId");
 
-        // Pick risk profile
-        PickRiskProfileRequest pickRequest = new PickRiskProfileRequest(RiskProfile.BALANCED);
+        // Pick risk profile and sectors
+        List<Sector> sectors = Arrays.asList(
+                Sector.INFORMATION_TECHNOLOGY,
+                Sector.HEALTH_CARE
+        );
+        PickPreferencesRequest pickRequest = new PickPreferencesRequest(RiskProfile.BALANCED, sectors);
 
         given()
                 .contentType(ContentType.JSON)
@@ -206,19 +212,20 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .body(pickRequest)
                 .log().all()
         .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-risk-profile", sessionId)
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-preferences", sessionId)
         .then()
                 .log().all()
                 .statusCode(200)
                 .body("sessionId", equalTo(sessionId))
                 .body("status", equalTo("IN_PROGRESS"))
-                .body("currentRound", equalTo(2))
-                .body("picked", equalTo("BALANCED"));
+                .body("currentRound", equalTo(1))
+                .body("picked.riskProfile", equalTo("BALANCED"))
+                .body("picked.sectors", hasSize(2));
     }
 
     @Test
-    @DisplayName("리스크 프로필 선택 실패 - validation 오류")
-    void pickRiskProfile_fail_validation() {
+    @DisplayName("Pre Round 선택 실패 - validation 오류")
+    void pickPreferences_fail_validation() {
         // Create session
         CreateSessionRequest createRequest = new CreateSessionRequest(TEST_PORTFOLIO_ID);
 
@@ -237,46 +244,29 @@ class ArenaControllerTest extends BaseIntegrationTest {
         given()
                 .contentType(ContentType.JSON)
                 .header("Authorization", "Bearer " + accessToken)
-                .body("{\"riskProfile\": null}")
+                .body("{\"riskProfile\": null, \"sectors\": []}")
         .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-risk-profile", sessionId)
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-preferences", sessionId)
         .then()
                 .statusCode(400);
     }
 
     @Test
-    @DisplayName("섹터 선택 성공")
-    void pickSectors_success() {
-        // Create session and pick risk profile
-        String sessionId = createSessionAndPickRiskProfile();
+    @DisplayName("Pre Round 섹터 선택 실패 - 4개 선택 (최대 3개)")
+    void pickPreferences_fail_tooManySectors() {
+        // Create session
+        CreateSessionRequest createRequest = new CreateSessionRequest(TEST_PORTFOLIO_ID);
 
-        // Pick sectors (2-3 sectors required)
-        List<Sector> sectors = Arrays.asList(
-                Sector.INFORMATION_TECHNOLOGY,
-                Sector.HEALTH_CARE
-        );
-        PickSectorsRequest pickRequest = new PickSectorsRequest(sectors);
-
-        given()
+        String sessionId = given()
                 .contentType(ContentType.JSON)
                 .header("Authorization", "Bearer " + accessToken)
-                .body(pickRequest)
-                .log().all()
+                .body(createRequest)
         .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-sectors", sessionId)
+                .post("/arena/sessions")
         .then()
-                .log().all()
                 .statusCode(200)
-                .body("sessionId", equalTo(sessionId))
-                .body("status", equalTo("IN_PROGRESS"))
-                .body("currentRound", equalTo(3))
-                .body("picked", hasSize(2));
-    }
-
-    @Test
-    @DisplayName("섹터 선택 실패 - 4개 선택 (최대 3개)")
-    void pickSectors_fail_tooMany() {
-        String sessionId = createSessionAndPickRiskProfile();
+                .extract()
+                .path("sessionId");
 
         List<Sector> sectors = Arrays.asList(
                 Sector.INFORMATION_TECHNOLOGY,
@@ -284,14 +274,14 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 Sector.FINANCIALS,
                 Sector.ENERGY
         );
-        PickSectorsRequest pickRequest = new PickSectorsRequest(sectors);
+        PickPreferencesRequest pickRequest = new PickPreferencesRequest(RiskProfile.BALANCED, sectors);
 
         given()
                 .contentType(ContentType.JSON)
                 .header("Authorization", "Bearer " + accessToken)
                 .body(pickRequest)
         .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-sectors", sessionId)
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-preferences", sessionId)
         .then()
                 .statusCode(400);
     }
@@ -299,8 +289,8 @@ class ArenaControllerTest extends BaseIntegrationTest {
     @Test
     @DisplayName("자산 선택 성공")
     void pickAsset_success() {
-        // Create session, pick risk profile, and pick sectors
-        String sessionId = createSessionAndPickSectors();
+        // Create session and pick preferences
+        String sessionId = createSessionAndPickPreferences();
 
         // Get current round to see asset options
         String assetId = given()
@@ -329,14 +319,14 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .body("sessionId", equalTo(sessionId))
                 .body("status", equalTo("IN_PROGRESS"))
-                .body("currentRound", equalTo(4))
+                .body("currentRound", equalTo(2))
                 .body("picked", equalTo(assetId));
     }
 
     @Test
     @DisplayName("자산 선택 실패 - 유효하지 않은 자산 ID")
     void pickAsset_fail_invalidAssetId() {
-        String sessionId = createSessionAndPickSectors();
+        String sessionId = createSessionAndPickPreferences();
 
         UUID invalidAssetId = UUID.randomUUID();
         PickAssetRequest pickRequest = new PickAssetRequest(invalidAssetId);
@@ -364,40 +354,28 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .post("/arena/sessions")
         .then()
                 .statusCode(200)
-                .body("currentRound", equalTo(1))
+                .body("currentRound", equalTo(0))
                 .extract()
                 .path("sessionId");
 
-        // 2. Pick risk profile (Round 1)
-        PickRiskProfileRequest riskRequest = new PickRiskProfileRequest(RiskProfile.BALANCED);
-        given()
-                .contentType(ContentType.JSON)
-                .header("Authorization", "Bearer " + accessToken)
-                .body(riskRequest)
-        .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-risk-profile", sessionId)
-        .then()
-                .statusCode(200)
-                .body("currentRound", equalTo(2));
-
-        // 3. Pick sectors (Round 2)
+        // 2. Pick preferences (Round 0 - Risk Profile + Sectors)
         List<Sector> sectors = Arrays.asList(
                 Sector.INFORMATION_TECHNOLOGY,
                 Sector.HEALTH_CARE
         );
-        PickSectorsRequest sectorsRequest = new PickSectorsRequest(sectors);
+        PickPreferencesRequest preferencesRequest = new PickPreferencesRequest(RiskProfile.BALANCED, sectors);
         given()
                 .contentType(ContentType.JSON)
                 .header("Authorization", "Bearer " + accessToken)
-                .body(sectorsRequest)
+                .body(preferencesRequest)
         .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-sectors", sessionId)
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-preferences", sessionId)
         .then()
                 .statusCode(200)
-                .body("currentRound", equalTo(3));
+                .body("currentRound", equalTo(1));
 
-        // 4. Pick assets (Rounds 3-12)
-        for (int round = 3; round <= 12; round++) {
+        // 3. Pick assets (Rounds 1-10)
+        for (int round = 1; round <= 10; round++) {
             // Get current round options
             String assetId = given()
                     .header("Authorization", "Bearer " + accessToken)
@@ -413,8 +391,8 @@ class ArenaControllerTest extends BaseIntegrationTest {
 
             // Pick first asset
             PickAssetRequest assetRequest = new PickAssetRequest(UUID.fromString(assetId));
-            int expectedNextRound = round < 12 ? round + 1 : 12;
-            String expectedStatus = round < 12 ? "IN_PROGRESS" : "COMPLETED";
+            int expectedNextRound = round < 10 ? round + 1 : 10;
+            String expectedStatus = round < 10 ? "IN_PROGRESS" : "COMPLETED";
 
             given()
                     .contentType(ContentType.JSON)
@@ -428,7 +406,7 @@ class ArenaControllerTest extends BaseIntegrationTest {
                     .body("status", equalTo(expectedStatus));
         }
 
-        // 5. Verify session is completed
+        // 4. Verify session is completed
         given()
                 .header("Authorization", "Bearer " + accessToken)
         .when()
@@ -436,13 +414,13 @@ class ArenaControllerTest extends BaseIntegrationTest {
         .then()
                 .statusCode(200)
                 .body("status", equalTo("COMPLETED"))
-                .body("currentRound", equalTo(12))
+                .body("currentRound", equalTo(10))
                 .body("selectedAssetIds", hasSize(10));
     }
 
     // Helper methods
 
-    private String createSessionAndPickRiskProfile() {
+    private String createSessionAndPickPreferences() {
         CreateSessionRequest createRequest = new CreateSessionRequest(TEST_PORTFOLIO_ID);
 
         String sessionId = given()
@@ -456,35 +434,18 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .extract()
                 .path("sessionId");
 
-        PickRiskProfileRequest pickRequest = new PickRiskProfileRequest(RiskProfile.BALANCED);
-
-        given()
-                .contentType(ContentType.JSON)
-                .header("Authorization", "Bearer " + accessToken)
-                .body(pickRequest)
-        .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-risk-profile", sessionId)
-        .then()
-                .statusCode(200);
-
-        return sessionId;
-    }
-
-    private String createSessionAndPickSectors() {
-        String sessionId = createSessionAndPickRiskProfile();
-
         List<Sector> sectors = Arrays.asList(
                 Sector.INFORMATION_TECHNOLOGY,
                 Sector.HEALTH_CARE
         );
-        PickSectorsRequest pickRequest = new PickSectorsRequest(sectors);
+        PickPreferencesRequest pickRequest = new PickPreferencesRequest(RiskProfile.BALANCED, sectors);
 
         given()
                 .contentType(ContentType.JSON)
                 .header("Authorization", "Bearer " + accessToken)
                 .body(pickRequest)
         .when()
-                .post("/arena/sessions/{sessionId}/rounds/current/pick-sectors", sessionId)
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-preferences", sessionId)
         .then()
                 .statusCode(200);
 
