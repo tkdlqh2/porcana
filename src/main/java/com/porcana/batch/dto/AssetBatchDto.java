@@ -59,7 +59,9 @@ public class AssetBatchDto {
     public void updateEntity(Asset entity) {
         entity.updateUniverseTags(universeTags);
         entity.updateAsOf(asOf);
-        entity.setImageUrl(imageUrl);
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            entity.setImageUrl(imageUrl);
+        }
         if (active) {
             entity.activate();
         } else {
