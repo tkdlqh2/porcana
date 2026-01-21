@@ -65,6 +65,9 @@ public class Asset {
     @Column(name = "current_risk_level")
     private Integer currentRiskLevel;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(nullable = false)
     private LocalDate asOf;
 
@@ -78,7 +81,8 @@ public class Asset {
 
     @Builder
     public Asset(Market market, String symbol, String name, AssetType type, Sector sector,
-                 AssetClass assetClass, List<UniverseTag> universeTags, Boolean active, LocalDate asOf) {
+                 AssetClass assetClass, List<UniverseTag> universeTags, Boolean active,
+                 String imageUrl, LocalDate asOf) {
         this.market = market;
         this.symbol = symbol;
         this.name = name;
@@ -87,6 +91,7 @@ public class Asset {
         this.assetClass = assetClass;
         this.universeTags = universeTags != null ? universeTags : new ArrayList<>();
         this.active = active != null ? active : false;
+        this.imageUrl = imageUrl;
         this.asOf = asOf;
     }
 
@@ -121,6 +126,10 @@ public class Asset {
             throw new IllegalArgumentException("Risk level must be between 1 and 5");
         }
         this.currentRiskLevel = riskLevel;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public enum Market {

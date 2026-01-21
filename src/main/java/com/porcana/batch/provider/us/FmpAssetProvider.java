@@ -163,6 +163,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                     .universeTags(universeTags)
                     .active(true) // All fetched assets are active
                     .asOf(asOf)
+                    .imageUrl(profile.getImage())
                     .build();
 
         } catch (Exception e) {
@@ -308,6 +309,38 @@ public class FmpAssetProvider implements UsAssetDataProvider {
         } catch (Exception e) {
             log.error("Failed to fetch historical prices for symbol: {}", asset.getSymbol(), e);
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Fetch image URL for a single symbol from FMP API
+     * Used for updating image URLs of existing assets
+     *
+     * @param symbol The stock symbol
+     * @return Image URL, or null if not found
+     */
+    public String fetchImageUrl(String symbol) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("FMP API key not configured. Skipping image fetch.");
+            return null;
+        }
+
+        String url = String.format("%s%s?symbol=%s&apikey=%s", baseUrl, PROFILE_ENDPOINT, symbol, apiKey);
+
+        try {
+            FmpProfile[] profiles = restTemplate.getForObject(url, FmpProfile[].class);
+
+            if (profiles == null || profiles.length == 0) {
+                log.debug("No profile data for symbol: {}", symbol);
+                return null;
+            }
+
+            FmpProfile profile = profiles[0];
+            return profile.getImage();
+
+        } catch (Exception e) {
+            log.warn("Failed to fetch image for symbol: {}. Error: {}", symbol, e.getMessage());
+            return null;
         }
     }
 

@@ -45,6 +45,12 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
     List<Asset> findByMarketAndTypeAndActiveTrue(Asset.Market market, Asset.AssetType type);
 
     /**
+     * Find all assets by market and type (including inactive)
+     * Used for bulk image updates
+     */
+    List<Asset> findByMarketAndType(Asset.Market market, Asset.AssetType type);
+
+    /**
      * Find all active assets
      * Used for risk calculation
      */
