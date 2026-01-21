@@ -1,10 +1,7 @@
 package com.porcana.domain.portfolio.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -31,10 +28,12 @@ public class Portfolio {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PortfolioStatus status;
 
+    @Setter
     @Column(name = "started_at")
     private LocalDate startedAt;
 
@@ -52,14 +51,7 @@ public class Portfolio {
         this.name = name;
         this.status = status != null ? status : PortfolioStatus.DRAFT;
         this.startedAt = startedAt;
-    }
-
-    public void setStatus(PortfolioStatus status) {
-        this.status = status;
-    }
-
-    public void setStartedAt(LocalDate startedAt) {
-        this.startedAt = startedAt;
+        this.createdAt = LocalDateTime.now();
     }
 
     public void start() {
