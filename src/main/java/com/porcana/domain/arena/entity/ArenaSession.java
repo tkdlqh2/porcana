@@ -18,7 +18,8 @@ import java.util.UUID;
 @Table(name = "arena_sessions", indexes = {
         @Index(name = "idx_arena_sessions_portfolio_id", columnList = "portfolio_id"),
         @Index(name = "idx_arena_sessions_user_id", columnList = "user_id"),
-        @Index(name = "idx_arena_sessions_status", columnList = "status")
+        @Index(name = "idx_arena_sessions_status", columnList = "status"),
+        @Index(name = "idx_arena_sessions_guest_session_id", columnList = "guest_session_id")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -31,8 +32,19 @@ public class ArenaSession {
     @Column(name = "portfolio_id", nullable = false)
     private UUID portfolioId;
 
-    @Column(name = "user_id", nullable = false)
+    /**
+     * 소유 사용자 ID (회원)
+     * nullable - 게스트 세션의 경우 NULL
+     */
+    @Column(name = "user_id")
     private UUID userId;
+
+    /**
+     * 소유 게스트 세션 ID (비회원)
+     * nullable - 회원 세션의 경우 NULL
+     */
+    @Column(name = "guest_session_id")
+    private UUID guestSessionId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -69,16 +81,71 @@ public class ArenaSession {
     private LocalDateTime completedAt;
 
     @Builder
-    public ArenaSession(UUID portfolioId, UUID userId, SessionStatus status,
+    public ArenaSession(UUID portfolioId, UUID userId, UUID guestSessionId, SessionStatus status,
                         Integer currentRound, Integer totalRounds, RiskProfile riskProfile,
                         List<Sector> selectedSectors) {
+        // Validate XOR: exactly one of userId or guestSessionId must be set
+        if ((userId == null && guestSessionId == null) || (userId != null && guestSessionId != null)) {
+            throw new IllegalArgumentException("Exactly one of userId or guestSessionId must be set");
+        }
+
         this.portfolioId = portfolioId;
         this.userId = userId;
+        this.guestSessionId = guestSessionId;
         this.status = status != null ? status : SessionStatus.IN_PROGRESS;
         this.currentRound = currentRound != null ? currentRound : 0;  // 0부터 시작 (0=Pre Round)
         this.totalRounds = totalRounds != null ? totalRounds : 11;  // Pre Round(0) + Asset Rounds(1-10)
         this.riskProfile = riskProfile;
         this.selectedSectors = selectedSectors != null ? selectedSectors : new ArrayList<>();
+    }
+
+    /**
+     * Create an arena session owned by a user
+     */
+    public static ArenaSession createForUser(UUID portfolioId, UUID userId) {
+        return ArenaSession.builder()
+                .portfolioId(portfolioId)
+                .userId(userId)
+                .build();
+    }
+
+    /**
+     * Create an arena session owned by a guest
+     */
+    public static ArenaSession createForGuest(UUID portfolioId, UUID guestSessionId) {
+        return ArenaSession.builder()
+                .portfolioId(portfolioId)
+                .guestSessionId(guestSessionId)
+                .build();
+    }
+
+    /**
+     * Transfer ownership from guest session to user (claim)
+     */
+    public void claimToUser(UUID userId) {
+        if (this.userId != null) {
+            throw new IllegalStateException("Arena session is already owned by a user");
+        }
+        if (this.guestSessionId == null) {
+            throw new IllegalStateException("Arena session is not owned by a guest");
+        }
+
+        this.userId = userId;
+        this.guestSessionId = null;
+    }
+
+    /**
+     * Check if session is owned by a specific user
+     */
+    public boolean isOwnedByUser(UUID userId) {
+        return this.userId != null && this.userId.equals(userId);
+    }
+
+    /**
+     * Check if session is owned by a specific guest session
+     */
+    public boolean isOwnedByGuestSession(UUID guestSessionId) {
+        return this.guestSessionId != null && this.guestSessionId.equals(guestSessionId);
     }
 
     public void setRiskProfile(RiskProfile riskProfile) {

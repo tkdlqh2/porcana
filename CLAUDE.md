@@ -594,6 +594,95 @@ riskScore = 100 × (0.45 × volPct + 0.45 × mddPct + 0.10 × worstPct)
 
 ---
 
+## 게스트 세션 (비회원 포트폴리오 지원)
+
+### 설계 목표
+
+**비회원도 포트폴리오를 생성할 수 있도록 하여 전환율을 높인다.**
+
+- 비회원은 `guest_sessions`로 "임시 소유권"을 가진다
+- 회원가입/로그인 시 `guest_session_id → user_id`로 **소유권 이전(claim)** 한다
+
+### GuestSession Entity
+
+게스트 사용자의 임시 세션 정보를 저장합니다.
+
+**필드 설계:**
+- `id`: UUID (Primary Key)
+- `created_at`: LocalDateTime - 세션 생성 시각
+- `last_seen_at`: LocalDateTime - 마지막 활동 시각 (만료 판단용)
+
+**세션 관리:**
+- 쿠키로 관리: `porcana_guest={sessionId}; HttpOnly; SameSite=Lax; Max-Age=2592000` (30일)
+- 만료 정책: `last_seen_at` 기준 30일 이상 비활성 시 배치로 삭제
+- 제한: 게스트당 포트폴리오 최대 3개
+
+### Portfolio, ArenaSession 소유권 확장
+
+**기존:**
+- `user_id UUID NOT NULL` (회원만 소유 가능)
+
+**변경:**
+- `user_id UUID NULL` (nullable로 변경)
+- `guest_session_id UUID NULL` 추가
+- **XOR 제약**: 둘 중 정확히 하나만 NOT NULL이어야 함
+
+```sql
+ALTER TABLE portfolios
+  ADD CONSTRAINT ck_portfolios_owner_xor
+  CHECK (
+    (user_id IS NULL AND guest_session_id IS NOT NULL)
+    OR
+    (user_id IS NOT NULL AND guest_session_id IS NULL)
+  );
+```
+
+**동일한 제약을 `arena_sessions`에도 적용**
+
+### Claim (소유권 이전) 로직
+
+회원가입/로그인 시 게스트 포트폴리오를 사용자 계정으로 이전합니다.
+
+**트랜잭션 처리:**
+```java
+@Transactional
+public void claimGuestPortfolios(UUID guestSessionId, UUID userId) {
+  // 1) 게스트 포트폴리오 조회 (FOR UPDATE로 동시성 제어)
+  List<Portfolio> guestPortfolios =
+      portfolioRepository.findByGuestSessionIdForUpdate(guestSessionId);
+
+  if (guestPortfolios.isEmpty()) return; // 멱등성
+
+  // 2) 소유권 이전
+  for (Portfolio p : guestPortfolios) {
+    p.claimToUser(userId); // userId 세팅 + guestSessionId null
+  }
+
+  // 3) 메인 포트폴리오 자동 설정 (없을 때만)
+  User user = userRepository.findByIdForUpdate(userId);
+  if (user.getMainPortfolioId() == null) {
+    UUID newest = guestPortfolios.stream()
+        .max(Comparator.comparing(Portfolio::getCreatedAt))
+        .get().getId();
+    user.setMainPortfolioId(newest);
+  }
+}
+```
+
+**핵심 포인트:**
+- `FOR UPDATE` 사용으로 동시 claim 방지
+- 멱등성 보장 (이미 claim된 세션은 스킵)
+- 메인 포트폴리오 자동 설정 (최신 게스트 포트폴리오)
+
+### 게스트 세션 정책
+
+**MVP 규칙:**
+1. **게스트 포트폴리오 제한**: 최대 3개
+2. **회원가입 시 병합**: 기존 계정 포트폴리오 + 게스트 포트폴리오 모두 유지 (merge)
+3. **만료 정책**: 30일간 미사용 시 배치로 삭제 (`last_seen_at` 기준)
+
+---
+
 ## 배치 스케줄 전체 요약
 
 ### 주간 스케줄 (일요일)
@@ -658,25 +747,70 @@ runKrDailyPriceUpdate()
 
 ---
 
+# 0) Guest Session (비회원 지원)
+
+## POST /guest-sessions
+**Description**: 비회원을 위한 게스트 세션을 생성합니다. 서버는 자동으로 쿠키를 설정합니다.
+
+**Auth**: Not required
+
+Request
+```json
+{}
+```
+
+Response (201 Created)
+```json
+{
+  "guestSessionId": "uuid"
+}
+```
+
+**Set-Cookie Header:**
+```
+Set-Cookie: porcana_guest={sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000
+```
+
+**Notes:**
+- 프론트엔드는 `porcana_guest` 쿠키가 없을 때만 호출
+- 쿠키 유효기간: 30일 (2592000초)
+- 디버깅용으로 `guestSessionId`를 응답에 포함하지만, 실제로는 쿠키로만 관리
+
+---
+
 # 1) Auth / User
 
 ## POST /auth/signup
+**Description**: 회원가입을 처리합니다. 요청에 `porcana_guest` 쿠키가 있으면 게스트 포트폴리오를 자동으로 사용자 계정으로 이전합니다.
+
+**Auth**: Not required
+
+**Guest Session Claim:**
+- 서버는 요청의 `porcana_guest` 쿠키를 확인
+- 게스트 세션이 있으면 해당 포트폴리오/아레나를 신규 사용자 계정으로 이전
+- 메인 포트폴리오가 없으면 가장 최근 게스트 포트폴리오를 메인으로 설정
+
 Request
+```json
 {
-"email": "string",
-"password": "string",
-"nickname": "string"
+  "email": "string",
+  "password": "string",
+  "nickname": "string"
 }
-Response
+```
+
+Response (200 OK)
+```json
 {
-"accessToken": "string",
-"refreshToken": "string",
-"user": {
-"userId": "uuid",
-"nickname": "string",
-"mainPortfolioId": null
+  "accessToken": "string",
+  "refreshToken": "string",
+  "user": {
+    "userId": "uuid",
+    "nickname": "string",
+    "mainPortfolioId": "uuid|null"
+  }
 }
-}
+```
 
 ## GET /auth/check-email?email=string
 Check if email is available for signup
@@ -687,31 +821,46 @@ Response
 }
 
 ## POST /auth/login
+**Description**: 로그인을 처리합니다. 요청에 `porcana_guest` 쿠키가 있으면 게스트 포트폴리오를 자동으로 사용자 계정으로 이전합니다.
+
+**Auth**: Not required
+
 **지원 Provider**: EMAIL, GOOGLE, APPLE
 
+**Guest Session Claim:**
+- 서버는 요청의 `porcana_guest` 쿠키를 확인
+- 게스트 세션이 있으면 해당 포트폴리오/아레나를 사용자 계정으로 이전 (merge)
+- 기존 포트폴리오와 게스트 포트폴리오 모두 유지
+
 Request (EMAIL provider)
+```json
 {
-"provider": "EMAIL",
-"email": "string",
-"password": "string"
+  "provider": "EMAIL",
+  "email": "string",
+  "password": "string"
 }
+```
 
 Request (OAuth providers - GOOGLE, APPLE)
+```json
 {
-"provider": "GOOGLE|APPLE",
-"code": "string"
+  "provider": "GOOGLE|APPLE",
+  "code": "string"
 }
+```
 
-Response
+Response (200 OK)
+```json
 {
-"accessToken": "string",
-"refreshToken": "string",
-"user": {
-"userId": "uuid",
-"nickname": "string",
-"mainPortfolioId": "uuid|null"
+  "accessToken": "string",
+  "refreshToken": "string",
+  "user": {
+    "userId": "uuid",
+    "nickname": "string",
+    "mainPortfolioId": "uuid|null"
+  }
 }
-}
+```
 
 **Validation Notes:**
 - EMAIL provider: email, password 필수
@@ -816,17 +965,34 @@ Response
 # 4) Portfolio (CRUD minimal for MVP)
 
 ## POST /portfolios
+**Description**: 새로운 포트폴리오를 생성합니다. 비회원도 생성 가능합니다.
+
+**Auth**: Optional (JWT 또는 Guest Session)
+
+**소유권 결정:**
+- `Authorization` 헤더가 있으면 → 사용자 소유 (`user_id` 설정)
+- 없으면 → 게스트 소유 (`guest_session_id` 설정)
+- 게스트 세션이 없으면 서버가 자동 생성
+
+**게스트 제한:**
+- 게스트당 최대 3개 포트폴리오
+
 Request
+```json
 {
-"name": "string"
+  "name": "string"
 }
-Response
+```
+
+Response (201 Created)
+```json
 {
-"portfolioId": "uuid",
-"name": "string",
-"status": "DRAFT",
-"createdAt": "YYYY-MM-DD"
+  "portfolioId": "uuid",
+  "name": "string",
+  "status": "DRAFT",
+  "createdAt": "YYYY-MM-DD"
 }
+```
 
 ## GET /portfolios/{portfolioId}
 Response
@@ -861,26 +1027,35 @@ Response
 # 5) Arena (Hearthstone-style drafting)
 
 ## POST /arena/sessions
-**Description**: 포트폴리오에 대한 새로운 아레나 드래프트 세션을 시작합니다. 이미 진행 중인 세션이 있으면 해당 세션을 반환합니다.
+**Description**: 포트폴리오에 대한 새로운 아레나 드래프트 세션을 시작합니다. 이미 진행 중인 세션이 있으면 해당 세션을 반환합니다. 비회원도 사용 가능합니다.
 
-**Auth**: Required (JWT)
+**Auth**: Optional (JWT 또는 Guest Session)
+
+**소유권 결정:**
+- `Authorization` 헤더가 있으면 → 사용자 소유 (`user_id` 설정)
+- 없으면 → 게스트 소유 (`guest_session_id` 설정)
+- 포트폴리오 소유권과 일치하는 세션만 생성 가능
 
 Request
+```json
 {
-"portfolioId": "uuid"
+  "portfolioId": "uuid"
 }
+```
 
 Response (200 OK)
+```json
 {
-"sessionId": "uuid",
-"portfolioId": "uuid",
-"status": "IN_PROGRESS",
-"currentRound": 0
+  "sessionId": "uuid",
+  "portfolioId": "uuid",
+  "status": "IN_PROGRESS",
+  "currentRound": 0
 }
+```
 
 Error Responses
 - 400: 포트폴리오를 찾을 수 없거나 권한이 없음
-- 401: 인증 필요
+- 403: 포트폴리오 소유권이 일치하지 않음
 
 ---
 
