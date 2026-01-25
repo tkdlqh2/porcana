@@ -212,10 +212,10 @@ public class BatchConfig {
 
     /**
      * Scheduled exchange rate update job
-     * Runs every weekday at 11:00 KST
+     * Runs every weekday at 12:00 KST
      * Korea Exim Bank updates exchange rates around 10:00 KST
      */
-    @Scheduled(cron = "0 0 11 * * MON-FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 12 * * MON-FRI", zone = "Asia/Seoul")
     public void runExchangeRateUpdate() {
         log.info("Starting scheduled exchange rate update");
 

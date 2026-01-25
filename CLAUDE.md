@@ -464,9 +464,9 @@ public enum CurrencyCode {
   3. CurrencyCode enum에 정의된 통화만 필터링 (지원하지 않는 통화는 자동 스킵)
   4. 중복 체크 (`currency_code + exchange_date`)
   5. Upsert 처리
-- **실행 주기**: 매 평일 11:00 KST
+- **실행 주기**: 매 평일 12:00 KST
   - 한국수출입은행은 평일 10시경 환율 업데이트
-  - 11시에 배치 실행하여 최신 데이터 수집
+  - 영업당일 11시 이전 데이터 요청 시 null 반환될 수 있어 12시에 실행
 
 **수동 실행:**
 ```bash
@@ -622,7 +622,7 @@ runUsDailyPriceUpdate()
 └─ usEtfDailyPriceJob - 미국 ETF 가격
 ```
 
-**11:00 KST (월-금)** - 환율 업데이트
+**12:00 KST (월-금)** - 환율 업데이트
 ```
 runExchangeRateUpdate()
 └─ exchangeRateJob - 환율 데이터
