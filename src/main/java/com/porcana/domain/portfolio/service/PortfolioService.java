@@ -65,15 +65,7 @@ public class PortfolioService {
                 .map(portfolio -> {
                     Double totalReturnPct = calculateTotalReturn(portfolio.getId());
                     boolean isMain = portfolio.getId().equals(finalMainPortfolioId);
-
-                    return PortfolioListResponse.builder()
-                            .portfolioId(portfolio.getId().toString())
-                            .name(portfolio.getName())
-                            .status(portfolio.getStatus().name())
-                            .isMain(isMain)
-                            .totalReturnPct(totalReturnPct)
-                            .createdAt(portfolio.getCreatedAt().toLocalDate())
-                            .build();
+                    return PortfolioListResponse.from(portfolio, isMain, totalReturnPct);
                 })
                 .collect(Collectors.toList());
     }
@@ -102,13 +94,7 @@ public class PortfolioService {
         }
 
         Portfolio saved = portfolioRepository.save(portfolio);
-
-        return CreatePortfolioResponse.builder()
-                .portfolioId(saved.getId().toString())
-                .name(saved.getName())
-                .status(saved.getStatus().name())
-                .createdAt(saved.getCreatedAt().toLocalDate())
-                .build();
+        return CreatePortfolioResponse.from(saved);
     }
 
     /**
@@ -126,16 +112,7 @@ public class PortfolioService {
 
         Double totalReturnPct = calculateTotalReturn(portfolio.getId());
         List<PortfolioDetailResponse.PositionInfo> positions = buildPositions(portfolio.getId());
-
-        return PortfolioDetailResponse.builder()
-                .portfolioId(portfolio.getId().toString())
-                .name(portfolio.getName())
-                .status(portfolio.getStatus().name())
-                .isMain(isMain)
-                .startedAt(portfolio.getStartedAt())
-                .totalReturnPct(totalReturnPct)
-                .positions(positions)
-                .build();
+        return PortfolioDetailResponse.from(portfolio, isMain, totalReturnPct, positions);
     }
 
     /**
@@ -151,12 +128,7 @@ public class PortfolioService {
 
         portfolio.start();
         Portfolio saved = portfolioRepository.save(portfolio);
-
-        return StartPortfolioResponse.builder()
-                .portfolioId(saved.getId().toString())
-                .status(saved.getStatus().name())
-                .startedAt(saved.getStartedAt())
-                .build();
+        return StartPortfolioResponse.from(saved);
     }
 
     /**
@@ -198,11 +170,7 @@ public class PortfolioService {
                     .build());
         }
 
-        return PortfolioPerformanceResponse.builder()
-                .portfolioId(portfolio.getId().toString())
-                .range(range)
-                .points(points)
-                .build();
+        return PortfolioPerformanceResponse.from(portfolio, range, points);
     }
 
     private Double calculateTotalReturn(UUID portfolioId) {
@@ -255,11 +223,7 @@ public class PortfolioService {
 
         portfolio.updateName(command.getName());
         Portfolio saved = portfolioRepository.save(portfolio);
-
-        return UpdatePortfolioNameResponse.builder()
-                .portfolioId(saved.getId().toString())
-                .name(saved.getName())
-                .build();
+        return UpdatePortfolioNameResponse.from(saved);
     }
 
     @Transactional
@@ -312,10 +276,7 @@ public class PortfolioService {
                 "Portfolio rebalancing"
         );
 
-        return UpdateAssetWeightsResponse.builder()
-                .portfolioId(portfolio.getId().toString())
-                .weights(updatedWeights)
-                .build();
+        return UpdateAssetWeightsResponse.from(portfolio, updatedWeights);
     }
 
     private LocalDate calculateStartDate(LocalDate endDate, String range) {
