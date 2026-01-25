@@ -37,16 +37,34 @@ public class PortfolioService {
     private final PortfolioReturnCalculator portfolioReturnCalculator;
     private final PortfolioSnapshotService portfolioSnapshotService;
 
-    public List<PortfolioListResponse> getPortfolios(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    private static final int MAX_GUEST_PORTFOLIOS = 3;
 
-        List<Portfolio> portfolios = portfolioRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    /**
+     * Get portfolios for user or guest session
+     */
+    public List<PortfolioListResponse> getPortfolios(UUID userId, UUID guestSessionId) {
+        List<Portfolio> portfolios;
+        UUID mainPortfolioId = null;
+
+        if (userId != null) {
+            // Authenticated user
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            portfolios = portfolioRepository.findByUserIdOrderByCreatedAtDesc(userId);
+            mainPortfolioId = user.getMainPortfolioId();
+        } else if (guestSessionId != null) {
+            // Guest session
+            portfolios = portfolioRepository.findByGuestSessionIdOrderByCreatedAtDesc(guestSessionId);
+        } else {
+            throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
+        }
+
+        final UUID finalMainPortfolioId = mainPortfolioId;
 
         return portfolios.stream()
                 .map(portfolio -> {
                     Double totalReturnPct = calculateTotalReturn(portfolio.getId());
-                    boolean isMain = portfolio.getId().equals(user.getMainPortfolioId());
+                    boolean isMain = portfolio.getId().equals(finalMainPortfolioId);
 
                     return PortfolioListResponse.builder()
                             .portfolioId(portfolio.getId().toString())
@@ -60,13 +78,28 @@ public class PortfolioService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Create portfolio for user or guest session
+     */
     @Transactional
-    public CreatePortfolioResponse createPortfolio(CreatePortfolioCommand command) {
-        Portfolio portfolio = Portfolio.builder()
-                .userId(command.getUserId())
-                .name(command.getName())
-                .status(PortfolioStatus.DRAFT)
-                .build();
+    public CreatePortfolioResponse createPortfolio(CreatePortfolioCommand command, UUID userId, UUID guestSessionId) {
+        Portfolio portfolio;
+
+        if (userId != null) {
+            // Authenticated user
+            portfolio = Portfolio.createForUser(userId, command.getName());
+        } else if (guestSessionId != null) {
+            // Guest session - check limit
+            long guestPortfolioCount = portfolioRepository.countByGuestSessionId(guestSessionId);
+            if (guestPortfolioCount >= MAX_GUEST_PORTFOLIOS) {
+                throw new IllegalStateException(
+                    String.format("Guest users can create up to %d portfolios. Please sign up to create more.", MAX_GUEST_PORTFOLIOS)
+                );
+            }
+            portfolio = Portfolio.createForGuest(guestSessionId, command.getName());
+        } else {
+            throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
+        }
 
         Portfolio saved = portfolioRepository.save(portfolio);
 
@@ -78,14 +111,19 @@ public class PortfolioService {
                 .build();
     }
 
-    public PortfolioDetailResponse getPortfolio(UUID portfolioId, UUID userId) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
+    /**
+     * Get portfolio details (supports both user and guest)
+     */
+    public PortfolioDetailResponse getPortfolio(UUID portfolioId, UUID userId, UUID guestSessionId) {
+        Portfolio portfolio = findPortfolioWithOwnership(portfolioId, userId, guestSessionId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        boolean isMain = false;
+        if (userId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            isMain = portfolio.getId().equals(user.getMainPortfolioId());
+        }
 
-        boolean isMain = portfolio.getId().equals(user.getMainPortfolioId());
         Double totalReturnPct = calculateTotalReturn(portfolio.getId());
         List<PortfolioDetailResponse.PositionInfo> positions = buildPositions(portfolio.getId());
 
@@ -100,10 +138,12 @@ public class PortfolioService {
                 .build();
     }
 
+    /**
+     * Start portfolio (supports both user and guest)
+     */
     @Transactional
-    public StartPortfolioResponse startPortfolio(UUID portfolioId, UUID userId) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
+    public StartPortfolioResponse startPortfolio(UUID portfolioId, UUID userId, UUID guestSessionId) {
+        Portfolio portfolio = findPortfolioWithOwnership(portfolioId, userId, guestSessionId);
 
         if (portfolio.getStatus() != PortfolioStatus.DRAFT) {
             throw new IllegalStateException("Portfolio is already started");
@@ -119,9 +159,11 @@ public class PortfolioService {
                 .build();
     }
 
-    public PortfolioPerformanceResponse getPortfolioPerformance(UUID portfolioId, UUID userId, String range) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
+    /**
+     * Get portfolio performance (supports both user and guest)
+     */
+    public PortfolioPerformanceResponse getPortfolioPerformance(UUID portfolioId, UUID userId, UUID guestSessionId, String range) {
+        Portfolio portfolio = findPortfolioWithOwnership(portfolioId, userId, guestSessionId);
 
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = calculateStartDate(endDate, range);
@@ -286,5 +328,27 @@ public class PortfolioService {
             case "1Y" -> endDate.minusYears(1);
             default -> endDate.minusMonths(1);
         };
+    }
+
+    /**
+     * Find portfolio with ownership validation (supports both user and guest)
+     * @param portfolioId Portfolio ID
+     * @param userId User ID (nullable)
+     * @param guestSessionId Guest session ID (nullable)
+     * @return Portfolio if found and authorized
+     * @throws IllegalArgumentException if portfolio not found or access denied
+     */
+    private Portfolio findPortfolioWithOwnership(UUID portfolioId, UUID userId, UUID guestSessionId) {
+        if (userId != null) {
+            // Authenticated user
+            return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
+        } else if (guestSessionId != null) {
+            // Guest session
+            return portfolioRepository.findByIdAndGuestSessionId(portfolioId, guestSessionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
+        } else {
+            throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
+        }
     }
 }

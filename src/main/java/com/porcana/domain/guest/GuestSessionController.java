@@ -46,7 +46,6 @@ public class GuestSessionController {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge(GUEST_COOKIE_MAX_AGE);
-        cookie.setSameSite("Lax");
         response.addCookie(cookie);
 
         // Return response (guestSessionId for debugging purposes)

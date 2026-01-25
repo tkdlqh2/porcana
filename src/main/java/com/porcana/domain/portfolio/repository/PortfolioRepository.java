@@ -67,3 +67,4 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
      * Count portfolios owned by a guest session
      */
     long countByGuestSessionId(UUID guestSessionId);
+}
