@@ -413,6 +413,35 @@ public void runUsDailyPriceUpdate()
 
 ---
 
+## US 종목 이미지 업데이트
+
+### US 이미지 업데이트 배치 Job
+
+**이미지 업데이트 (usImageUpdateJob):**
+- **대상**: 모든 US STOCK 자산 (active/inactive 무관)
+- **데이터 소스**: FMP API (`/stable/profile`)
+- **처리 로직**:
+  1. 모든 US 주식 자산 조회
+  2. 각 종목마다 FMP profile API 호출
+  3. `image` 필드 추출
+  4. `imageUrl` 필드 업데이트
+  5. Rate limiting: 150ms 딜레이
+- **실행 주기**: 필요 시 수동 실행
+  - 초기 이미지 데이터 구축 또는 이미지 누락 종목 보완용
+
+**수동 실행:**
+```bash
+./gradlew bootRun --args='--spring.batch.job.names=usImageUpdateJob'
+```
+
+**참고:**
+- US 주식/ETF 생성 배치 (`usAssetJob`, `usEtfJob`)에서 이미지 URL이 자동으로 포함됨
+- 이 배치는 기존 자산의 이미지를 일괄 업데이트할 때만 사용
+- FMP API의 이미지 URL 포맷: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
+- 한국 종목은 이미지 소스가 없어 지원하지 않음
+
+---
+
 ## 환율 데이터 관리
 
 ### ExchangeRate (환율) Entity
@@ -936,24 +965,24 @@ Response (when has main portfolio)
 }
 
 ## PUT /portfolios/{portfolioId}/main
+**Description**: 지정한 포트폴리오를 메인 포트폴리오로 설정합니다. 다른 포트폴리오가 이미 메인으로 설정되어 있다면 변경됩니다.
+
 Response
 { "mainPortfolioId": "uuid" }
-
-## DELETE /portfolios/main
-Response
-{ "mainPortfolioId": null }
 
 ---
 
 # 3) Portfolio List
 
 ## GET /portfolios
+**Note**: DRAFT 상태의 포트폴리오는 리스트에 표시되지 않습니다. ACTIVE 및 FINISHED 상태만 조회됩니다.
+
 Response
 [
 {
 "portfolioId": "uuid",
 "name": "string",
-"status": "DRAFT|ACTIVE|FINISHED",
+"status": "ACTIVE|FINISHED",
 "isMain": true,
 "totalReturnPct": 12.34,
 "createdAt": "YYYY-MM-DD"
@@ -1003,24 +1032,43 @@ Response
 "isMain": true,
 "startedAt": "YYYY-MM-DD|null",
 "totalReturnPct": 12.34,
+"averageRiskLevel": 3.2,
+"diversityLevel": "HIGH",
+"riskDistribution": {
+"1": 10.0,
+"2": 20.0,
+"3": 30.0,
+"4": 25.0,
+"5": 15.0
+},
 "positions": [
 {
 "assetId": "uuid",
 "ticker": "string",
 "name": "string",
+"currentRiskLevel": 4,
 "weightPct": 25.0,
 "returnPct": 18.3
 }
 ]
 }
 
-## POST /portfolios/{portfolioId}/start
-Response
-{
-"portfolioId": "uuid",
-"status": "ACTIVE",
-"startedAt": "YYYY-MM-DD"
-}
+**Portfolio-Level Risk Metrics:**
+- `averageRiskLevel`: 가중 평균 위험도 (1.0 - 5.0, null 가능)
+  - 각 자산의 currentRiskLevel × weightPct로 계산
+  - 예: (4 × 0.25) + (3 × 0.25) + (2 × 0.50) = 2.75
+- `diversityLevel`: 분산도 수준 ("HIGH" | "MEDIUM" | "LOW")
+  - 섹터 다양성 (50%), 위험도 밴드 다양성 (30%), 자산 타입 다양성 (20%) 종합
+  - HIGH: 70점 이상 (여러 섹터, 여러 위험도, 주식+ETF 혼합)
+  - MEDIUM: 40-70점
+  - LOW: 40점 미만 (단일 섹터, 단일 위험도, 단일 타입)
+- `riskDistribution`: 위험도별 비중 분포 (Map<Integer, Double>)
+  - Key: 위험도 레벨 (1-5)
+  - Value: 해당 위험도 자산들의 비중 합계 (%)
+  - 예: { "1": 10.0, "2": 20.0, "3": 30.0, "4": 25.0, "5": 15.0 }
+  - 모든 레벨 (1-5)이 항상 포함되며, 없는 레벨은 0.0%
+  - 합계는 100%가 되어야 함 (riskLevel이 null인 자산 제외)
+
 
 ---
 
@@ -1148,6 +1196,8 @@ Response for Round 1-10 (Asset Selection)
 "sector": "INFORMATION_TECHNOLOGY",
 "market": "US",
 "assetClass": null,
+"currentRiskLevel": 4,
+"imageUrl": "https://financialmodelingprep.com/image-stock/AAPL.png",
 "impactHint": "성장 비중 ↑ · 변동성 ↑"
 },
 {
@@ -1157,6 +1207,8 @@ Response for Round 1-10 (Asset Selection)
 "sector": "INFORMATION_TECHNOLOGY",
 "market": "US",
 "assetClass": null,
+"currentRiskLevel": 3,
+"imageUrl": "https://financialmodelingprep.com/image-stock/MSFT.png",
 "impactHint": "성장 비중 ↑ · 균형"
 },
 {
@@ -1166,6 +1218,8 @@ Response for Round 1-10 (Asset Selection)
 "sector": null,
 "market": "US",
 "assetClass": "EQUITY_INDEX",
+"currentRiskLevel": 2,
+"imageUrl": "https://financialmodelingprep.com/image-stock/SPY.png",
 "impactHint": "분산 효과 · 균형"
 }
 ]
@@ -1175,6 +1229,9 @@ Response for Round 1-10 (Asset Selection)
 - `sector`: 주식(STOCK)의 경우 GICS 섹터, ETF는 null
 - `market`: 시장 구분 (KR | US)
 - `assetClass`: ETF의 경우 자산 클래스 (EQUITY_INDEX, DIVIDEND, BOND 등), 주식은 null
+- `currentRiskLevel`: 위험도 레벨 (1-5, 1: Low, 5: High, null 가능)
+- `imageUrl`: 회사 로고 이미지 URL (미국 주식/ETF만 제공, 한국 종목은 null)
+  - FMP API 제공: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
 - `impactHint`: 포트폴리오에 미치는 영향 힌트 (역할 · 리스크)
   - 역할: ETF는 assetClass 기반 ("분산 효과", "배당 기여", "방어 역할"), 주식은 sector 기반 ("성장 비중 ↑", "경기 민감", "방어적")
   - 리스크: currentRiskLevel 기반 ("변동성 ↑", "균형", "안정성 ↑")
@@ -1217,6 +1274,12 @@ Error Responses
 
 ## POST /arena/sessions/{sessionId}/rounds/current/pick-asset
 **Description**: 아레나 Round 1-10에서 제시된 3개의 자산 중 1개를 선택합니다. Round 10 완료 시 세션이 종료되고 포트폴리오가 완성됩니다.
+
+**Auto Actions on Round 10 Completion:**
+1. 포트폴리오에 선택된 10개 자산 추가 (균등 비중 10% 씩)
+2. 포트폴리오 스냅샷 생성
+3. **포트폴리오 자동 시작** (DRAFT → ACTIVE, startedAt = today)
+4. **메인 포트폴리오 자동 설정** (사용자의 mainPortfolioId가 null인 경우)
 
 **Auth**: Required (JWT)
 
@@ -1341,8 +1404,15 @@ sectorWeight(Set<Sector> preferredSectors, Sector sector):
 #### Type Weight
 ```java
 typeWeight(AssetType assetType):
-  return assetType == ETF ? 1.05 : 1.0
-  // ETF를 "가볍게" 선호 (과도하지 않게)
+  return assetType == ETF ? 2.5 : 1.0
+  // ETF를 "강하게" 선호하여 포트폴리오 다양성 확보
+  // ETF는 sector가 null이므로 sectorWeight 1.0을 받음
+  // 주식은 선호 섹터 시 sectorWeight 1.5를 받음
+  // 따라서 ETF에 2.5x 부스트를 주어 균형 맞춤
+
+  // Wild Pick 추가 보정:
+  // Wild Pick(섹터 선호 무시)에서 ETF는 추가로 1.5x 보정
+  // 최종 Wild Pick ETF 가중치: 2.5 × 1.5 = 3.75x
 ```
 
 #### Diversity Penalty

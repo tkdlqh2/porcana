@@ -24,6 +24,11 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
     List<Portfolio> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     /**
+     * Find active and finished portfolios for a user (exclude DRAFT)
+     */
+    List<Portfolio> findByUserIdAndStatusNotOrderByCreatedAtDesc(UUID userId, PortfolioStatus status);
+
+    /**
      * Find portfolio by ID and user ID (ownership validation)
      */
     Optional<Portfolio> findByIdAndUserId(UUID id, UUID userId);

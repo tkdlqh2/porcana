@@ -208,12 +208,148 @@ public class PortfolioService {
                             .assetId(asset.getId().toString())
                             .ticker(asset.getSymbol())
                             .name(asset.getName())
+                            .currentRiskLevel(asset.getCurrentRiskLevel())
+                            .imageUrl(asset.getImageUrl())
                             .weightPct(pa.getWeightPct().doubleValue())
                             .returnPct(returnPct)
                             .build();
                 })
                 .filter(Objects::nonNull)
+                .sorted((p1, p2) -> Double.compare(p2.getWeightPct(), p1.getWeightPct())) // Sort by weight descending
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Calculate weighted average risk level
+     */
+    private Double calculateAverageRiskLevel(List<PortfolioDetailResponse.PositionInfo> positions) {
+        if (positions.isEmpty()) {
+            return null;
+        }
+
+        double totalWeight = 0.0;
+        double weightedRiskSum = 0.0;
+
+        for (PortfolioDetailResponse.PositionInfo position : positions) {
+            if (position.getCurrentRiskLevel() != null && position.getWeightPct() != null) {
+                double weight = position.getWeightPct() / 100.0;  // Convert percentage to decimal
+                weightedRiskSum += position.getCurrentRiskLevel() * weight;
+                totalWeight += weight;
+            }
+        }
+
+        if (totalWeight == 0.0) {
+            return null;
+        }
+
+        // Round to 1 decimal place
+        return Math.round(weightedRiskSum / totalWeight * 10.0) / 10.0;
+    }
+
+    /**
+     * Calculate diversity level based on sector and risk distribution
+     */
+    private String calculateDiversityLevel(UUID portfolioId) {
+        List<PortfolioAsset> portfolioAssets = portfolioAssetRepository.findByPortfolioId(portfolioId);
+
+        if (portfolioAssets.isEmpty()) {
+            return "LOW";
+        }
+
+        Set<UUID> assetIds = portfolioAssets.stream()
+                .map(PortfolioAsset::getAssetId)
+                .collect(Collectors.toSet());
+
+        List<Asset> assets = assetRepository.findAllById(assetIds);
+
+        // 1. Sector diversity (섹터 다양성)
+        long distinctSectors = assets.stream()
+                .map(Asset::getSector)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+
+        // 2. Risk band diversity (위험도 밴드 다양성)
+        long distinctRiskBands = assets.stream()
+                .map(Asset::getCurrentRiskLevel)
+                .filter(Objects::nonNull)
+                .map(this::getRiskBand)
+                .distinct()
+                .count();
+
+        // 3. Asset type diversity (자산 타입 다양성)
+        long distinctAssetTypes = assets.stream()
+                .map(Asset::getType)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+
+        // Calculate diversity score (0-100)
+        int totalAssets = assets.size();
+        double sectorScore = totalAssets > 0 ? (distinctSectors * 100.0) / Math.min(totalAssets, 5) : 0;  // Max 5 sectors
+        double riskScore = (distinctRiskBands * 100.0) / 3;  // Max 3 bands (LOW, MID, HIGH)
+        double typeScore = (distinctAssetTypes * 100.0) / 2;  // Max 2 types (STOCK, ETF)
+
+        double diversityScore = (sectorScore * 0.5) + (riskScore * 0.3) + (typeScore * 0.2);
+
+        // Map to level
+        if (diversityScore >= 70) {
+            return "HIGH";
+        } else if (diversityScore >= 40) {
+            return "MEDIUM";
+        } else {
+            return "LOW";
+        }
+    }
+
+    /**
+     * Calculate risk distribution by risk level (1-5)
+     * Returns percentage weight for each risk level
+     */
+    private Map<Integer, Double> calculateRiskDistribution(List<PortfolioDetailResponse.PositionInfo> positions) {
+        Map<Integer, Double> distribution = new HashMap<>();
+
+        // Initialize all risk levels to 0%
+        for (int level = 1; level <= 5; level++) {
+            distribution.put(level, 0.0);
+        }
+
+        if (positions.isEmpty()) {
+            return distribution;
+        }
+
+        // Group positions by risk level and sum their weights
+        for (PortfolioDetailResponse.PositionInfo position : positions) {
+            if (position.getCurrentRiskLevel() != null && position.getWeightPct() != null) {
+                Integer riskLevel = position.getCurrentRiskLevel();
+                Double currentWeight = distribution.getOrDefault(riskLevel, 0.0);
+                distribution.put(riskLevel, currentWeight + position.getWeightPct());
+            }
+        }
+
+        // Round to 2 decimal places
+        for (Map.Entry<Integer, Double> entry : distribution.entrySet()) {
+            double rounded = Math.round(entry.getValue() * 100.0) / 100.0;
+            distribution.put(entry.getKey(), rounded);
+        }
+
+        return distribution;
+    }
+
+    /**
+     * Map risk level to risk band
+     */
+    private String getRiskBand(Integer riskLevel) {
+        if (riskLevel == null) {
+            return "UNKNOWN";
+        }
+        if (riskLevel <= 2) {
+            return "LOW";
+        } else if (riskLevel == 3) {
+            return "MEDIUM";
+        } else {
+            return "HIGH";
+        }
     }
 
     @Transactional

@@ -92,19 +92,6 @@ public class HomeService {
                 .build();
     }
 
-    @Transactional
-    public MainPortfolioIdResponse removeMainPortfolio(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        user.setMainPortfolioId(null);
-        userRepository.save(user);
-
-        return MainPortfolioIdResponse.builder()
-                .mainPortfolioId(null)
-                .build();
-    }
-
     private Double calculateTotalReturn(UUID portfolioId) {
         return portfolioReturnCalculator.calculateTotalReturn(portfolioId);
     }
@@ -174,11 +161,13 @@ public class HomeService {
                             .assetId(asset.getId().toString())
                             .ticker(asset.getSymbol())
                             .name(asset.getName())
+                            .imageUrl(asset.getImageUrl())
                             .weightPct(pa.getWeightPct().doubleValue())
                             .returnPct(returnPct)
                             .build();
                 })
                 .filter(Objects::nonNull)
+                .sorted((p1, p2) -> Double.compare(p2.getWeightPct(), p1.getWeightPct())) // Sort by weight descending
                 .collect(Collectors.toList());
     }
 

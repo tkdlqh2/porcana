@@ -36,6 +36,7 @@ public class HomeResponse {
         private final String assetId;
         private final String ticker;
         private final String name;
+        private final String imageUrl;
         private final Double weightPct;
         private final Double returnPct;
     }

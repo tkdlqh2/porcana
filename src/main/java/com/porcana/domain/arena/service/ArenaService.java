@@ -14,6 +14,8 @@ import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioAsset;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
+import com.porcana.domain.user.entity.User;
+import com.porcana.domain.user.repository.UserRepository;
 import com.porcana.global.exception.ForbiddenException;
 import com.porcana.global.exception.InvalidOperationException;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +42,7 @@ public class ArenaService {
     private final AssetRepository assetRepository;
     private final PortfolioAssetRepository portfolioAssetRepository;
     private final PortfolioRepository portfolioRepository;
+    private final UserRepository userRepository;
     private final AssetRecommendationService recommendationService;
     private final com.porcana.domain.portfolio.service.PortfolioSnapshotService portfolioSnapshotService;
 
@@ -347,6 +350,8 @@ public class ArenaService {
                         .sector(asset.getSector())
                         .market(asset.getMarket())
                         .assetClass(asset.getAssetClass())
+                        .currentRiskLevel(asset.getCurrentRiskLevel())
+                        .imageUrl(asset.getImageUrl())
                         .impactHint(generateImpactHint(asset))
                         .build())
                 .collect(Collectors.toList());
@@ -453,6 +458,20 @@ public class ArenaService {
                     today,
                     "Initial portfolio creation via Arena"
             );
+
+            // Auto-start the portfolio
+            Portfolio portfolio = portfolioRepository.findById(session.getPortfolioId())
+                    .orElseThrow(() -> new IllegalArgumentException("Portfolio not found"));
+            portfolio.start();
+            portfolioRepository.save(portfolio);
+
+            // Set as main portfolio if user has no main portfolio
+            User user = userRepository.findById(session.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            if (user.getMainPortfolioId() == null) {
+                user.setMainPortfolioId(session.getPortfolioId());
+                userRepository.save(user);
+            }
         }
     }
 

@@ -88,25 +88,6 @@ public class PortfolioController {
     }
 
     @Operation(
-            summary = "포트폴리오 시작",
-            description = "DRAFT 상태의 포트폴리오를 ACTIVE 상태로 변경하고 시작일을 설정합니다.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "시작 성공"),
-                    @ApiResponse(responseCode = "400", description = "포트폴리오를 찾을 수 없거나 이미 시작됨", content = @Content)
-            }
-    )
-    @PostMapping("/{portfolioId}/start")
-    public ResponseEntity<StartPortfolioResponse> startPortfolio(
-            @Parameter(description = "포트폴리오 ID", required = true) @PathVariable UUID portfolioId,
-            HttpServletRequest request) {
-        UUID userId = extractUserId();
-        UUID guestSessionId = guestSessionExtractor.extractGuestSessionId(request);
-
-        StartPortfolioResponse response = portfolioService.startPortfolio(portfolioId, userId, guestSessionId);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
             summary = "포트폴리오 성과 차트 조회",
             description = "지정한 기간의 포트폴리오 성과 차트를 조회합니다. 1M, 3M, 1Y 중 선택 가능합니다.",
             responses = {

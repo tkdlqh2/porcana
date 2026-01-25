@@ -41,7 +41,7 @@ public class HomeController {
 
     @Operation(
             summary = "메인 포트폴리오 설정",
-            description = "지정한 포트폴리오를 메인 포트폴리오로 설정합니다.",
+            description = "지정한 포트폴리오를 메인 포트폴리오로 설정합니다. 다른 포트폴리오가 이미 메인으로 설정되어 있다면 변경됩니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "설정 성공"),
                     @ApiResponse(responseCode = "400", description = "포트폴리오를 찾을 수 없거나 권한이 없음", content = @Content),
@@ -53,20 +53,6 @@ public class HomeController {
             @Parameter(description = "포트폴리오 ID", required = true) @PathVariable UUID portfolioId,
             @CurrentUser UUID userId) {
         MainPortfolioIdResponse response = homeService.setMainPortfolio(userId, portfolioId);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "메인 포트폴리오 해제",
-            description = "메인 포트폴리오 설정을 해제합니다.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "해제 성공"),
-                    @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
-            }
-    )
-    @DeleteMapping("/portfolios/main")
-    public ResponseEntity<MainPortfolioIdResponse> removeMainPortfolio(@CurrentUser UUID userId) {
-        MainPortfolioIdResponse response = homeService.removeMainPortfolio(userId);
         return ResponseEntity.ok(response);
     }
 }
