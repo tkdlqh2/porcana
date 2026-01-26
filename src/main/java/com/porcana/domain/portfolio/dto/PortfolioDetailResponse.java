@@ -31,7 +31,14 @@ public class PortfolioDetailResponse {
      * @param positions List of position information
      * @return PortfolioDetailResponse
      */
-    public static PortfolioDetailResponse from(Portfolio portfolio, boolean isMain, Double totalReturnPct, List<PositionInfo> positions) {
+    public static PortfolioDetailResponse from(Portfolio portfolio,
+                                               boolean isMain,
+                                               Double totalReturnPct,
+                                               Double averageRiskLevel,
+                                               String diversityLevel,
+                                               Map<Integer, Double> riskDistribution,
+                                               List<PositionInfo> positions
+    ) {
         return PortfolioDetailResponse.builder()
                 .portfolioId(portfolio.getId().toString())
                 .name(portfolio.getName())
@@ -39,6 +46,9 @@ public class PortfolioDetailResponse {
                 .isMain(isMain)
                 .startedAt(portfolio.getStartedAt())
                 .totalReturnPct(totalReturnPct)
+                .averageRiskLevel(averageRiskLevel)
+                .diversityLevel(diversityLevel)
+                .riskDistribution(riskDistribution)
                 .positions(positions)
                 .build();
     }

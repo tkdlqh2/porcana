@@ -99,6 +99,10 @@ public class Portfolio {
      * @param userId User ID to claim the portfolio
      */
     public void claimToUser(UUID userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId must not be null");
+        }
+
         if (this.userId != null) {
             throw new IllegalStateException("Portfolio is already owned by a user");
         }

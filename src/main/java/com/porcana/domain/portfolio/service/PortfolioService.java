@@ -112,7 +112,21 @@ public class PortfolioService {
 
         Double totalReturnPct = calculateTotalReturn(portfolio.getId());
         List<PortfolioDetailResponse.PositionInfo> positions = buildPositions(portfolio.getId());
-        return PortfolioDetailResponse.from(portfolio, isMain, totalReturnPct, positions);
+
+        // Calculate portfolio-level risk metrics
+        Double averageRiskLevel = calculateAverageRiskLevel(positions);
+        String diversityLevel = calculateDiversityLevel(portfolio.getId());
+        Map<Integer, Double> riskDistribution = calculateRiskDistribution(positions);
+
+        return PortfolioDetailResponse.from(
+            portfolio,
+            isMain,
+            totalReturnPct,
+            averageRiskLevel,
+            diversityLevel,
+            riskDistribution,
+            positions
+        );
     }
 
     /**

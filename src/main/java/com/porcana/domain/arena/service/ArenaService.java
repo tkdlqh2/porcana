@@ -217,6 +217,14 @@ public class ArenaService {
     }
 
     /**
+     * Pick asset (Rounds 1-10, authenticated users)
+     */
+    @Transactional
+    public PickResponse pickAsset(UUID sessionId, UUID userId, PickAssetCommand command) {
+        return pickAsset(sessionId, userId, null, command);
+    }
+
+    /**
      * Pick asset (Rounds 1-10, supports both user and guest)
      */
     @Transactional
@@ -465,12 +473,14 @@ public class ArenaService {
             portfolio.start();
             portfolioRepository.save(portfolio);
 
-            // Set as main portfolio if user has no main portfolio
-            User user = userRepository.findById(session.getUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            if (user.getMainPortfolioId() == null) {
-                user.setMainPortfolioId(session.getPortfolioId());
-                userRepository.save(user);
+            // Set as main portfolio only for authenticated users
+            if (session.getUserId() != null) {
+                User user = userRepository.findById(session.getUserId())
+                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                if (user.getMainPortfolioId() == null) {
+                    user.setMainPortfolioId(session.getPortfolioId());
+                    userRepository.save(user);
+                }
             }
         }
     }

@@ -796,7 +796,7 @@ Response (201 Created)
 ```
 
 **Set-Cookie Header:**
-```
+```text
 Set-Cookie: porcana_guest={sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000
 ```
 

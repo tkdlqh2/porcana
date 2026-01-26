@@ -92,8 +92,10 @@ public class GuestSessionInterceptor implements HandlerInterceptor {
     private void setGuestCookie(HttpServletResponse response, UUID guestSessionId) {
         Cookie cookie = new Cookie(GUEST_COOKIE_NAME, guestSessionId.toString());
         cookie.setHttpOnly(true);
+        cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge(GUEST_COOKIE_MAX_AGE);
+        cookie.setAttribute("SameSite", "Lax");
         response.addCookie(cookie);
     }
 }

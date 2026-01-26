@@ -46,6 +46,8 @@ public class GuestSessionController {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge(GUEST_COOKIE_MAX_AGE);
+        cookie.setSecure(true); // HTTPS 환경에서만 쿠키 전송
+        cookie.setAttribute("SameSite", "Lax"); // CSRF 방지
         response.addCookie(cookie);
 
         // Return response (guestSessionId for debugging purposes)

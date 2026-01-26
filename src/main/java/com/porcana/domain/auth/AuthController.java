@@ -82,7 +82,12 @@ public class AuthController {
         // Claim guest data if guest session cookie exists
         UUID guestSessionId = extractGuestSessionId(httpRequest);
         if (guestSessionId != null) {
-            authService.claimGuestData(guestSessionId, response.getUser().getUserId());
+            try {
+                authService.claimGuestData(guestSessionId, response.getUser().getUserId());
+            } catch (Exception e) {
+                log.warn("게스트 데이터 이관 실패: guestSessionId={}, userId={}",
+                        guestSessionId, response.getUser().getUserId(), e);
+            }
         }
 
         return ResponseEntity.ok(response);
