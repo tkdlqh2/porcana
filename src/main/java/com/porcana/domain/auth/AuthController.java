@@ -38,7 +38,15 @@ public class AuthController {
 
     @Operation(
             summary = "회원가입",
-            description = "이메일로 회원가입하고 JWT 토큰을 발급받습니다. 게스트 세션이 있으면 자동으로 포트폴리오를 사용자 계정으로 이전합니다.",
+            description = """
+                    이메일로 회원가입하고 JWT 토큰을 발급받습니다.
+
+                    **Guest Session Claim (게스트 데이터 이전):**
+                    - 서버는 요청의 `porcana_guest` 쿠키를 확인합니다
+                    - 게스트 세션이 있으면 해당 포트폴리오/아레나를 신규 사용자 계정으로 자동 이전합니다
+                    - 메인 포트폴리오가 없으면 가장 최근 게스트 포트폴리오를 메인으로 설정합니다
+                    - 게스트 쿠키는 클라이언트에서 자동으로 전송되며, 별도 파라미터 필요 없습니다
+                    """,
             responses = {
                     @ApiResponse(responseCode = "200", description = "회원가입 성공"),
                     @ApiResponse(responseCode = "400", description = "이메일 중복 또는 잘못된 요청", content = @Content)
@@ -47,7 +55,7 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> signup(
             @Valid @RequestBody SignupRequest request,
-            HttpServletRequest httpRequest
+            @Parameter(hidden = true) HttpServletRequest httpRequest
     ) {
         SignupCommand command = SignupCommand.from(request);
         AuthResponse response = authService.signup(command);
@@ -63,7 +71,17 @@ public class AuthController {
 
     @Operation(
             summary = "로그인",
-            description = "이메일과 비밀번호로 로그인하고 JWT 토큰을 발급받습니다. 게스트 세션이 있으면 자동으로 포트폴리오를 사용자 계정으로 이전합니다.",
+            description = """
+                    이메일과 비밀번호로 로그인하고 JWT 토큰을 발급받습니다.
+
+                    **Guest Session Claim (게스트 데이터 이전):**
+                    - 서버는 요청의 `porcana_guest` 쿠키를 확인합니다
+                    - 게스트 세션이 있으면 해당 포트폴리오/아레나를 사용자 계정으로 자동 이전합니다 (merge)
+                    - 기존 포트폴리오와 게스트 포트폴리오 모두 유지됩니다
+                    - 게스트 쿠키는 클라이언트에서 자동으로 전송되며, 별도 파라미터 필요 없습니다
+
+                    **지원 Provider:** EMAIL, GOOGLE, APPLE
+                    """,
             responses = {
                     @ApiResponse(responseCode = "200", description = "로그인 성공"),
                     @ApiResponse(responseCode = "400", description = "이메일 또는 비밀번호 오류", content = @Content)
@@ -72,7 +90,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest
+            @Parameter(hidden = true) HttpServletRequest httpRequest
     ) {
         LoginCommand command = LoginCommand.from(request);
         AuthResponse response = authService.login(command);
