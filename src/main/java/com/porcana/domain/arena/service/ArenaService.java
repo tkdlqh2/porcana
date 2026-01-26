@@ -183,8 +183,10 @@ public class ArenaService {
         }
 
         // Validate each sector has enough assets (at least 3 for one round)
+        java.util.Map<Sector, Integer> sectorCounts = recommendationService.getActiveAssetCountsBySector();
         for (Sector sector : command.getSectors()) {
-            if (!recommendationService.hasEnoughAssets(sector, 3)) {
+            int count = sectorCounts.getOrDefault(sector, 0);
+            if (count < 3) {
                 throw new IllegalArgumentException(
                         String.format("Sector %s has insufficient assets", sector.getDescription())
                 );
@@ -293,9 +295,10 @@ public class ArenaService {
         }
 
         // Sector options
+        java.util.Map<Sector, Integer> sectorCounts = recommendationService.getActiveAssetCountsBySector();
         List<PreRoundResponse.SectorOption> sectorOptions = new ArrayList<>();
         for (Sector sector : Sector.values()) {
-            Integer assetCount = recommendationService.getAssetCount(sector);
+            Integer assetCount = sectorCounts.getOrDefault(sector, 0);
 
             // Only include sectors with enough assets (at least 3 for one round)
             if (assetCount >= 3) {
