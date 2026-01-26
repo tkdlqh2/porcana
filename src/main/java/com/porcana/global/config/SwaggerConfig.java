@@ -14,12 +14,22 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI openAPI() {
         String jwt = "JWT";
+        String guestSession = "GuestSession";
+
         Components components = new Components()
                 .addSecuritySchemes(jwt, new SecurityScheme()
                         .name(jwt)
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")
                         .bearerFormat("JWT")
+                        .description("JWT 토큰 인증 (회원 전용)")
+                )
+                .addSecuritySchemes(guestSession, new SecurityScheme()
+                        .name(guestSession)
+                        .type(SecurityScheme.Type.APIKEY)
+                        .in(SecurityScheme.In.HEADER)
+                        .name("X-Guest-Session-Id")
+                        .description("게스트 세션 ID (비회원용). POST /guest-sessions로 생성 후 사용")
                 );
 
         return new OpenAPI()

@@ -47,16 +47,25 @@ public class ArenaService {
     private final com.porcana.domain.portfolio.service.PortfolioSnapshotService portfolioSnapshotService;
 
     /**
-     * Create a new arena session for portfolio drafting
+     * Create a new arena session for portfolio drafting (supports both user and guest)
      */
     @Transactional
-    public CreateSessionResponse createSession(CreateSessionCommand command) {
-        // Validate portfolio exists and user owns it
+    public CreateSessionResponse createSession(CreateSessionCommand command, UUID userId, UUID guestSessionId) {
+        // Validate portfolio exists and ownership
         Portfolio portfolio = portfolioRepository.findById(command.getPortfolioId())
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found"));
 
-        if (!portfolio.getUserId().equals(command.getUserId())) {
-            throw new ForbiddenException("Not authorized to access this portfolio");
+        // Validate ownership
+        if (userId != null) {
+            if (!portfolio.isOwnedByUser(userId)) {
+                throw new ForbiddenException("Not authorized to access this portfolio");
+            }
+        } else if (guestSessionId != null) {
+            if (!portfolio.isOwnedByGuestSession(guestSessionId)) {
+                throw new ForbiddenException("Not authorized to access this portfolio");
+            }
+        } else {
+            throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
         }
 
         // Check if session already exists for this portfolio
@@ -69,13 +78,12 @@ public class ArenaService {
         }
 
         // Create new session (Round 0 = Pre Round, Rounds 1-10 = Asset selection)
-        ArenaSession session = ArenaSession.builder()
-                .portfolioId(command.getPortfolioId())
-                .userId(command.getUserId())
-                .status(SessionStatus.IN_PROGRESS)
-                .currentRound(0)  // Start at Pre Round
-                .totalRounds(11)   // Pre Round (0) + Asset Rounds (1-10)
-                .build();
+        ArenaSession session;
+        if (userId != null) {
+            session = ArenaSession.createForUser(command.getPortfolioId(), userId);
+        } else {
+            session = ArenaSession.createForGuest(command.getPortfolioId(), guestSessionId);
+        }
 
         ArenaSession saved = sessionRepository.save(session);
 
@@ -83,10 +91,18 @@ public class ArenaService {
     }
 
     /**
-     * Get session details
+     * Legacy method for backward compatibility (authenticated users only)
      */
-    public SessionResponse getSession(UUID sessionId, UUID userId) {
-        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId);
+    @Transactional
+    public CreateSessionResponse createSession(CreateSessionCommand command) {
+        return createSession(command, command.getUserId(), null);
+    }
+
+    /**
+     * Get session details (supports both user and guest)
+     */
+    public SessionResponse getSession(UUID sessionId, UUID userId, UUID guestSessionId) {
+        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId, guestSessionId);
 
         // Get selected asset IDs from completed asset rounds
         List<ArenaRound> assetRounds = roundRepository.findBySessionIdAndRoundType(sessionId, RoundType.ASSET);
@@ -108,11 +124,18 @@ public class ArenaService {
     }
 
     /**
-     * Get current round data
+     * Legacy method for backward compatibility (authenticated users only)
+     */
+    public SessionResponse getSession(UUID sessionId, UUID userId) {
+        return getSession(sessionId, userId, null);
+    }
+
+    /**
+     * Get current round data (supports both user and guest)
      */
     @Transactional
-    public RoundResponse getCurrentRound(UUID sessionId, UUID userId) {
-        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId);
+    public RoundResponse getCurrentRound(UUID sessionId, UUID userId, UUID guestSessionId) {
+        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId, guestSessionId);
 
         if (session.getStatus() == SessionStatus.COMPLETED) {
             throw new InvalidOperationException("Session already completed");
@@ -130,11 +153,19 @@ public class ArenaService {
     }
 
     /**
-     * Pick preferences (Round 0: Risk Profile + Sectors)
+     * Legacy method for backward compatibility (authenticated users only)
      */
     @Transactional
-    public PickResponse pickPreferences(UUID sessionId, UUID userId, PickPreferencesCommand command) {
-        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId);
+    public RoundResponse getCurrentRound(UUID sessionId, UUID userId) {
+        return getCurrentRound(sessionId, userId, null);
+    }
+
+    /**
+     * Pick preferences (Round 0: Risk Profile + Sectors, supports both user and guest)
+     */
+    @Transactional
+    public PickResponse pickPreferences(UUID sessionId, UUID userId, UUID guestSessionId, PickPreferencesCommand command) {
+        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId, guestSessionId);
 
         if (session.getCurrentRound() != 0) {
             throw new InvalidOperationException("Preferences can only be selected in round 0 (Pre Round)");
@@ -178,11 +209,27 @@ public class ArenaService {
     }
 
     /**
-     * Pick asset (Rounds 1-10)
+     * Legacy method for backward compatibility (authenticated users only)
+     */
+    @Transactional
+    public PickResponse pickPreferences(UUID sessionId, UUID userId, PickPreferencesCommand command) {
+        return pickPreferences(sessionId, userId, null, command);
+    }
+
+    /**
+     * Pick asset (Rounds 1-10, authenticated users)
      */
     @Transactional
     public PickResponse pickAsset(UUID sessionId, UUID userId, PickAssetCommand command) {
-        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId);
+        return pickAsset(sessionId, userId, null, command);
+    }
+
+    /**
+     * Pick asset (Rounds 1-10, supports both user and guest)
+     */
+    @Transactional
+    public PickResponse pickAsset(UUID sessionId, UUID userId, UUID guestSessionId, PickAssetCommand command) {
+        ArenaSession session = getSessionAndValidateOwnership(sessionId, userId, guestSessionId);
 
         int currentRound = session.getCurrentRound();
 
@@ -426,12 +473,14 @@ public class ArenaService {
             portfolio.start();
             portfolioRepository.save(portfolio);
 
-            // Set as main portfolio if user has no main portfolio
-            User user = userRepository.findById(session.getUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            if (user.getMainPortfolioId() == null) {
-                user.setMainPortfolioId(session.getPortfolioId());
-                userRepository.save(user);
+            // Set as main portfolio only for authenticated users
+            if (session.getUserId() != null) {
+                User user = userRepository.findById(session.getUserId())
+                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                if (user.getMainPortfolioId() == null) {
+                    user.setMainPortfolioId(session.getPortfolioId());
+                    userRepository.save(user);
+                }
             }
         }
     }
@@ -439,11 +488,26 @@ public class ArenaService {
     /**
      * Get session and validate ownership
      */
-    private ArenaSession getSessionAndValidateOwnership(UUID sessionId, UUID userId) {
-        ArenaSession session = sessionRepository.findByIdAndUserId(sessionId, userId)
-                .orElseThrow(() -> new ForbiddenException("Session not found or access denied"));
+    /**
+     * Get session and validate ownership (supports both user and guest)
+     */
+    private ArenaSession getSessionAndValidateOwnership(UUID sessionId, UUID userId, UUID guestSessionId) {
+        if (userId != null) {
+            return sessionRepository.findByIdAndUserId(sessionId, userId)
+                    .orElseThrow(() -> new ForbiddenException("Session not found or access denied"));
+        } else if (guestSessionId != null) {
+            return sessionRepository.findByIdAndGuestSessionId(sessionId, guestSessionId)
+                    .orElseThrow(() -> new ForbiddenException("Session not found or access denied"));
+        } else {
+            throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
+        }
+    }
 
-        return session;
+    /**
+     * Legacy method for backward compatibility (authenticated users only)
+     */
+    private ArenaSession getSessionAndValidateOwnership(UUID sessionId, UUID userId) {
+        return getSessionAndValidateOwnership(sessionId, userId, null);
     }
 
     /**

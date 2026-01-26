@@ -1,5 +1,6 @@
 package com.porcana.domain.portfolio.dto;
 
+import com.porcana.domain.portfolio.entity.Portfolio;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -20,6 +21,37 @@ public class PortfolioDetailResponse {
     private final String diversityLevel;    // 분산도 ("HIGH" | "MEDIUM" | "LOW")
     private final Map<Integer, Double> riskDistribution;  // 위험도별 비중 분포 (1-5 → percentage)
     private final List<PositionInfo> positions;
+
+    /**
+     * Factory method to create response from Portfolio entity
+     *
+     * @param portfolio Portfolio entity
+     * @param isMain Whether this portfolio is the main portfolio
+     * @param totalReturnPct Total return percentage
+     * @param positions List of position information
+     * @return PortfolioDetailResponse
+     */
+    public static PortfolioDetailResponse from(Portfolio portfolio,
+                                               boolean isMain,
+                                               Double totalReturnPct,
+                                               Double averageRiskLevel,
+                                               String diversityLevel,
+                                               Map<Integer, Double> riskDistribution,
+                                               List<PositionInfo> positions
+    ) {
+        return PortfolioDetailResponse.builder()
+                .portfolioId(portfolio.getId().toString())
+                .name(portfolio.getName())
+                .status(portfolio.getStatus().name())
+                .isMain(isMain)
+                .startedAt(portfolio.getStartedAt())
+                .totalReturnPct(totalReturnPct)
+                .averageRiskLevel(averageRiskLevel)
+                .diversityLevel(diversityLevel)
+                .riskDistribution(riskDistribution)
+                .positions(positions)
+                .build();
+    }
 
     @Getter
     @Builder

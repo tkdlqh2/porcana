@@ -2,7 +2,11 @@ package com.porcana.domain.arena.repository;
 
 import com.porcana.domain.arena.entity.ArenaSession;
 import com.porcana.domain.arena.entity.SessionStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -29,4 +33,25 @@ public interface ArenaSessionRepository extends JpaRepository<ArenaSession, UUID
      * Used for ownership validation
      */
     Optional<ArenaSession> findByIdAndUserId(UUID id, UUID userId);
+
+    // ===== Guest Session Support =====
+
+    /**
+     * Find all sessions for a guest session, ordered by creation date
+     */
+    List<ArenaSession> findByGuestSessionIdOrderByCreatedAtDesc(UUID guestSessionId);
+
+    /**
+     * Find session by ID and guest session ID
+     * Used for ownership validation
+     */
+    Optional<ArenaSession> findByIdAndGuestSessionId(UUID id, UUID guestSessionId);
+
+    /**
+     * Find arena sessions by guest session ID with pessimistic lock (for claim operation)
+     * Used to prevent concurrent claim of the same guest sessions
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM ArenaSession a WHERE a.guestSessionId = :guestSessionId")
+    List<ArenaSession> findByGuestSessionIdForUpdate(@Param("guestSessionId") UUID guestSessionId);
 }

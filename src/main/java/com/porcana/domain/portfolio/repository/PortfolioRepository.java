@@ -2,9 +2,13 @@ package com.porcana.domain.portfolio.repository;
 
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -43,4 +47,29 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
      * Find portfolios by status with pagination (for chunk-based batch processing)
      */
     Page<Portfolio> findByStatus(PortfolioStatus status, Pageable pageable);
+
+    // ===== Guest Session Support =====
+
+    /**
+     * Find all portfolios for a guest session
+     */
+    List<Portfolio> findByGuestSessionIdOrderByCreatedAtDesc(UUID guestSessionId);
+
+    /**
+     * Find portfolio by ID and guest session ID (ownership validation)
+     */
+    Optional<Portfolio> findByIdAndGuestSessionId(UUID id, UUID guestSessionId);
+
+    /**
+     * Find portfolios by guest session ID with pessimistic lock (for claim operation)
+     * Used to prevent concurrent claim of the same guest portfolios
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Portfolio p WHERE p.guestSessionId = :guestSessionId")
+    List<Portfolio> findByGuestSessionIdForUpdate(@Param("guestSessionId") UUID guestSessionId);
+
+    /**
+     * Count portfolios owned by a guest session
+     */
+    long countByGuestSessionId(UUID guestSessionId);
 }
