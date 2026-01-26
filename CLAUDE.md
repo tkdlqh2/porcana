@@ -642,7 +642,7 @@ riskScore = 100 × (0.45 × volPct + 0.45 × mddPct + 0.10 × worstPct)
 - `last_seen_at`: LocalDateTime - 마지막 활동 시각 (만료 판단용)
 
 **세션 관리:**
-- 쿠키로 관리: `porcana_guest={sessionId}; HttpOnly; SameSite=Lax; Max-Age=2592000` (30일)
+- 헤더로 관리: `X-Guest-Session-Id: {sessionId}` (클라이언트가 로컬스토리지 등에 저장 후 헤더로 전송)
 - 만료 정책: `last_seen_at` 기준 30일 이상 비활성 시 배치로 삭제
 - 제한: 게스트당 포트폴리오 최대 3개
 
@@ -779,7 +779,7 @@ runKrDailyPriceUpdate()
 # 0) Guest Session (비회원 지원)
 
 ## POST /guest-sessions
-**Description**: 비회원을 위한 게스트 세션을 생성합니다. 서버는 자동으로 쿠키를 설정합니다.
+**Description**: 비회원을 위한 게스트 세션을 생성합니다. 서버는 응답 본문과 `X-Guest-Session-Id` 헤더로 세션 ID를 반환합니다.
 
 **Auth**: Not required
 
@@ -795,27 +795,27 @@ Response (201 Created)
 }
 ```
 
-**Set-Cookie Header:**
+**Response Header:**
 ```text
-Set-Cookie: porcana_guest={sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000
+X-Guest-Session-Id: {sessionId}
 ```
 
 **Notes:**
-- 프론트엔드는 `porcana_guest` 쿠키가 없을 때만 호출
-- 쿠키 유효기간: 30일 (2592000초)
-- 디버깅용으로 `guestSessionId`를 응답에 포함하지만, 실제로는 쿠키로만 관리
+- 프론트엔드는 응답의 `guestSessionId` 또는 `X-Guest-Session-Id` 헤더를 로컬스토리지 등에 저장
+- 이후 API 요청 시 `X-Guest-Session-Id` 헤더로 전송
+- 세션 유효기간: 30일 (`last_seen_at` 기준)
 
 ---
 
 # 1) Auth / User
 
 ## POST /auth/signup
-**Description**: 회원가입을 처리합니다. 요청에 `porcana_guest` 쿠키가 있으면 게스트 포트폴리오를 자동으로 사용자 계정으로 이전합니다.
+**Description**: 회원가입을 처리합니다. 요청에 `X-Guest-Session-Id` 헤더가 있으면 게스트 포트폴리오를 자동으로 사용자 계정으로 이전합니다.
 
 **Auth**: Not required
 
 **Guest Session Claim:**
-- 서버는 요청의 `porcana_guest` 쿠키를 확인
+- 서버는 요청의 `X-Guest-Session-Id` 헤더를 확인
 - 게스트 세션이 있으면 해당 포트폴리오/아레나를 신규 사용자 계정으로 이전
 - 메인 포트폴리오가 없으면 가장 최근 게스트 포트폴리오를 메인으로 설정
 
@@ -850,14 +850,14 @@ Response
 }
 
 ## POST /auth/login
-**Description**: 로그인을 처리합니다. 요청에 `porcana_guest` 쿠키가 있으면 게스트 포트폴리오를 자동으로 사용자 계정으로 이전합니다.
+**Description**: 로그인을 처리합니다. 요청에 `X-Guest-Session-Id` 헤더가 있으면 게스트 포트폴리오를 자동으로 사용자 계정으로 이전합니다.
 
 **Auth**: Not required
 
 **지원 Provider**: EMAIL, GOOGLE, APPLE
 
 **Guest Session Claim:**
-- 서버는 요청의 `porcana_guest` 쿠키를 확인
+- 서버는 요청의 `X-Guest-Session-Id` 헤더를 확인
 - 게스트 세션이 있으면 해당 포트폴리오/아레나를 사용자 계정으로 이전 (merge)
 - 기존 포트폴리오와 게스트 포트폴리오 모두 유지
 

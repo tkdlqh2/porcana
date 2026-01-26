@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -43,10 +44,11 @@ public class AuthController {
 
                     **Guest Session Claim (게스트 데이터 이전):**
                     - 서버는 요청의 `porcana_guest` 쿠키를 확인합니다
-                    - 게스트 세션이 있으면 해당 포트폴리오/아레나를 신규 사용자 계정으로 자동 이전합니다
+                    - 게스트 세션(X-Guest-Session-Id 헤더, optional)이 있으면 해당 포트폴리오/아레나를 신규 사용자 계정으로 자동 이전합니다
                     - 메인 포트폴리오가 없으면 가장 최근 게스트 포트폴리오를 메인으로 설정합니다
                     - 게스트 쿠키는 클라이언트에서 자동으로 전송되며, 별도 파라미터 필요 없습니다
                     """,
+            security = {@SecurityRequirement(name = "GuestSession")},
             responses = {
                     @ApiResponse(responseCode = "200", description = "회원가입 성공"),
                     @ApiResponse(responseCode = "400", description = "이메일 중복 또는 잘못된 요청", content = @Content)
@@ -76,12 +78,13 @@ public class AuthController {
 
                     **Guest Session Claim (게스트 데이터 이전):**
                     - 서버는 요청의 `porcana_guest` 쿠키를 확인합니다
-                    - 게스트 세션이 있으면 해당 포트폴리오/아레나를 사용자 계정으로 자동 이전합니다 (merge)
+                    - 게스트 세션(X-Guest-Session-Id 헤더, optional)이 있으면 해당 포트폴리오/아레나를 사용자 계정으로 자동 이전합니다 (merge)
                     - 기존 포트폴리오와 게스트 포트폴리오 모두 유지됩니다
                     - 게스트 쿠키는 클라이언트에서 자동으로 전송되며, 별도 파라미터 필요 없습니다
 
                     **지원 Provider:** EMAIL, GOOGLE, APPLE
                     """,
+            security = {@SecurityRequirement(name = "GuestSession")},
             responses = {
                     @ApiResponse(responseCode = "200", description = "로그인 성공"),
                     @ApiResponse(responseCode = "400", description = "이메일 또는 비밀번호 오류", content = @Content)
