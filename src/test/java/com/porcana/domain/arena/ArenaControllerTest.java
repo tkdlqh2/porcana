@@ -8,6 +8,7 @@ import com.porcana.domain.arena.entity.RiskProfile;
 import com.porcana.domain.arena.repository.ArenaRoundRepository;
 import com.porcana.domain.arena.repository.ArenaSessionRepository;
 import com.porcana.domain.asset.entity.Sector;
+import com.porcana.domain.guest.service.GuestSessionService;
 import com.porcana.global.security.JwtTokenProvider;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,9 @@ class ArenaControllerTest extends BaseIntegrationTest {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private GuestSessionService guestSessionService;
 
     private static final UUID TEST_USER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final UUID TEST_PORTFOLIO_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
@@ -82,7 +86,7 @@ class ArenaControllerTest extends BaseIntegrationTest {
         .when()
                 .post("/arena/sessions")
         .then()
-                .statusCode(401);
+                .statusCode(400);
     }
 
     @Test
@@ -416,6 +420,276 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .body("status", equalTo("COMPLETED"))
                 .body("currentRound", equalTo(10))
                 .body("selectedAssetIds", hasSize(10));
+    }
+
+    // ========== Guest Session Tests ==========
+
+    @Test
+    @DisplayName("게스트 세션 - 아레나 세션 생성 성공")
+    void createSession_success_guest() {
+        // Create guest session directly
+        UUID guestSessionId = guestSessionService.createGuestSession();
+
+        // Create guest portfolio
+        String guestPortfolioId = given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body("{\"name\": \"Guest Test Portfolio\"}")
+                .log().all()
+        .when()
+                .post("/portfolios")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .extract()
+                .path("portfolioId");
+
+        // Create arena session
+        CreateSessionRequest request = new CreateSessionRequest(UUID.fromString(guestPortfolioId));
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body(request)
+                .log().all()
+        .when()
+                .post("/arena/sessions")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("sessionId", notNullValue())
+                .body("portfolioId", equalTo(guestPortfolioId))
+                .body("status", equalTo("IN_PROGRESS"))
+                .body("currentRound", equalTo(0));
+    }
+
+    @Test
+    @DisplayName("게스트 세션 - 전체 아레나 플로우 테스트")
+    void fullArenaFlow_success_guest() {
+        // 1. Create guest session directly
+        UUID guestSessionId = guestSessionService.createGuestSession();
+
+        // 2. Create guest portfolio
+        String guestPortfolioId = given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body("{\"name\": \"Guest Arena Portfolio\"}")
+        .when()
+                .post("/portfolios")
+        .then()
+                .statusCode(200)
+                .extract()
+                .path("portfolioId");
+
+        // 3. Create arena session
+        CreateSessionRequest createRequest = new CreateSessionRequest(UUID.fromString(guestPortfolioId));
+        String sessionId = given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body(createRequest)
+        .when()
+                .post("/arena/sessions")
+        .then()
+                .statusCode(200)
+                .body("currentRound", equalTo(0))
+                .extract()
+                .path("sessionId");
+
+        // 4. Get current round (Round 0 - Pre Round)
+        given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+        .then()
+                .statusCode(200)
+                .body("sessionId", equalTo(sessionId))
+                .body("round", equalTo(0))
+                .body("roundType", equalTo("PRE_ROUND"))
+                .body("riskProfileOptions", hasSize(3))
+                .body("sectorOptions", notNullValue());
+
+        // 5. Pick preferences (Round 0 - Risk Profile + Sectors)
+        List<Sector> sectors = Arrays.asList(
+                Sector.INFORMATION_TECHNOLOGY,
+                Sector.HEALTH_CARE
+        );
+        PickPreferencesRequest preferencesRequest = new PickPreferencesRequest(RiskProfile.BALANCED, sectors);
+        given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body(preferencesRequest)
+        .when()
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-preferences", sessionId)
+        .then()
+                .statusCode(200)
+                .body("currentRound", equalTo(1))
+                .body("picked.riskProfile", equalTo("BALANCED"));
+
+        // 6. Pick assets (Rounds 1-10)
+        for (int round = 1; round <= 10; round++) {
+            // Get current round options
+            String assetId = given()
+                    .header("X-Guest-Session-Id", guestSessionId.toString())
+            .when()
+                    .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+            .then()
+                    .statusCode(200)
+                    .body("round", equalTo(round))
+                    .body("roundType", equalTo("ASSET"))
+                    .body("assets", hasSize(3))
+                    .extract()
+                    .path("assets[0].assetId");
+
+            // Pick first asset
+            PickAssetRequest assetRequest = new PickAssetRequest(UUID.fromString(assetId));
+            int expectedNextRound = round < 10 ? round + 1 : 10;
+            String expectedStatus = round < 10 ? "IN_PROGRESS" : "COMPLETED";
+
+            given()
+                    .contentType(ContentType.JSON)
+                    .header("X-Guest-Session-Id", guestSessionId.toString())
+                    .body(assetRequest)
+            .when()
+                    .post("/arena/sessions/{sessionId}/rounds/current/pick-asset", sessionId)
+            .then()
+                    .statusCode(200)
+                    .body("currentRound", equalTo(expectedNextRound))
+                    .body("status", equalTo(expectedStatus));
+        }
+
+        // 7. Verify session is completed
+        given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .get("/arena/sessions/{sessionId}", sessionId)
+        .then()
+                .statusCode(200)
+                .body("status", equalTo("COMPLETED"))
+                .body("currentRound", equalTo(10))
+                .body("selectedAssetIds", hasSize(10));
+
+        // 8. Verify portfolio is now ACTIVE with 10 assets
+        given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .get("/portfolios/{portfolioId}", guestPortfolioId)
+        .then()
+                .statusCode(200)
+                .body("status", equalTo("ACTIVE"))
+                .body("positions", hasSize(10));
+    }
+
+    @Test
+    @DisplayName("게스트 세션 - 라운드 조회 성공")
+    void getCurrentRound_success_guest() {
+        // Create guest session directly
+        UUID guestSessionId = guestSessionService.createGuestSession();
+
+        String guestPortfolioId = given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body("{\"name\": \"Guest Portfolio\"}")
+        .when()
+                .post("/portfolios")
+        .then()
+                .statusCode(200)
+                .extract()
+                .path("portfolioId");
+
+        // Create arena session
+        CreateSessionRequest createRequest = new CreateSessionRequest(UUID.fromString(guestPortfolioId));
+        String sessionId = given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body(createRequest)
+        .when()
+                .post("/arena/sessions")
+        .then()
+                .statusCode(200)
+                .extract()
+                .path("sessionId");
+
+        // Get current round
+        given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+        .then()
+                .statusCode(200)
+                .body("sessionId", equalTo(sessionId))
+                .body("round", equalTo(0))
+                .body("roundType", equalTo("PRE_ROUND"));
+    }
+
+    @Test
+    @DisplayName("게스트 세션 - 자산 선택 성공")
+    void pickAsset_success_guest() {
+        // Create guest session directly
+        UUID guestSessionId = guestSessionService.createGuestSession();
+
+        String guestPortfolioId = given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body("{\"name\": \"Guest Portfolio\"}")
+        .when()
+                .post("/portfolios")
+        .then()
+                .statusCode(200)
+                .extract()
+                .path("portfolioId");
+
+        CreateSessionRequest createRequest = new CreateSessionRequest(UUID.fromString(guestPortfolioId));
+        String sessionId = given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body(createRequest)
+        .when()
+                .post("/arena/sessions")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .extract()
+                .path("sessionId");
+
+        // Pick preferences first
+        List<Sector> sectors = Arrays.asList(Sector.INFORMATION_TECHNOLOGY, Sector.HEALTH_CARE);
+        PickPreferencesRequest preferencesRequest = new PickPreferencesRequest(RiskProfile.BALANCED, sectors);
+        given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body(preferencesRequest)
+        .when()
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-preferences", sessionId)
+        .then()
+                .statusCode(200);
+
+        // Get asset options and pick one
+        String assetId = given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+        .then()
+                .statusCode(200)
+                .body("roundType", equalTo("ASSET"))
+                .body("assets", hasSize(3))
+                .extract()
+                .path("assets[0].assetId");
+
+        PickAssetRequest pickRequest = new PickAssetRequest(UUID.fromString(assetId));
+        given()
+                .contentType(ContentType.JSON)
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+                .body(pickRequest)
+                .log().all()
+        .when()
+                .post("/arena/sessions/{sessionId}/rounds/current/pick-asset", sessionId)
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("sessionId", equalTo(sessionId))
+                .body("status", equalTo("IN_PROGRESS"))
+                .body("currentRound", equalTo(2))
+                .body("picked", equalTo(assetId));
     }
 
     // Helper methods

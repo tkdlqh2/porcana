@@ -60,6 +60,3 @@ ALTER TABLE arena_sessions
 
 -- Add index for guest session queries
 CREATE INDEX idx_arena_sessions_guest_session_id ON arena_sessions(guest_session_id);
-CREATE INDEX idx_asset_sector_active on assets(sector, active);
-CREATE INDEX idx_asset_active_id on assets(active, id);
-CREATE INDEX idx_asset_current_risk_level on assets(current_risk_level);

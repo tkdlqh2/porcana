@@ -1,11 +1,9 @@
 package com.porcana.global.guest;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.UUID;
 
 /**
@@ -15,26 +13,20 @@ import java.util.UUID;
 @Component
 public class GuestSessionExtractor {
 
-    private static final String GUEST_COOKIE_NAME = "porcana_guest";
+    public static final String GUEST_SESSION_HEADER = "X-Guest-Session-Id";
 
     /**
-     * Extract guest session ID from cookie
+     * Extract guest session ID from header
      * @param request HTTP request
      * @return Guest session ID or null if not found
      */
     public UUID extractGuestSessionId(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
+        String headerValue = request.getHeader(GUEST_SESSION_HEADER);
+        if (headerValue == null || headerValue.isBlank()) {
             return null;
         }
 
-        return Arrays.stream(cookies)
-                .filter(cookie -> GUEST_COOKIE_NAME.equals(cookie.getName()))
-                .map(Cookie::getValue)
-                .map(this::parseUUID)
-                .filter(java.util.Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+        return parseUUID(headerValue);
     }
 
     /**
@@ -44,7 +36,7 @@ public class GuestSessionExtractor {
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid UUID in guest cookie: {}", value);
+            log.warn("Invalid UUID in guest session header: {}", value);
             return null;
         }
     }
