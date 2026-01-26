@@ -436,4 +436,16 @@ public class AssetRecommendationService {
         Integer count = assetRepository.countBySectorAndActiveTrue(sector);
         return count != null ? count : 0;
     }
+
+    /**
+     * Get counts of active assets by sector in a single query
+     */
+    public Map<Sector, Integer> getActiveAssetCountsBySector() {
+        List<AssetRepository.SectorCount> counts = assetRepository.countActiveBySector();
+        Map<Sector, Integer> result = new EnumMap<>(Sector.class);
+        for (AssetRepository.SectorCount count : counts) {
+            result.put(count.getSector(), (int) count.getCount());
+        }
+        return result;
+    }
 }

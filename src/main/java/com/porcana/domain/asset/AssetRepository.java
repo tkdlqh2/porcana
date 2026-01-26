@@ -81,6 +81,21 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
     Integer countBySectorAndActiveTrue(Sector sector);
 
     /**
+     * Count active assets per sector
+     * Used to reduce per-sector count queries in arena flows
+     */
+    @Query("SELECT a.sector AS sector, COUNT(a) AS count " +
+           "FROM Asset a " +
+           "WHERE a.active = true AND a.sector IS NOT NULL " +
+           "GROUP BY a.sector")
+    List<SectorCount> countActiveBySector();
+
+    interface SectorCount {
+        Sector getSector();
+        long getCount();
+    }
+
+    /**
      * Search active assets by symbol or name (case-insensitive)
      * Used for asset search API
      */
