@@ -214,7 +214,7 @@ public class BatchScheduler {
      * Execute exchange rate update batch job every 24 hours
      * Uncomment @Scheduled annotation to enable
      */
-//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
     public void runExchangeRateBatch() {
         try {
             log.info("Starting scheduled exchange rate update batch job");

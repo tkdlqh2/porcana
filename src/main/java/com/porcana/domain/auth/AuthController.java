@@ -7,12 +7,12 @@ import com.porcana.domain.auth.dto.LoginRequest;
 import com.porcana.domain.auth.dto.RefreshRequest;
 import com.porcana.domain.auth.dto.SignupRequest;
 import com.porcana.domain.auth.service.AuthService;
+import com.porcana.global.guest.GuestSessionExtractor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -22,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 
@@ -35,8 +34,7 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
-
-    private static final String GUEST_COOKIE_NAME = "porcana_guest";
+    private final GuestSessionExtractor guestSessionExtractor;
 
     @Operation(
             summary = "회원가입",
@@ -54,7 +52,7 @@ public class AuthController {
         SignupCommand command = SignupCommand.from(request);
         AuthResponse response = authService.signup(command);
 
-        // Claim guest data if guest session cookie exists
+        // Claim guest data if guest session header exists
         UUID guestSessionId = extractGuestSessionId(httpRequest);
         if (guestSessionId != null) {
             authService.claimGuestData(guestSessionId, response.getUser().getUserId());
@@ -79,7 +77,7 @@ public class AuthController {
         LoginCommand command = LoginCommand.from(request);
         AuthResponse response = authService.login(command);
 
-        // Claim guest data if guest session cookie exists
+        // Claim guest data if guest session header exists
         UUID guestSessionId = extractGuestSessionId(httpRequest);
         if (guestSessionId != null) {
             try {
@@ -124,32 +122,9 @@ public class AuthController {
     }
 
     /**
-     * Extract guest session ID from cookie
+     * Extract guest session ID from header
      */
     private UUID extractGuestSessionId(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return null;
-        }
-
-        return Arrays.stream(cookies)
-                .filter(cookie -> GUEST_COOKIE_NAME.equals(cookie.getName()))
-                .map(Cookie::getValue)
-                .map(this::parseUUID)
-                .filter(java.util.Objects::nonNull)
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
-     * Parse UUID from string, return null if invalid
-     */
-    private UUID parseUUID(String value) {
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid UUID in guest cookie: {}", value);
-            return null;
-        }
+        return guestSessionExtractor.extractGuestSessionId(request);
     }
 }

@@ -1,46 +1,46 @@
-# Porcana MVP API Contract (Frontend ê³µìœ ìš©)
+# Porcana MVP API Contract (Frontend °øÀ¯??
 
 ## Development Philosophy
 
 ### Request DTO as Record
-- **Request DTO**: Java Recordë¡œ ì‘ì„± (ë¶ˆë³€ì„±, ê°„ê²°í•¨)
-- **Response DTO**: @Builder + Lombok ì‚¬ìš© (ìœ ì—°í•œ ìƒì„±)
-- **Command DTO**: @Builder + Lombok ì‚¬ìš© (ë‚´ë¶€ ë¡œì§ìš©)
+- **Request DTO**: Java Record????¼º (ºÒ???? °£°á??
+- **Response DTO**: @Builder + Lombok ??¿ë (??¿¬????¼º)
+- **Command DTO**: @Builder + Lombok ??¿ë (???? ·ÎÁ÷??
 
 **Request DTO Example:**
 ```java
 public record SignupRequest(
-    @Email(message = "ì˜¬ë°”ë¥¸ ì´ë©”ì¼ í˜•ì‹ì´ ì•„ë‹™ë‹ˆë‹¤")
+    @Email(message = "??¹Ù????¸Ş????½Ä????´Õ??´Ù")
     String email,
 
-    @NotBlank(message = "ë¹„ë°€ë²ˆí˜¸ëŠ” í•„ìˆ˜ì…ë‹ˆë‹¤")
-    @Size(min = 8, message = "ë¹„ë°€ë²ˆí˜¸ëŠ” ìµœì†Œ 8ì ì´ìƒì´ì–´ì•¼ í•©ë‹ˆë‹¤")
+    @NotBlank(message = "ºñ??¹øÈ£????¼ö??´Ï??)
+    @Size(min = 8, message = "ºñ??¹øÈ£??ÃÖ¼Ò 8????»ó??¾î????´Ï??)
     String password,
 
-    @NotBlank(message = "ë‹‰ë„¤ì„ì€ í•„ìˆ˜ì…ë‹ˆë‹¤")
+    @NotBlank(message = "??³×???? ??¼ö??´Ï??)
     String nickname
 ) {
 }
 ```
 
-**ì´ìœ :**
-- RecordëŠ” ë¶ˆë³€ ê°ì²´ë¡œ API ìš”ì²­ ë°ì´í„°ì— ì í•©
-- Validation annotationì„ í•„ë“œì— ì§ì ‘ ì ìš© ê°€ëŠ¥
-- getter ë©”ì„œë“œ ìë™ ìƒì„± (fieldëª…ê³¼ ë™ì¼: `request.email()`)
-- equals/hashCode/toString ìë™ ìƒì„±
+**??À¯:**
+- Record??ºÒ?? °´Ã¼??API ??Ã» ??ÀÌ??¿¡ ??ÇÕ
+- Validation annotation????µå??Á÷Á¢ ??¿ë °¡??
+- getter ¸Ş¼­????µ¿ ??¼º (field¸í°ú ??ÀÏ: `request.email()`)
+- equals/hashCode/toString ??µ¿ ??¼º
 
 ### Command Pattern
-- **Controller**: Request DTO ìˆ˜ì‹  â†’ Command ìƒì„± (Command.from(request)) â†’ Service í˜¸ì¶œ
-- **Command**: Requestë¡œë¶€í„° ìì‹ ì„ ìƒì„±í•˜ëŠ” ì •ì  íŒ©í† ë¦¬ ë©”ì„œë“œ ì œê³µ
-- **Service**: Command DTO ìˆ˜ì‹  â†’ ë¹„ì¦ˆë‹ˆìŠ¤ ë¡œì§ ì²˜ë¦¬
-- **Entity**: Commandë¡œë¶€í„° ìƒì„± (Entity.from(command))
+- **Controller**: Request DTO ??½Å ??Command ??¼º (Command.from(request)) ??Service ??Ãâ
+- **Command**: Request·Î??????½Å????¼º??´Â ??Àû ??Åä??¸Ş¼­????°ø
+- **Service**: Command DTO ??½Å ??ºñÁî??½º ·ÎÁ÷ Ã³¸®
+- **Entity**: Command·Î??????¼º (Entity.from(command))
 
 **Flow Example:**
 ```
 Request DTO (SignupRequest)
-    â†“ Commandì˜ ì •ì  íŒ©í† ë¦¬ ë©”ì„œë“œ
+    ??Command????Àû ??Åä??¸Ş¼­??
 Command DTO (SignupCommand.from(request))
-    â†“ Serviceë¡œ ì „ë‹¬
+    ??Service????´Ş
 Entity (User.from(command))
 ```
 
@@ -65,35 +65,35 @@ public static SignupCommand from(SignupRequest request) {
 }
 ```
 
-**ì´ìœ :**
-- ê³„ì¸µ ê°„ ëª…í™•í•œ ì±…ì„ ë¶„ë¦¬
-- Request DTOëŠ” API ìŠ¤í™ì— ì¢…ì†, CommandëŠ” ë„ë©”ì¸ ë¡œì§ì— ì§‘ì¤‘
-- **ë³€í™˜ ë¡œì§ì„ Commandê°€ ì†Œìœ ** â†’ ControllerëŠ” ë‹¨ìˆœíˆ í˜¸ì¶œë§Œ
-- Entity ìƒì„± ë¡œì§ì„ Entity ë‚´ë¶€ì— ìº¡ìŠí™”
+**??À¯:**
+- °èÃş ??¸íÈ®??Ã¥ÀÓ ºĞ¸®
+- Request DTO??API ??Æå??Á¾¼Ó, Command????¸Ş??·ÎÁ÷??ÁıÁß
+- **º¯??·ÎÁ÷??Command°¡ ??À¯** ??Controller????¼ø????Ãâ??
+- Entity ??¼º ·ÎÁ÷??Entity ??????Ä¸½¶??
 
 ### Swagger Authentication (JWT)
-- **Bearer Token ë°©ì‹**: Swagger UIì—ì„œ JWT í† í° ì¸ì¦ ì§€ì›
-- **Annotation ê¸°ë°˜ êµ¬ë¶„**: @SecurityRequirementë¡œ ì¸ì¦ í•„ìš” API í‘œì‹œ
-- **SecurityScheme ì„¤ì •**: SwaggerConfigì—ì„œ JWT scheme ë“±ë¡
+- **Bearer Token ¹æ½Ä**: Swagger UI??¼­ JWT ??Å« ??Áõ Áö??
+- **Annotation ±â¹İ ±¸ºĞ**: @SecurityRequirement????Áõ ??¿ä API ??½Ã
+- **SecurityScheme ??Á¤**: SwaggerConfig??¼­ JWT scheme ??·Ï
 
-**ì¸ì¦ì´ í•„ìš”í•œ API:**
+**??Áõ????¿ä??API:**
 ```java
 @SecurityRequirement(name = "JWT")
 @RestController
 @RequestMapping("/api/v1")
 public class UserController {
-    // ì´ ì»¨íŠ¸ë¡¤ëŸ¬ì˜ ëª¨ë“  ì—”ë“œí¬ì¸íŠ¸ì— JWT í•„ìš”
-    // Swagger UIì—ì„œ ìë¬¼ì‡  ì•„ì´ì½˜ í‘œì‹œë¨
+    // ??ÄÁÆ®·Ñ·¯??¸ğµç ??µå??ÀÎ??¿¡ JWT ??¿ä
+    // Swagger UI??¼­ ??¹°????ÀÌ????½Ã??
 }
 ```
 
-**ì¸ì¦ì´ í•„ìš”ì—†ëŠ” API:**
+**??Áõ????¿ä??´Â API:**
 ```java
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    // @SecurityRequirement ì—†ìŒ = ê³µê°œ API
-    // Swagger UIì—ì„œ ìë¬¼ì‡  ì•„ì´ì½˜ ì—†ìŒ
+    // @SecurityRequirement ??À½ = °ø°³ API
+    // Swagger UI??¼­ ??¹°????ÀÌ????À½
 }
 ```
 
@@ -101,36 +101,36 @@ public class AuthController {
 ```java
 @GetMapping("/me")
 public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
-    // @CurrentUser: JWT í† í°ì—ì„œ userId ìë™ ì¶”ì¶œ
-    // CurrentUserArgumentResolverê°€ SecurityContextì—ì„œ userId íŒŒì‹±
+    // @CurrentUser: JWT ??Å«??¼­ userId ??µ¿ ÃßÃâ
+    // CurrentUserArgumentResolver°¡ SecurityContext??¼­ userId ??½Ì
 }
 ```
 
-**ì´ìœ :**
-- APIë³„ ì¸ì¦ ìš”êµ¬ì‚¬í•­ì„ ëª…í™•íˆ êµ¬ë¶„
-- Swagger UIì—ì„œ ì‹œê°ì ìœ¼ë¡œ ì¸ì¦ í•„ìš” ì—¬ë¶€ í™•ì¸ ê°€ëŠ¥
-- @CurrentUserë¡œ ë°˜ë³µì ì¸ ì¸ì¦ ì²˜ë¦¬ ì½”ë“œ ì œê±°
+**??À¯:**
+- API????Áõ ??±¸??Ç×??¸íÈ®??±¸ºĞ
+- Swagger UI??¼­ ??°¢??À¸????Áõ ??¿ä ???? ??ÀÎ °¡??
+- @CurrentUser??¹İº¹??ÀÎ ??Áõ Ã³¸® ÄÚµå ??°Å
 
 ---
 
 ## Data Model & Batch Strategy
 
-### Asset (ì¢…ëª©) Entity
+### Asset (Á¾¸ñ) Entity
 
-ì¢…ëª© ë°ì´í„°ë¥¼ Record í˜•íƒœë¡œ ê´€ë¦¬í•˜ëŠ” ë¶ˆë³€ í…Œì´ë¸”ì…ë‹ˆë‹¤.
+Á¾¸ñ ??ÀÌ???? Record ??ÅÂ??°ü¸®ÇÏ??ºÒ?? ??ÀÌºíÀÔ??´Ù.
 
-**í•„ë“œ ì„¤ê³„:**
+**??µå ??°è:**
 - `id`: UUID (Primary Key)
-- `market`: ENUM (KR | US) - ì‹œì¥ êµ¬ë¶„
-- `symbol`: String - ì¢…ëª© ì½”ë“œ (US: AAPL, KR: 005930)
-- `name`: String - ì¢…ëª©ëª…
-- `type`: ENUM (STOCK | ETF) - ìƒí’ˆ ìœ í˜•
-- `sector`: ENUM (Sector) - GICS í‘œì¤€ ì„¹í„° (ì£¼ì‹ ì „ìš©, ETFëŠ” NULL)
-- `asset_class`: ENUM (AssetClass) - ETF ìì‚° í´ë˜ìŠ¤ (ETF ì „ìš©, STOCKì€ NULL)
-- `universe_tags`: List<UniverseTag> - ìœ ë‹ˆë²„ìŠ¤ íƒœê·¸ (SP500, NASDAQ100, KOSPI200, KOSDAQ150 ë“±)
-- `current_risk_level`: Integer (1~5) - í˜„ì¬ ìœ„í—˜ë„ (1: Low, 5: High)
-- `active`: Boolean - í™œì„±í™” ì—¬ë¶€ (ì¹´ë“œ í’€ì— í¬í•¨ ì—¬ë¶€)
-- `as_of`: LocalDate - ê¸°ì¤€ì¼ (ì´ ë ˆì½”ë“œê°€ "ì–¸ì œ ê¸°ì¤€"ì¸ì§€)
+- `market`: ENUM (KR | US) - ??Àå ±¸ºĞ
+- `symbol`: String - Á¾¸ñ ÄÚµå (US: AAPL, KR: 005930)
+- `name`: String - Á¾¸ñ??
+- `type`: ENUM (STOCK | ETF) - ??Ç° ??Çü
+- `sector`: ENUM (Sector) - GICS ???? ??ÅÍ (ÁÖ½Ä ??¿ë, ETF??NULL)
+- `asset_class`: ENUM (AssetClass) - ETF ??»ê ??·¡??(ETF ??¿ë, STOCK?? NULL)
+- `universe_tags`: List<UniverseTag> - ??´Ï¹ö½º ??±× (SP500, NASDAQ100, KOSPI200, KOSDAQ150 ??
+- `current_risk_level`: Integer (1~5) - ??Àç ??Çè??(1: Low, 5: High)
+- `active`: Boolean - ??¼º?????? (Ä«µå ??????ÇÔ ????)
+- `as_of`: LocalDate - ±â????(????ÄÚ???? "??Á¦ ±â??"????)
 - `created_at`: LocalDateTime
 - `updated_at`: LocalDateTime
 
@@ -152,10 +152,10 @@ public class Asset {
     private AssetType type;  // STOCK, ETF
 
     @Enumerated(EnumType.STRING)
-    private Sector sector;  // GICS í‘œì¤€ ì„¹í„° (ì£¼ì‹ ì „ìš©)
+    private Sector sector;  // GICS ???? ??ÅÍ (ÁÖ½Ä ??¿ë)
 
     @Enumerated(EnumType.STRING)
-    private AssetClass assetClass;  // ETF ìì‚° í´ë˜ìŠ¤ (ETF ì „ìš©)
+    private AssetClass assetClass;  // ETF ??»ê ??·¡??(ETF ??¿ë)
 
     @ElementCollection
     @Enumerated(EnumType.STRING)
@@ -169,492 +169,492 @@ public class Asset {
 }
 ```
 
-**Sector ENUM (GICS í‘œì¤€):**
+**Sector ENUM (GICS ????):**
 ```java
 public enum Sector {
-    MATERIALS,                  // ì†Œì¬
-    COMMUNICATION_SERVICES,     // ì»¤ë®¤ë‹ˆì¼€ì´ì…˜ ì„œë¹„ìŠ¤
-    CONSUMER_DISCRETIONARY,     // ì„ì˜ì†Œë¹„ì¬
-    CONSUMER_STAPLES,          // í•„ìˆ˜ì†Œë¹„ì¬
-    ENERGY,                    // ì—ë„ˆì§€
-    FINANCIALS,                // ê¸ˆìœµ
-    HEALTH_CARE,               // í—¬ìŠ¤ì¼€ì–´
-    INDUSTRIALS,               // ì‚°ì—…ì¬
-    REAL_ESTATE,               // ë¶€ë™ì‚°
-    INFORMATION_TECHNOLOGY,    // ì •ë³´ê¸°ìˆ 
-    UTILITIES                  // ìœ í‹¸ë¦¬í‹°
+    MATERIALS,                  // ??Àç
+    COMMUNICATION_SERVICES,     // Ä¿????????¼Ç ??ºñ??
+    CONSUMER_DISCRETIONARY,     // ??ÀÇ??ºñ??
+    CONSUMER_STAPLES,          // ??¼ö??ºñ??
+    ENERGY,                    // ??³ÊÁö
+    FINANCIALS,                // ±İÀ¶
+    HEALTH_CARE,               // ??½ºÄÉ??
+    INDUSTRIALS,               // ??¾÷??
+    REAL_ESTATE,               // ºÎ??»ê
+    INFORMATION_TECHNOLOGY,    // ??º¸±â¼ú
+    UTILITIES                  // ??Æ¿¸®Æ¼
 }
 ```
 
-**FMP API Sector â†’ GICS Sector ë§¤í•‘:**
-- Basic Materials â†’ MATERIALS
-- Communication Services â†’ COMMUNICATION_SERVICES
-- Consumer Cyclical â†’ CONSUMER_DISCRETIONARY
-- Consumer Defensive â†’ CONSUMER_STAPLES
-- Energy â†’ ENERGY
-- Financial Services â†’ FINANCIALS
-- Healthcare â†’ HEALTH_CARE
-- Industrials â†’ INDUSTRIALS
-- Real Estate â†’ REAL_ESTATE
-- Technology â†’ INFORMATION_TECHNOLOGY
-- Utilities â†’ UTILITIES
+**FMP API Sector ??GICS Sector ¸ÅÇÎ:**
+- Basic Materials ??MATERIALS
+- Communication Services ??COMMUNICATION_SERVICES
+- Consumer Cyclical ??CONSUMER_DISCRETIONARY
+- Consumer Defensive ??CONSUMER_STAPLES
+- Energy ??ENERGY
+- Financial Services ??FINANCIALS
+- Healthcare ??HEALTH_CARE
+- Industrials ??INDUSTRIALS
+- Real Estate ??REAL_ESTATE
+- Technology ??INFORMATION_TECHNOLOGY
+- Utilities ??UTILITIES
 
-**AssetClass ENUM (ETF ë¶„ë¥˜):**
+**AssetClass ENUM (ETF ºĞ·ù):**
 ```java
 public enum AssetClass {
-    EQUITY_INDEX,    // ì£¼ì‹ ì¸ë±ìŠ¤ ETF (SPY, KODEX 200)
-    SECTOR,          // ì„¹í„°ë³„ ETF (XLK, KODEX ë°˜ë„ì²´)
-    DIVIDEND,        // ë°°ë‹¹ ETF (SCHD, TIGER ê³ ë°°ë‹¹)
-    BOND,            // ì±„ê¶Œ ETF (TLT, KODEX êµ­ê³ ì±„10ë…„)
-    COMMODITY        // ì›ìì¬ ETF (GLD, KRX ê¸ˆí˜„ë¬¼)
+    EQUITY_INDEX,    // ÁÖ½Ä ??µ¦??ETF (SPY, KODEX 200)
+    SECTOR,          // ??ÅÍ??ETF (XLK, KODEX ¹İµµ??
+    DIVIDEND,        // ¹è´ç ETF (SCHD, TIGER °í¹è??
+    BOND,            // Ã¤±Ç ETF (TLT, KODEX ??????0??
+    COMMODITY        // ??ÀÚ??ETF (GLD, KRX ±İÇö??
 }
 ```
 
-**ì£¼ì˜ì‚¬í•­:**
-- `sector`ëŠ” ì£¼ì‹(STOCK) ì „ìš© í•„ë“œë¡œ, ETFëŠ” NULL
-- `assetClass`ëŠ” ETF ì „ìš© í•„ë“œë¡œ, ì£¼ì‹ì€ NULL
+**ÁÖÀÇ??Ç×:**
+- `sector`??ÁÖ½Ä(STOCK) ??¿ë ??µå?? ETF??NULL
+- `assetClass`??ETF ??¿ë ??µå?? ÁÖ½Ä?? NULL
 
-### Spring Batch ê¸°ë°˜ ì¢…ëª© ë°ì´í„° ìƒì„± ì „ëµ
+### Spring Batch ±â¹İ Á¾¸ñ ??ÀÌ????¼º ??·«
 
-**í•œêµ­ ì¢…ëª© (KR Market):**
-1. **ì¢…ëª© ë°ì´í„° ìˆ˜ì§‘** (data.go.kr API)
-   - CSV íŒŒì¼(kospi200.csv, kosdaq150.csv)ì—ì„œ ì¢…ëª© ì½”ë“œ ëª©ë¡ ì½ê¸° (ì•½ 348ê°œ)
-   - ê° ì¢…ëª© ì½”ë“œë§ˆë‹¤ data.go.krì˜ `getStockPriceInfo` APIë¥¼ ê°œë³„ í˜¸ì¶œ
-   - ì‘ë‹µ ë°ì´í„°ë¥¼ `assets` í…Œì´ë¸”ì— upsert (ì´ˆê¸° active=false)
-   - ê¸°ë³¸ ì •ë³´: symbol, name, exchange (KOSPI/KOSDAQ), type (STOCK/ETF)
-   - ì£¼ì˜: ì•½ 348ê°œ ì¢…ëª© Ã— API í˜¸ì¶œì´ë¯€ë¡œ ì‹œê°„ ì†Œìš” (ì•½ 5-10ë¶„)
+**??±¹ Á¾¸ñ (KR Market):**
+1. **Á¾¸ñ ??ÀÌ????Áı** (data.go.kr API)
+   - CSV ??ÀÏ(kospi200.csv, kosdaq150.csv)??¼­ Á¾¸ñ ÄÚµå ¸ñ·Ï ??±â (??348??
+   - ??Á¾¸ñ ÄÚµå¸¶´Ù data.go.kr??`getStockPriceInfo` API??°³º° ??Ãâ
+   - ??´ä ??ÀÌ???? `assets` ??ÀÌºí¿¡ upsert (ÃÊ±â active=false)
+   - ±âº» ??º¸: symbol, name, exchange (KOSPI/KOSDAQ), type (STOCK/ETF)
+   - ÁÖÀÇ: ??348??Á¾¸ñ ¡¿ API ??Ãâ????????°£ ??¿ä (??5-10??
 
-2. **ìœ ë‹ˆë²„ìŠ¤ íƒœê¹…**
-   - `kospi200.csv`: KOSPI200 êµ¬ì„±ì¢…ëª© ì½”ë“œ ëª©ë¡ (ì•½ 199ê°œ)
-   - `kosdaq150.csv`: KOSDAQ150 êµ¬ì„±ì¢…ëª© ì½”ë“œ ëª©ë¡ (ì•½ 149ê°œ)
-   - CSVì˜ ì¢…ëª© ì½”ë“œë¥¼ ê¸°ì¤€ìœ¼ë¡œ `universe_tags` ì¶”ê°€
-   - íƒœê¹…ëœ ì¢…ëª©ë§Œ `active = true` ì„¤ì • â†’ ì¹´ë“œ í’€ì— í¬í•¨
+2. **??´Ï¹ö½º ??±ë**
+   - `kospi200.csv`: KOSPI200 ±¸¼ºÁ¾¸ñ ÄÚµå ¸ñ·Ï (??199??
+   - `kosdaq150.csv`: KOSDAQ150 ±¸¼ºÁ¾¸ñ ÄÚµå ¸ñ·Ï (??149??
+   - CSV??Á¾¸ñ ÄÚµå??±â????·Î `universe_tags` Ãß??
+   - ??±ë??Á¾¸ñ??`active = true` ??Á¤ ??Ä«µå ??????ÇÔ
 
-3. **Batch Job êµ¬ì¡°**
+3. **Batch Job ±¸Á¶**
    ```
    KrAssetBatchJob
-   â”œâ”€ Step 1: fetchKrAssetsStep
-   â”‚   â””â”€ CSVì—ì„œ ì¢…ëª© ì½”ë“œ ì½ê¸° â†’ ê° ì½”ë“œë§ˆë‹¤ API í˜¸ì¶œ â†’ assets í…Œì´ë¸” upsert
-   â”œâ”€ Step 2: tagKospi200Step
-   â”‚   â””â”€ kospi200.csv ê¸°ë°˜ íƒœê¹… ë° í™œì„±í™”
-   â””â”€ Step 3: tagKosdaq150Step
-       â””â”€ kosdaq150.csv ê¸°ë°˜ íƒœê¹… ë° í™œì„±í™”
+   ???? Step 1: fetchKrAssetsStep
+   ??  ???? CSV??¼­ Á¾¸ñ ÄÚµå ??±â ????ÄÚµå¸¶´Ù API ??Ãâ ??assets ??ÀÌ??upsert
+   ???? Step 2: tagKospi200Step
+   ??  ???? kospi200.csv ±â¹İ ??±ë ????¼º??
+   ???? Step 3: tagKosdaq150Step
+       ???? kosdaq150.csv ±â¹İ ??±ë ????¼º??
    ```
 
-**ë¯¸êµ­ ì¢…ëª© (US Market):**
-1. **S&P 500 êµ¬ì„±ì¢…ëª© ìˆ˜ì§‘** (FMP API)
-   - FMP (Financial Modeling Prep) Constituents API ì‚¬ìš©
+**¹Ì±¹ Á¾¸ñ (US Market):**
+1. **S&P 500 ±¸¼ºÁ¾¸ñ ??Áı** (FMP API)
+   - FMP (Financial Modeling Prep) Constituents API ??¿ë
    - Endpoint: `/api/v3/sp500_constituent`
-   - ì‘ë‹µ: symbol, name, sector, subSector ë“±
+   - ??´ä: symbol, name, sector, subSector ??
 
-2. **ë°ì´í„° ì²˜ë¦¬**
-   - exchangeëŠ” FMP ì‘ë‹µ ë˜ëŠ” ë³„ë„ ì¡°íšŒë¡œ í™•ì¸ (NASDAQ/NYSE)
+2. **??ÀÌ??Ã³¸®**
+   - exchange??FMP ??´ä ??´Â º°µµ Á¶È¸????ÀÎ (NASDAQ/NYSE)
    - `universe_tags = ["SP500"]`
-   - `active = true` ì„¤ì •
-   - `type = STOCK` (ETFëŠ” ë³„ë„ ì²˜ë¦¬)
+   - `active = true` ??Á¤
+   - `type = STOCK` (ETF??º°µµ Ã³¸®)
 
-3. **Batch Job êµ¬ì¡°**
+3. **Batch Job ±¸Á¶**
    ```
    UsAssetBatchJob
-   â””â”€ Step 1: Fetch from FMP â†’ Upsert to assets (market=US, active=true)
+   ???? Step 1: Fetch from FMP ??Upsert to assets (market=US, active=true)
    ```
 
-**ê³µí†µ ì²˜ë¦¬ ì›ì¹™:**
-- **Upsert ì „ëµ**: symbol + marketì„ natural keyë¡œ ì‚¬ìš©, ì¤‘ë³µ ì‹œ ì—…ë°ì´íŠ¸
-- **as_of ê´€ë¦¬**: ë°°ì¹˜ ì‹¤í–‰ì¼ì„ `as_of`ë¡œ ê¸°ë¡ (ë°ì´í„°ì˜ ì‹œì  ì¶”ì )
-- **active í”Œë˜ê·¸**: ìœ ë‹ˆë²„ìŠ¤ì— í¬í•¨ëœ ì¢…ëª©ë§Œ `active=true`, ë‚˜ë¨¸ì§€ëŠ” `false`
-- **ì´ë ¥ ê´€ë¦¬**: í•„ìš” ì‹œ `as_of` ê¸°ì¤€ìœ¼ë¡œ ê³¼ê±° êµ¬ì„±ì¢…ëª© ì¡°íšŒ ê°€ëŠ¥ (í–¥í›„ í™•ì¥)
+**°øÅë Ã³¸® ??Ä¢:**
+- **Upsert ??·«**: symbol + market??natural key????¿ë, Áßº¹ ????µ¥??Æ®
+- **as_of °ü??*: ¹èÄ¡ ??Çà??À» `as_of`??±â·Ï (??ÀÌ??ÀÇ ??Á¡ ÃßÀû)
+- **active ??·¡??*: ??´Ï¹ö½º????ÇÔ??Á¾¸ñ??`active=true`, ??¸ÓÁö??`false`
+- **??·Â °ü??*: ??¿ä ??`as_of` ±â????·Î °ú°Å ±¸¼ºÁ¾¸ñ Á¶È¸ °¡??(??ÈÄ ??Àå)
 
-**ë°°ì¹˜ ì‹¤í–‰ ì£¼ê¸°:**
-- ì´ˆê¸° ë°ì´í„° êµ¬ì¶•: ìˆ˜ë™ ì‹¤í–‰ (./gradlew bootRun --args='--spring.batch.job.names=krAssetBatchJob')
-- ì •ê¸° ì—…ë°ì´íŠ¸: ì£¼ 1íšŒ ìŠ¤ì¼€ì¤„ë§ (ë§¤ì£¼ ì¼ìš”ì¼ 02:00 KST)
+**¹èÄ¡ ??Çà ÁÖ±â:**
+- ÃÊ±â ??ÀÌ??±¸Ãà: ??µ¿ ??Çà (./gradlew bootRun --args='--spring.batch.job.names=krAssetBatchJob')
+- ??±â ??µ¥??Æ®: ??1??????ÁÙ¸µ (¸ÅÁÖ ??¿ä??02:00 KST)
 
-### ETF ë°ì´í„° ìƒì„± ì „ëµ
+### ETF ??ÀÌ????¼º ??·«
 
-**í•œêµ­ ETF (KR Market):**
-1. **ETF ë°ì´í„° ìˆ˜ì§‘** (CSV ê¸°ë°˜)
-   - CSV íŒŒì¼ (`kr_etf.csv`)ì—ì„œ ETF ëª©ë¡ ì½ê¸°
-   - í¬ë§·: `symbol, name, asset_class`
-   - ì˜ˆì‹œ: `069500, KODEX 200, EQUITY_INDEX`
+**??±¹ ETF (KR Market):**
+1. **ETF ??ÀÌ????Áı** (CSV ±â¹İ)
+   - CSV ??ÀÏ (`kr_etf.csv`)??¼­ ETF ¸ñ·Ï ??±â
+   - ??¸Ë: `symbol, name, asset_class`
+   - ??½Ã: `069500, KODEX 200, EQUITY_INDEX`
 
-2. **ë°ì´í„° ì²˜ë¦¬**
+2. **??ÀÌ??Ã³¸®**
    - `type = ETF`
-   - `active = true` (CSVì— ìˆëŠ” ETFëŠ” ëª¨ë‘ í™œì„±í™”)
-   - `assetClass` ë§¤í•‘: CSVì˜ asset_class ì»¬ëŸ¼ ê°’
+   - `active = true` (CSV????´Â ETF??¸ğµÎ ??¼º??
+   - `assetClass` ¸ÅÇÎ: CSV??asset_class ÄÃ·³ ??
 
-3. **Batch Job êµ¬ì¡°**
+3. **Batch Job ±¸Á¶**
    ```
    KrEtfBatchJob
-   â”œâ”€ Step 1: importKrEtfsStep
-   â”‚   â””â”€ kr_etf.csv ì½ê¸° â†’ assets í…Œì´ë¸” upsert
-   â””â”€ Step 2: fetchKrEtfHistoricalPricesStep
-       â””â”€ ê³¼ê±° 1ë…„ì¹˜ ê°€ê²© ë°ì´í„° ìˆ˜ì§‘ (24ì‹œê°„ ì´ë‚´ ìƒì„±ëœ ETFë§Œ)
+   ???? Step 1: importKrEtfsStep
+   ??  ???? kr_etf.csv ??±â ??assets ??ÀÌ??upsert
+   ???? Step 2: fetchKrEtfHistoricalPricesStep
+       ???? °ú°Å 1??Ä¡ °¡????ÀÌ????Áı (24??°£ ??³» ??¼º??ETF??
    ```
 
-4. **ê°€ê²© ë°ì´í„° ì†ŒìŠ¤**
+4. **°¡????ÀÌ????½º**
    - API: data.go.kr `GetSecuritiesProductInfoService/getETFPriceInfo`
-   - ê³¼ê±° 1ë…„ì¹˜ ì¼ì¼ ê°€ê²© ë°ì´í„° ìˆ˜ì§‘
+   - °ú°Å 1??Ä¡ ??ÀÏ °¡????ÀÌ????Áı
 
-**ë¯¸êµ­ ETF (US Market):**
-1. **ETF ë°ì´í„° ìˆ˜ì§‘** (CSV ê¸°ë°˜)
-   - CSV íŒŒì¼ (`us_etf.csv`)ì—ì„œ ETF ëª©ë¡ ì½ê¸°
-   - í¬ë§·: `symbol, name, asset_class`
-   - ì˜ˆì‹œ: `SPY, S&P 500 ETF, EQUITY_INDEX`
+**¹Ì±¹ ETF (US Market):**
+1. **ETF ??ÀÌ????Áı** (CSV ±â¹İ)
+   - CSV ??ÀÏ (`us_etf.csv`)??¼­ ETF ¸ñ·Ï ??±â
+   - ??¸Ë: `symbol, name, asset_class`
+   - ??½Ã: `SPY, S&P 500 ETF, EQUITY_INDEX`
 
-2. **ë°ì´í„° ì²˜ë¦¬**
+2. **??ÀÌ??Ã³¸®**
    - `type = ETF`
    - `active = true`
-   - `assetClass` ë§¤í•‘: CSVì˜ asset_class ì»¬ëŸ¼ ê°’
+   - `assetClass` ¸ÅÇÎ: CSV??asset_class ÄÃ·³ ??
 
-3. **Batch Job êµ¬ì¡°**
+3. **Batch Job ±¸Á¶**
    ```
    UsEtfBatchJob
-   â”œâ”€ Step 1: importUsEtfsStep
-   â”‚   â””â”€ us_etf.csv ì½ê¸° â†’ assets í…Œì´ë¸” upsert
-   â””â”€ Step 2: fetchUsEtfHistoricalPricesStep
-       â””â”€ ê³¼ê±° 1ë…„ì¹˜ ê°€ê²© ë°ì´í„° ìˆ˜ì§‘ (24ì‹œê°„ ì´ë‚´ ìƒì„±ëœ ETFë§Œ)
+   ???? Step 1: importUsEtfsStep
+   ??  ???? us_etf.csv ??±â ??assets ??ÀÌ??upsert
+   ???? Step 2: fetchUsEtfHistoricalPricesStep
+       ???? °ú°Å 1??Ä¡ °¡????ÀÌ????Áı (24??°£ ??³» ??¼º??ETF??
    ```
 
-4. **ê°€ê²© ë°ì´í„° ì†ŒìŠ¤**
+4. **°¡????ÀÌ????½º**
    - API: FMP `historical-price-eod`
-   - ì£¼ì‹ê³¼ ë™ì¼í•œ API ì‚¬ìš©
+   - ÁÖ½Ä????ÀÏ??API ??¿ë
 
-**ë°°ì¹˜ ì‹¤í–‰ ì£¼ê¸°:**
-- ì´ˆê¸° ë°ì´í„° êµ¬ì¶•: ìˆ˜ë™ ì‹¤í–‰
+**¹èÄ¡ ??Çà ÁÖ±â:**
+- ÃÊ±â ??ÀÌ??±¸Ãà: ??µ¿ ??Çà
   ```bash
   ./gradlew bootRun --args='--spring.batch.job.names=krEtfJob'
   ./gradlew bootRun --args='--spring.batch.job.names=usEtfJob'
   ```
-- ì •ê¸° ì—…ë°ì´íŠ¸: ì£¼ 1íšŒ ìŠ¤ì¼€ì¤„ë§ (ë§¤ì£¼ ì¼ìš”ì¼ 02:00 KST, ì£¼ì‹ê³¼ í•¨ê»˜)
+- ??±â ??µ¥??Æ®: ??1??????ÁÙ¸µ (¸ÅÁÖ ??¿ä??02:00 KST, ÁÖ½Ä????²²)
 
 ---
 
-## Spring Batch ê¸°ë°˜ ì¼ì¼ ê°€ê²© ì—…ë°ì´íŠ¸ ì „ëµ
+## Spring Batch ±â¹İ ??ÀÏ °¡????µ¥??Æ® ??·«
 
-### AssetPrice (ê°€ê²© ë°ì´í„°) Entity
+### AssetPrice (°¡????ÀÌ?? Entity
 
-ì¢…ëª©ì˜ ì¼ë³„ ì¢…ê°€ ë° ê±°ë˜ëŸ‰ ë°ì´í„°ë¥¼ ì €ì¥í•©ë‹ˆë‹¤.
+Á¾¸ñ????º° Á¾?? ??°Å·¡????ÀÌ???? ????ÇÕ??´Ù.
 
-**í•„ë“œ ì„¤ê³„:**
+**??µå ??°è:**
 - `id`: UUID (Primary Key)
-- `asset_id`: UUID (Foreign Key â†’ assets)
-- `price_date`: LocalDate - ê±°ë˜ì¼
-- `price`: BigDecimal - ì¢…ê°€
-- `volume`: Long - ê±°ë˜ëŸ‰
+- `asset_id`: UUID (Foreign Key ??assets)
+- `price_date`: LocalDate - °Å·¡??
+- `price`: BigDecimal - Á¾??
+- `volume`: Long - °Å·¡??
 - `created_at`: LocalDateTime
 
-**Unique Index:** `(asset_id, price_date)` - ì¤‘ë³µ ë°©ì§€
+**Unique Index:** `(asset_id, price_date)` - Áßº¹ ¹æ??
 
-### ì¼ì¼ ê°€ê²© ì—…ë°ì´íŠ¸ ë°°ì¹˜ Job
+### ??ÀÏ °¡????µ¥??Æ® ¹èÄ¡ Job
 
-**í•œêµ­ ì£¼ì‹ (krDailyPriceJob):**
-- **ëŒ€ìƒ**: `active = true AND type = STOCK`ì¸ ëª¨ë“  í•œêµ­ ì£¼ì‹
-- **ë°ì´í„° ì†ŒìŠ¤**: data.go.kr API (`getStockPriceInfo`)
-- **ì²˜ë¦¬ ë¡œì§**:
-  1. activeí•œ ì£¼ì‹ ëª©ë¡ ì¡°íšŒ
-  2. ê° ì¢…ëª©ë§ˆë‹¤ ìµœê·¼ 5ì¼ì¹˜ ë°ì´í„° ìš”ì²­ (ìµœì‹  ê±°ë˜ì¼ í™•ë³´)
-  3. ìµœì‹  ê±°ë˜ì¼ ê°€ê²© ì¶”ì¶œ
-  4. ì¤‘ë³µ ì²´í¬ (`asset_id + price_date`)
-  5. ì‹ ê·œ ê°€ê²©ë§Œ ì €ì¥
-- **Rate Limiting**: 100ms ë”œë ˆì´
-- **ì‹¤í–‰ ì£¼ê¸°**: ë§¤ í‰ì¼ 18:00 KST (ì¥ ë§ˆê° 15:30 ì´í›„)
+**??±¹ ÁÖ½Ä (krDailyPriceJob):**
+- **????*: `active = true AND type = STOCK`??¸ğµç ??±¹ ÁÖ½Ä
+- **??ÀÌ????½º**: data.go.kr API (`getStockPriceInfo`)
+- **Ã³¸® ·ÎÁ÷**:
+  1. active??ÁÖ½Ä ¸ñ·Ï Á¶È¸
+  2. ??Á¾¸ñ¸¶´Ù ÃÖ±Ù 5??Ä¡ ??ÀÌ????Ã» (ÃÖ½Å °Å·¡????º¸)
+  3. ÃÖ½Å °Å·¡??°¡??ÃßÃâ
+  4. Áßº¹ Ã¼Å© (`asset_id + price_date`)
+  5. ??±Ô °¡°İ¸¸ ????
+- **Rate Limiting**: 100ms ??·¹??
+- **??Çà ÁÖ±â**: ????ÀÏ 18:00 KST (??¸¶°¨ 15:30 ??ÈÄ)
 
-**í•œêµ­ ETF (krEtfDailyPriceJob):**
-- **ëŒ€ìƒ**: `active = true AND type = ETF`ì¸ ëª¨ë“  í•œêµ­ ETF
-- **ë°ì´í„° ì†ŒìŠ¤**: data.go.kr API (`getETFPriceInfo`)
-- **ì²˜ë¦¬ ë¡œì§**: ì£¼ì‹ê³¼ ë™ì¼
-- **Rate Limiting**: 100ms ë”œë ˆì´
-- **ì‹¤í–‰ ì£¼ê¸°**: ë§¤ í‰ì¼ 18:00 KST (ì£¼ì‹ ê°€ê²© ì—…ë°ì´íŠ¸ ì§í›„)
+**??±¹ ETF (krEtfDailyPriceJob):**
+- **????*: `active = true AND type = ETF`??¸ğµç ??±¹ ETF
+- **??ÀÌ????½º**: data.go.kr API (`getETFPriceInfo`)
+- **Ã³¸® ·ÎÁ÷**: ÁÖ½Ä????ÀÏ
+- **Rate Limiting**: 100ms ??·¹??
+- **??Çà ÁÖ±â**: ????ÀÏ 18:00 KST (ÁÖ½Ä °¡????µ¥??Æ® Á÷ÈÄ)
 
-**ë¯¸êµ­ ì£¼ì‹ (usDailyPriceJob):**
-- **ëŒ€ìƒ**: `active = true AND type = STOCK`ì¸ ëª¨ë“  ë¯¸êµ­ ì£¼ì‹
-- **ë°ì´í„° ì†ŒìŠ¤**: FMP API (`historical-price-eod`)
-- **ì²˜ë¦¬ ë¡œì§**:
-  1. activeí•œ ì£¼ì‹ ëª©ë¡ ì¡°íšŒ
-  2. ê° ì¢…ëª©ë§ˆë‹¤ ìµœê·¼ 3ì¼ì¹˜ ë°ì´í„° ìš”ì²­ (ìµœì‹  ê±°ë˜ì¼ í™•ë³´)
-  3. ìµœì‹  ê±°ë˜ì¼ ê°€ê²© ì¶”ì¶œ (FMPëŠ” ìµœì‹ ìˆœ ì •ë ¬)
-  4. ì¤‘ë³µ ì²´í¬ (`asset_id + price_date`)
-  5. ì‹ ê·œ ê°€ê²©ë§Œ ì €ì¥
-- **Rate Limiting**: 150ms ë”œë ˆì´
-- **ì‹¤í–‰ ì£¼ê¸°**: ë§¤ í‰ì¼ 07:00 KST (ë¯¸êµ­ ì¥ ë§ˆê° í›„, TUE-SAT KST = MON-FRI EST)
+**¹Ì±¹ ÁÖ½Ä (usDailyPriceJob):**
+- **????*: `active = true AND type = STOCK`??¸ğµç ¹Ì±¹ ÁÖ½Ä
+- **??ÀÌ????½º**: FMP API (`historical-price-eod`)
+- **Ã³¸® ·ÎÁ÷**:
+  1. active??ÁÖ½Ä ¸ñ·Ï Á¶È¸
+  2. ??Á¾¸ñ¸¶´Ù ÃÖ±Ù 3??Ä¡ ??ÀÌ????Ã» (ÃÖ½Å °Å·¡????º¸)
+  3. ÃÖ½Å °Å·¡??°¡??ÃßÃâ (FMP??ÃÖ½Å????·Ä)
+  4. Áßº¹ Ã¼Å© (`asset_id + price_date`)
+  5. ??±Ô °¡°İ¸¸ ????
+- **Rate Limiting**: 150ms ??·¹??
+- **??Çà ÁÖ±â**: ????ÀÏ 07:00 KST (¹Ì±¹ ??¸¶°¨ ?? TUE-SAT KST = MON-FRI EST)
 
-**ë¯¸êµ­ ETF (usEtfDailyPriceJob):**
-- **ëŒ€ìƒ**: `active = true AND type = ETF`ì¸ ëª¨ë“  ë¯¸êµ­ ETF
-- **ë°ì´í„° ì†ŒìŠ¤**: FMP API (`historical-price-eod`)
-- **ì²˜ë¦¬ ë¡œì§**: ì£¼ì‹ê³¼ ë™ì¼ (FMP APIëŠ” ì£¼ì‹/ETF êµ¬ë¶„ ì—†ì´ ë™ì¼ ì—”ë“œí¬ì¸íŠ¸)
-- **Rate Limiting**: 150ms ë”œë ˆì´
-- **ì‹¤í–‰ ì£¼ê¸°**: ë§¤ í‰ì¼ 07:00 KST (ì£¼ì‹ ê°€ê²© ì—…ë°ì´íŠ¸ ì§í›„)
+**¹Ì±¹ ETF (usEtfDailyPriceJob):**
+- **????*: `active = true AND type = ETF`??¸ğµç ¹Ì±¹ ETF
+- **??ÀÌ????½º**: FMP API (`historical-price-eod`)
+- **Ã³¸® ·ÎÁ÷**: ÁÖ½Ä????ÀÏ (FMP API??ÁÖ½Ä/ETF ±¸ºĞ ??ÀÌ ??ÀÏ ??µå??ÀÎ??
+- **Rate Limiting**: 150ms ??·¹??
+- **??Çà ÁÖ±â**: ????ÀÏ 07:00 KST (ÁÖ½Ä °¡????µ¥??Æ® Á÷ÈÄ)
 
-**ë°°ì¹˜ ìŠ¤ì¼€ì¤„ë§ (BatchConfig):**
+**¹èÄ¡ ????ÁÙ¸µ (BatchConfig):**
 ```java
-// í•œêµ­ ì‹œì¥: í‰ì¼ 18:00 KST
+// ??±¹ ??Àå: ??ÀÏ 18:00 KST
 @Scheduled(cron = "0 0 18 * * MON-FRI", zone = "Asia/Seoul")
 public void runKrDailyPriceUpdate()
 
-// ë¯¸êµ­ ì‹œì¥: í‰ì¼ 07:00 KST (í™”-í† , ì‹œì°¨ ê³ ë ¤)
+// ¹Ì±¹ ??Àå: ??ÀÏ 07:00 KST (???? ??Â÷ °í·Á)
 @Scheduled(cron = "0 0 7 * * TUE-SAT", zone = "Asia/Seoul")
 public void runUsDailyPriceUpdate()
 ```
 
-**ìˆ˜ë™ ì‹¤í–‰:**
+**??µ¿ ??Çà:**
 ```bash
-# í•œêµ­ ì£¼ì‹ ì¼ì¼ ê°€ê²© ì—…ë°ì´íŠ¸
+# ??±¹ ÁÖ½Ä ??ÀÏ °¡????µ¥??Æ®
 ./gradlew bootRun --args='--spring.batch.job.names=krDailyPriceJob'
 
-# í•œêµ­ ETF ì¼ì¼ ê°€ê²© ì—…ë°ì´íŠ¸
+# ??±¹ ETF ??ÀÏ °¡????µ¥??Æ®
 ./gradlew bootRun --args='--spring.batch.job.names=krEtfDailyPriceJob'
 
-# ë¯¸êµ­ ì£¼ì‹ ì¼ì¼ ê°€ê²© ì—…ë°ì´íŠ¸
+# ¹Ì±¹ ÁÖ½Ä ??ÀÏ °¡????µ¥??Æ®
 ./gradlew bootRun --args='--spring.batch.job.names=usDailyPriceJob'
 
-# ë¯¸êµ­ ETF ì¼ì¼ ê°€ê²© ì—…ë°ì´íŠ¸
+# ¹Ì±¹ ETF ??ÀÏ °¡????µ¥??Æ®
 ./gradlew bootRun --args='--spring.batch.job.names=usEtfDailyPriceJob'
 ```
 
 ---
 
-## US ì¢…ëª© ì´ë¯¸ì§€ ì—…ë°ì´íŠ¸
+## US Á¾¸ñ ????Áö ??µ¥??Æ®
 
-### US ì´ë¯¸ì§€ ì—…ë°ì´íŠ¸ ë°°ì¹˜ Job
+### US ????Áö ??µ¥??Æ® ¹èÄ¡ Job
 
-**ì´ë¯¸ì§€ ì—…ë°ì´íŠ¸ (usImageUpdateJob):**
-- **ëŒ€ìƒ**: ëª¨ë“  US STOCK ìì‚° (active/inactive ë¬´ê´€)
-- **ë°ì´í„° ì†ŒìŠ¤**: FMP API (`/stable/profile`)
-- **ì²˜ë¦¬ ë¡œì§**:
-  1. ëª¨ë“  US ì£¼ì‹ ìì‚° ì¡°íšŒ
-  2. ê° ì¢…ëª©ë§ˆë‹¤ FMP profile API í˜¸ì¶œ
-  3. `image` í•„ë“œ ì¶”ì¶œ
-  4. `imageUrl` í•„ë“œ ì—…ë°ì´íŠ¸
-  5. Rate limiting: 150ms ë”œë ˆì´
-- **ì‹¤í–‰ ì£¼ê¸°**: í•„ìš” ì‹œ ìˆ˜ë™ ì‹¤í–‰
-  - ì´ˆê¸° ì´ë¯¸ì§€ ë°ì´í„° êµ¬ì¶• ë˜ëŠ” ì´ë¯¸ì§€ ëˆ„ë½ ì¢…ëª© ë³´ì™„ìš©
+**????Áö ??µ¥??Æ® (usImageUpdateJob):**
+- **????*: ¸ğµç US STOCK ??»ê (active/inactive ¹«??)
+- **??ÀÌ????½º**: FMP API (`/stable/profile`)
+- **Ã³¸® ·ÎÁ÷**:
+  1. ¸ğµç US ÁÖ½Ä ??»ê Á¶È¸
+  2. ??Á¾¸ñ¸¶´Ù FMP profile API ??Ãâ
+  3. `image` ??µå ÃßÃâ
+  4. `imageUrl` ??µå ??µ¥??Æ®
+  5. Rate limiting: 150ms ??·¹??
+- **??Çà ÁÖ±â**: ??¿ä ????µ¿ ??Çà
+  - ÃÊ±â ????Áö ??ÀÌ??±¸Ãà ??´Â ????Áö ??¶ô Á¾¸ñ º¸¿Ï??
 
-**ìˆ˜ë™ ì‹¤í–‰:**
+**??µ¿ ??Çà:**
 ```bash
 ./gradlew bootRun --args='--spring.batch.job.names=usImageUpdateJob'
 ```
 
-**ì°¸ê³ :**
-- US ì£¼ì‹/ETF ìƒì„± ë°°ì¹˜ (`usAssetJob`, `usEtfJob`)ì—ì„œ ì´ë¯¸ì§€ URLì´ ìë™ìœ¼ë¡œ í¬í•¨ë¨
-- ì´ ë°°ì¹˜ëŠ” ê¸°ì¡´ ìì‚°ì˜ ì´ë¯¸ì§€ë¥¼ ì¼ê´„ ì—…ë°ì´íŠ¸í•  ë•Œë§Œ ì‚¬ìš©
-- FMP APIì˜ ì´ë¯¸ì§€ URL í¬ë§·: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
-- í•œêµ­ ì¢…ëª©ì€ ì´ë¯¸ì§€ ì†ŒìŠ¤ê°€ ì—†ì–´ ì§€ì›í•˜ì§€ ì•ŠìŒ
+**Âü°í:**
+- US ÁÖ½Ä/ETF ??¼º ¹èÄ¡ (`usAssetJob`, `usEtfJob`)??¼­ ????Áö URL????µ¿??·Î ??ÇÔ??
+- ??¹èÄ¡??±âÁ¸ ??»ê??????Áö????°ı ??µ¥??Æ®????¸¸ ??¿ë
+- FMP API??????Áö URL ??¸Ë: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
+- ??±¹ Á¾¸ñ?? ????Áö ??½º°¡ ??¾î Áö??ÇÏÁö ??À½
 
 ---
 
-## í™˜ìœ¨ ë°ì´í„° ê´€ë¦¬
+## ??À² ??ÀÌ??°ü??
 
-### ExchangeRate (í™˜ìœ¨) Entity
+### ExchangeRate (??À²) Entity
 
-ì¼ì¼ í™˜ìœ¨ ì •ë³´ë¥¼ ì €ì¥í•©ë‹ˆë‹¤.
+??ÀÏ ??À² ??º¸??????ÇÕ??´Ù.
 
-**í•„ë“œ ì„¤ê³„:**
+**??µå ??°è:**
 - `id`: UUID (Primary Key)
-- `currency_code`: ENUM (CurrencyCode) - í†µí™” ì½”ë“œ
-- `currency_name`: String - í†µí™”ëª…
-- `base_rate`: BigDecimal - ë§¤ë§¤ê¸°ì¤€ìœ¨ (KRW ê¸°ì¤€)
-- `buy_rate`: BigDecimal - ì†¡ê¸ˆ ë°›ì„ ë•Œ í™˜ìœ¨ (ì‚´ ë•Œ)
-- `sell_rate`: BigDecimal - ì†¡ê¸ˆ ë³´ë‚¼ ë•Œ í™˜ìœ¨ (íŒ” ë•Œ)
-- `exchange_date`: LocalDate - í™˜ìœ¨ ê¸°ì¤€ì¼
+- `currency_code`: ENUM (CurrencyCode) - ??È­ ÄÚµå
+- `currency_name`: String - ??È­??
+- `base_rate`: BigDecimal - ¸Å¸Å±â????(KRW ±â??)
+- `buy_rate`: BigDecimal - ??±İ ¹ŞÀ» ????À² (????
+- `sell_rate`: BigDecimal - ??±İ º¸³¾ ????À² (????
+- `exchange_date`: LocalDate - ??À² ±â????
 - `created_at`: LocalDateTime
 
-**Unique Index:** `(currency_code, exchange_date)` - ì¤‘ë³µ ë°©ì§€
+**Unique Index:** `(currency_code, exchange_date)` - Áßº¹ ¹æ??
 
 **CurrencyCode ENUM:**
 ```java
 public enum CurrencyCode {
-    // ì£¼ìš” í†µí™”
+    // ÁÖ¿ä ??È­
     USD, JPY, EUR, CNY,
-    // ìœ ëŸ½
+    // ??·´
     GBP, CHF, SEK, CZK, DKK, NOK, HUF, PLN, RUB, TRY,
-    // ì•„ì‹œì•„/ì˜¤ì„¸ì•„ë‹ˆì•„
+    // ??½Ã????¼¼??´Ï??
     HKD, TWD, SGD, THB, MYR, IDR, PHP, VND, INR, AUD, NZD,
     PKR, BDT, MNT, KZT, BND, FJD,
-    // ì¤‘ë™
+    // Áßµ¿
     SAR, KWD, BHD, AED, QAR, OMR, JOD, ILS, EGP,
-    // ì•„ë©”ë¦¬ì¹´
+    // ??¸Ş¸®Ä«
     CAD, MXN, BRL, CLP,
-    // ì•„í”„ë¦¬ì¹´
+    // ??ÇÁ¸®Ä«
     ZAR
-    // ì´ 44ê°œ í†µí™”
+    // ??44????È­
 }
 ```
 
-### ì¼ì¼ í™˜ìœ¨ ì—…ë°ì´íŠ¸ ë°°ì¹˜ Job
+### ??ÀÏ ??À² ??µ¥??Æ® ¹èÄ¡ Job
 
-**í™˜ìœ¨ ì—…ë°ì´íŠ¸ (exchangeRateJob):**
-- **ëŒ€ìƒ**: í•œêµ­ìˆ˜ì¶œì…ì€í–‰ì´ ì œê³µí•˜ëŠ” ëª¨ë“  í†µí™”
-- **ë°ì´í„° ì†ŒìŠ¤**: í•œêµ­ìˆ˜ì¶œì…ì€í–‰ API
+**??À² ??µ¥??Æ® (exchangeRateJob):**
+- **????*: ??±¹??Ãâ??????ÀÌ ??°ø??´Â ¸ğµç ??È­
+- **??ÀÌ????½º**: ??±¹??Ãâ??????API
   - API: `https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON`
-  - íŒŒë¼ë¯¸í„°: `authkey`, `searchdate` (YYYYMMDD), `data=AP01`
-- **ì²˜ë¦¬ ë¡œì§**:
-  1. ì˜¤ëŠ˜ ë‚ ì§œ ê¸°ì¤€ìœ¼ë¡œ í™˜ìœ¨ ë°ì´í„° ìš”ì²­
-  2. API ì‘ë‹µì—ì„œ í†µí™” ì½”ë“œ íŒŒì‹± (ì˜ˆ: "JPY(100)" â†’ "JPY")
-  3. CurrencyCode enumì— ì •ì˜ëœ í†µí™”ë§Œ í•„í„°ë§ (ì§€ì›í•˜ì§€ ì•ŠëŠ” í†µí™”ëŠ” ìë™ ìŠ¤í‚µ)
-  4. ì¤‘ë³µ ì²´í¬ (`currency_code + exchange_date`)
-  5. Upsert ì²˜ë¦¬
-- **ì‹¤í–‰ ì£¼ê¸°**: ë§¤ í‰ì¼ 12:00 KST
-  - í•œêµ­ìˆ˜ì¶œì…ì€í–‰ì€ í‰ì¼ 10ì‹œê²½ í™˜ìœ¨ ì—…ë°ì´íŠ¸
-  - ì˜ì—…ë‹¹ì¼ 11ì‹œ ì´ì „ ë°ì´í„° ìš”ì²­ ì‹œ null ë°˜í™˜ë  ìˆ˜ ìˆì–´ 12ì‹œì— ì‹¤í–‰
+  - ??¶ó¹ÌÅÍ: `authkey`, `searchdate` (YYYYMMDD), `data=AP01`
+- **Ã³¸® ·ÎÁ÷**:
+  1. ??´Ã ??Â¥ ±â????·Î ??À² ??ÀÌ????Ã»
+  2. API ??´ä??¼­ ??È­ ÄÚµå ??½Ì (?? "JPY(100)" ??"JPY")
+  3. CurrencyCode enum????ÀÇ????È­????ÅÍ??(Áö??ÇÏÁö ??´Â ??È­????µ¿ ??Åµ)
+  4. Áßº¹ Ã¼Å© (`currency_code + exchange_date`)
+  5. Upsert Ã³¸®
+- **??Çà ÁÖ±â**: ????ÀÏ 12:00 KST
+  - ??±¹??Ãâ???????? ??ÀÏ 10??°æ ??À² ??µ¥??Æ®
+  - ??¾÷??ÀÏ 11????Àü ??ÀÌ????Ã» ??null ¹İÈ¯??????¾î 12??¿¡ ??Çà
 
-**ìˆ˜ë™ ì‹¤í–‰:**
+**??µ¿ ??Çà:**
 ```bash
 ./gradlew bootRun --args='--spring.batch.job.names=exchangeRateJob'
 ```
 
 ---
 
-## ì¢…ëª© ìœ„í—˜ë„ ê´€ë¦¬
+## Á¾¸ñ ??Çè??°ü??
 
-### AssetRiskHistory (ìœ„í—˜ë„ ì´ë ¥) Entity
+### AssetRiskHistory (??Çè????·Â) Entity
 
-ì¢…ëª©ì˜ ìœ„í—˜ë„ ê³„ì‚° ì´ë ¥ì„ ì£¼ ë‹¨ìœ„ë¡œ ì €ì¥í•©ë‹ˆë‹¤.
+Á¾¸ñ????Çè??°è»ê ??·Â??????À§??????ÇÕ??´Ù.
 
-**í•„ë“œ ì„¤ê³„:**
+**??µå ??°è:**
 - `id`: UUID (Primary Key)
-- `asset_id`: UUID (Foreign Key â†’ assets)
-- `week`: String (YYYY-WW í¬ë§·, ì˜ˆ: "2025-W03")
-- `risk_level`: Integer (1~5) - ìœ„í—˜ë„ ë ˆë²¨
-- `risk_score`: BigDecimal - ìœ„í—˜ë„ ì ìˆ˜ (0~100)
-- `volatility`: BigDecimal - ë³€ë™ì„± (ì—°ìœ¨í™”)
-- `max_drawdown`: BigDecimal - ìµœëŒ€ë‚™í­ (MDD)
-- `worst_day_return`: BigDecimal - 1ì¼ ìµœì•… í•˜ë½ë¥ 
-- `factors_snapshot`: JSON - ê³„ì‚°ì— ì‚¬ìš©ëœ ì¶”ê°€ ìš”ì†Œ ìŠ¤ëƒ…ìƒ·
+- `asset_id`: UUID (Foreign Key ??assets)
+- `week`: String (YYYY-WW ??¸Ë, ?? "2025-W03")
+- `risk_level`: Integer (1~5) - ??Çè????º§
+- `risk_score`: BigDecimal - ??Çè????¼ö (0~100)
+- `volatility`: BigDecimal - º¯??¼º (??À²??
+- `max_drawdown`: BigDecimal - ÃÖ????Æø (MDD)
+- `worst_day_return`: BigDecimal - 1??ÃÖ¾Ç ??¶ô??
+- `factors_snapshot`: JSON - °è»ê????¿ë??Ãß?? ??¼Ò ??³À??
 - `created_at`: LocalDateTime
 
-**Unique Index:** `(asset_id, week)` - ì¤‘ë³µ ë°©ì§€
+**Unique Index:** `(asset_id, week)` - Áßº¹ ¹æ??
 
-### ìœ„í—˜ë„ ì €ì¥ ì „ëµ
+### ??Çè????????·«
 
-**ì„¤ê³„ ì›ì¹™:**
-- **í˜„ì¬ ìœ„í—˜ë„**: `Asset.currentRiskLevel` í•„ë“œì— ì €ì¥ (1~5)
-- **ê³¼ê±° ì´ë ¥**: `AssetRiskHistory` í…Œì´ë¸”ì— ì£¼ ë‹¨ìœ„ë¡œ ì €ì¥
-- **ìœ„í—˜ë„ëŠ” ê³„ì‚° ê²°ê³¼ë¬¼**: ìˆ˜ìµë¥ ì²˜ëŸ¼ ì •ë°€ ì‹œê³„ì—´ ë°ì´í„°ê°€ ì•„ë‹˜
-- **ì„œë¹„ìŠ¤ì—ì„œ í•„ìš”í•œ ê²ƒ**: "ì§€ê¸ˆ ìœ„í—˜ë„"
-- **íˆìŠ¤í† ë¦¬ëŠ” ì„¤ëª…Â·ë¶„ì„Â·ë©”íƒ€ ë¦¬í¬íŠ¸ìš©**
+**??°è ??Ä¢:**
+- **??Àç ??Çè??*: `Asset.currentRiskLevel` ??µå??????(1~5)
+- **°ú°Å ??·Â**: `AssetRiskHistory` ??ÀÌºí¿¡ ????À§??????
+- **??Çè??´Â °è»ê °á°ú??*: ??ÀÍ·üÃ³?????? ??°è????ÀÌ???? ??´Ô
+- **??ºñ??¿¡????¿ä????*: "Áö????Çè??
+- **??½º??¸®????¸í¡¤ºĞ¼®¡¤¸Ş?? ¸®Æ÷??¿ë**
 
-### ìœ„í—˜ë„ ê³„ì‚° ë°©ì‹
+### ??Çè??°è»ê ¹æ½Ä
 
-**ì „ì œ ì¡°ê±´:**
-- ìœ„í—˜ë„ëŠ” **ìˆ˜ìµë¥ (returns) ê¸°ë°˜**ìœ¼ë¡œ ê³„ì‚°
-- í™˜ìœ¨/ê°€ê²© ë‹¨ìœ„ì™€ ë¬´ê´€í•˜ê²Œ ë¯¸ì¥/í•œêµ­ì¥ í†µí•© ê°€ëŠ¥
-- ì¼ê°„ ë¡œê·¸ìˆ˜ìµë¥ : `r_t = ln(P_t / P_{t-1})`
+**??Á¦ Á¶°Ç:**
+- ??Çè??´Â **??ÀÍ??returns) ±â¹İ**??·Î °è»ê
+- ??À²/°¡????À§?? ¹«????°Ô ¹ÌÀå/??±¹????ÇÕ °¡??
+- ??°£ ·Î±×??ÀÍ?? `r_t = ln(P_t / P_{t-1})`
 
-**í•µì‹¬ ì§€í‘œ 3ê°œ:**
+**??½É Áö??3??**
 
-1. **ë³€ë™ì„± (Volatility)** - ìµœê·¼ 60 ê±°ë˜ì¼
-   - í‘œì¤€í¸ì°¨ë¥¼ ì—°ìœ¨í™”: `vol = std(r_{t-59..t}) Ã— âˆš252`
-   - ì˜ë¯¸: "í‰ì†Œì— í”ë“¤ë¦¼ì´ ì–¼ë§ˆë‚˜ í°ê°€"
+1. **º¯??¼º (Volatility)** - ÃÖ±Ù 60 °Å·¡??
+   - ??????Â÷????À²?? `vol = std(r_{t-59..t}) ¡¿ ??52`
+   - ????: "??¼Ò????µé¸²ÀÌ ??¸¶??????"
 
-2. **ìµœëŒ€ë‚™í­ (MDD)** - ìµœê·¼ 252 ê±°ë˜ì¼
-   - ëˆ„ì  ê°€ê²©ì˜ ê³ ì  ëŒ€ë¹„ ì €ì  í•˜ë½ ìµœëŒ€ì¹˜
+2. **ÃÖ????Æø (MDD)** - ÃÖ±Ù 252 °Å·¡??
+   - ??Àû °¡°İÀÇ °íÁ¡ ??????????¶ô ÃÖ????
    - `mdd = max_t(1 - P_t / max(P_{0..t}))`
-   - ì˜ë¯¸: "í•œë²ˆ ë¬´ë„ˆì§€ë©´ ì–¼ë§ˆë‚˜ í¬ê²Œ ë¬´ë„ˆì¡Œë‚˜"
+   - ????: "??¹ø ¹«³ÊÁö????¸¶????°Ô ¹«³ÊÁ³³ª"
 
-3. **1ì¼ ìµœì•… í•˜ë½ (Worst Day)** - ìµœê·¼ 252 ê±°ë˜ì¼
+3. **1??ÃÖ¾Ç ??¶ô (Worst Day)** - ÃÖ±Ù 252 °Å·¡??
    - `worst = min(r_{t-251..t})`
-   - ì˜ë¯¸: "ê°­í•˜ë½/ê¸‰ë½ ê°™ì€ ê¼¬ë¦¬ë¦¬ìŠ¤í¬"
+   - ????: "??????±Ş¶ô °°?? ²¿¸®¸®½º??
 
-**ì ìˆ˜í™” (ìŠ¤ì¼€ì¼ í†µì¼): í¼ì„¼íƒ€ì¼ ì •ê·œí™”**
+**??¼ö??(????????ÀÏ): ??¼¾??????±Ô??*
 
-ë¯¸ì¥/í•œêµ­ì¥/ETF/ì£¼ì‹ì„ ê°™ì€ ìŠ¤ì¼€ì¼ë¡œ ë§Œë“¤ê¸° ìœ„í•´ í¼ì„¼íƒ€ì¼ ì‚¬ìš©:
+¹ÌÀå/??±¹??ETF/ÁÖ½Ä??°°?? ??????·Î ¸¸µé????ÇØ ??¼¾??????¿ë:
 
 ```
-ê° ìì‚° iì— ëŒ€í•´:
+????»ê i??????
 - volPct = percentile_rank(vol_i)
 - mddPct = percentile_rank(mdd_i)
-- worstPct = percentile_rank(-worst_i)  // worstê°€ ë” í° ê¸‰ë½ì¼ìˆ˜ë¡ ìœ„í—˜â†‘
+- worstPct = percentile_rank(-worst_i)  // worst°¡ ????±Ş¶ô??¼ö????Çè??
 
-í¼ì„¼íƒ€ì¼ ë²”ìœ„: 0~1
+??¼¾????¹üÀ§: 0~1
 ```
 
-**ìµœì¢… RiskScore (0~100):**
+**ÃÖÁ¾ RiskScore (0~100):**
 
 ```
-riskScore = 100 Ã— (0.45 Ã— volPct + 0.45 Ã— mddPct + 0.10 Ã— worstPct)
+riskScore = 100 ¡¿ (0.45 ¡¿ volPct + 0.45 ¡¿ mddPct + 0.10 ¡¿ worstPct)
 
-ê°€ì¤‘ì¹˜:
-- ë³€ë™ì„±: 45%
-- ìµœëŒ€ë‚™í­: 45%
-- ê¼¬ë¦¬ë¦¬ìŠ¤í¬: 10%
+°¡ÁßÄ¡:
+- º¯??¼º: 45%
+- ÃÖ????Æø: 45%
+- ²¿¸®¸®½º?? 10%
 ```
 
-**RiskLevel 1~5 ë§¤í•‘ (í€¸íƒ€ì¼ ê¸°ì¤€):**
+**RiskLevel 1~5 ¸ÅÇÎ (??????±â??):**
 
-- 0~20 â†’ 1 (Low)
-- 20~40 â†’ 2
-- 40~60 â†’ 3
-- 60~80 â†’ 4
-- 80~100 â†’ 5 (High)
+- 0~20 ??1 (Low)
+- 20~40 ??2
+- 40~60 ??3
+- 60~80 ??4
+- 80~100 ??5 (High)
 
-**ì„¤ê³„ íŠ¹ì§•:**
-- **ëª¨ë“  ìì‚°ì— ë™ì¼í•œ ìœ„í—˜ë„ ê·œì¹™ ì ìš©** (ë§ˆì¼“/ETF/ì£¼ì‹ êµ¬ë¶„ ì—†ìŒ)
-- **ìœ„í—˜ë„ëŠ” ì ˆëŒ€ ìŠ¤ì¼€ì¼**: "ìœ„í—˜ë„ 4"ëŠ” ì–´ë–¤ ìì‚°ì´ë“  ë™ì¼í•œ ì˜ë¯¸
-- **ETFëŠ” ìì—°ìŠ¤ëŸ½ê²Œ ì €ìœ„í—˜**ìœ¼ë¡œ ê³„ì‚°ë¨ (ë³„ë„ ê·œì¹™ ë¶ˆí•„ìš”)
-- **í¼ì„¼íƒ€ì¼ ê¸°ë°˜**ì´ë¼ ì‹œì¥ ì „ì²´ê°€ ë¶ˆì•ˆí•´ì ¸ë„ "ìƒëŒ€ì  ìœ„í—˜"ì´ ìœ ì§€
+**??°è ??Â¡:**
+- **¸ğµç ??»ê????ÀÏ????Çè??±ÔÄ¢ ??¿ë** (¸¶ÄÏ/ETF/ÁÖ½Ä ±¸ºĞ ??À½)
+- **??Çè??´Â ???? ??????*: "??Çè??4"????¶² ??»ê??µç ??ÀÏ??????
+- **ETF????¿¬??·´??????Çè**??·Î °è»ê??(º°µµ ±ÔÄ¢ ºÒÇÊ??
+- **??¼¾????±â¹İ**??¶ó ??Àå ??Ã¼°¡ ºÒ¾È??Á®??"????????Çè"??????
 
-### ì£¼ê°„ ìœ„í—˜ë„ ê³„ì‚° ë°°ì¹˜ Job
+### ÁÖ°£ ??Çè??°è»ê ¹èÄ¡ Job
 
-**ìœ„í—˜ë„ ê³„ì‚° (assetRiskJob):**
-- **ëŒ€ìƒ**: `active = true`ì¸ ëª¨ë“  ì¢…ëª© (ì£¼ì‹ + ETF, í•œêµ­ + ë¯¸êµ­)
-- **ë°ì´í„° ì†ŒìŠ¤**: `asset_prices` í…Œì´ë¸” (ì¼ë´‰ ì¢…ê°€)
-- **ì²˜ë¦¬ ë¡œì§**:
-  1. ì „ ìì‚°ì˜ ìµœê·¼ 252ì¼ ê°€ê²© ë°ì´í„° ë¡œë”©
-  2. ê° ìì‚°ë³„ë¡œ returns ê³„ì‚°
-  3. Volatility, MDD, Worst Day ê³„ì‚°
-  4. ì „ì²´ ìì‚° ê¸°ì¤€ í¼ì„¼íƒ€ì¼ ì‚°ì¶œ
-  5. riskScore ê³„ì‚° (0~100)
-  6. riskLevel ë§¤í•‘ (1~5)
-  7. `Asset.currentRiskLevel` ì—…ë°ì´íŠ¸
+**??Çè??°è»ê (assetRiskJob):**
+- **????*: `active = true`??¸ğµç Á¾¸ñ (ÁÖ½Ä + ETF, ??±¹ + ¹Ì±¹)
+- **??ÀÌ????½º**: `asset_prices` ??ÀÌ??(??ºÀ Á¾??)
+- **Ã³¸® ·ÎÁ÷**:
+  1. ????»ê??ÃÖ±Ù 252??°¡????ÀÌ??·Îµù
+  2. ????»êº°·Î returns °è»ê
+  3. Volatility, MDD, Worst Day °è»ê
+  4. ??Ã¼ ??»ê ±â?? ??¼¾??????Ãâ
+  5. riskScore °è»ê (0~100)
+  6. riskLevel ¸ÅÇÎ (1~5)
+  7. `Asset.currentRiskLevel` ??µ¥??Æ®
   8. `AssetRiskHistory` insert (week, riskLevel, riskScore, volatility, mdd, worstDayReturn)
-- **ì‹¤í–‰ ì£¼ê¸°**: ë§¤ì£¼ ì¼ìš”ì¼ 03:00 KST
-  - ì£¼ê°„ ì¢…ëª© ì—…ë°ì´íŠ¸ (02:00) ì§í›„ ì‹¤í–‰
-  - ìµœê·¼ 8~12ì£¼ ë°ì´í„° rolling windowë¡œ ìœ„í—˜ë„ ì¬ê³„ì‚°
+- **??Çà ÁÖ±â**: ¸ÅÁÖ ??¿ä??03:00 KST
+  - ÁÖ°£ Á¾¸ñ ??µ¥??Æ® (02:00) Á÷ÈÄ ??Çà
+  - ÃÖ±Ù 8~12????ÀÌ??rolling window????Çè????°è??
 
-**ìˆ˜ë™ ì‹¤í–‰:**
+**??µ¿ ??Çà:**
 ```bash
 ./gradlew bootRun --args='--spring.batch.job.names=assetRiskJob'
 ```
 
-**ë°ì´í„° ìš”êµ¬ì‚¬í•­:**
-- **í•„ìš”í•œ ë°ì´í„°**: ì¼ë´‰ ì¢…ê°€ë§Œ (ìµœì†Œ 252ì¼, ë¶€ì¡±í•˜ë©´ ê°€ëŠ¥í•œ ë²”ìœ„ ë‚´ ê³„ì‚°)
-- **ì €ì¥ ì£¼ê¸°**: ì£¼ 1íšŒ
-- **íˆìŠ¤í† ë¦¬ ê´€ë¦¬**: week(YYYY-WW) ê¸°ì¤€ìœ¼ë¡œ ê³¼ê±° ìœ„í—˜ë„ ì¡°íšŒ ê°€ëŠ¥
+**??ÀÌ????±¸??Ç×:**
+- **??¿ä????ÀÌ??*: ??ºÀ Á¾????(ÃÖ¼Ò 252?? ºÎÁ·ÇÏ??°¡??ÇÑ ¹üÀ§ ??°è»ê)
+- **????ÁÖ±â**: ??1??
+- **??½º??¸® °ü??*: week(YYYY-WW) ±â????·Î °ú°Å ??Çè??Á¶È¸ °¡??
 
 ---
 
-## ê²ŒìŠ¤íŠ¸ ì„¸ì…˜ (ë¹„íšŒì› í¬íŠ¸í´ë¦¬ì˜¤ ì§€ì›)
+## °Ô½º????¼Ç (ºñÈ¸????Æ®??¸®??Áö??
 
-### ì„¤ê³„ ëª©í‘œ
+### ??°è ¸ñÇ¥
 
-**ë¹„íšŒì›ë„ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ìƒì„±í•  ìˆ˜ ìˆë„ë¡ í•˜ì—¬ ì „í™˜ìœ¨ì„ ë†’ì¸ë‹¤.**
+**ºñÈ¸??µµ ??Æ®??¸®???? ??¼º??????µµ????¿© ??È¯??À» ??ÀÎ??**
 
-- ë¹„íšŒì›ì€ `guest_sessions`ë¡œ "ì„ì‹œ ì†Œìœ ê¶Œ"ì„ ê°€ì§„ë‹¤
-- íšŒì›ê°€ì…/ë¡œê·¸ì¸ ì‹œ `guest_session_id â†’ user_id`ë¡œ **ì†Œìœ ê¶Œ ì´ì „(claim)** í•œë‹¤
+- ºñÈ¸???? `guest_sessions`??"??½Ã ??À¯????°¡Áø´Ù
+- ??¿ø°¡??·Î±×????`guest_session_id ??user_id`??**??À¯????Àü(claim)** ??´Ù
 
 ### GuestSession Entity
 
-ê²ŒìŠ¤íŠ¸ ì‚¬ìš©ìì˜ ì„ì‹œ ì„¸ì…˜ ì •ë³´ë¥¼ ì €ì¥í•©ë‹ˆë‹¤.
+°Ô½º????¿ë??ÀÇ ??½Ã ??¼Ç ??º¸??????ÇÕ??´Ù.
 
-**í•„ë“œ ì„¤ê³„:**
+**??µå ??°è:**
 - `id`: UUID (Primary Key)
-- `created_at`: LocalDateTime - ì„¸ì…˜ ìƒì„± ì‹œê°
-- `last_seen_at`: LocalDateTime - ë§ˆì§€ë§‰ í™œë™ ì‹œê° (ë§Œë£Œ íŒë‹¨ìš©)
+- `created_at`: LocalDateTime - ??¼Ç ??¼º ??°¢
+- `last_seen_at`: LocalDateTime - ¸¶??????µ¿ ??°¢ (¸¸·á ??´Ü??
 
-**ì„¸ì…˜ ê´€ë¦¬:**
-- ì¿ í‚¤ë¡œ ê´€ë¦¬: `porcana_guest={sessionId}; HttpOnly; SameSite=Lax; Max-Age=2592000` (30ì¼)
-- ë§Œë£Œ ì •ì±…: `last_seen_at` ê¸°ì¤€ 30ì¼ ì´ìƒ ë¹„í™œì„± ì‹œ ë°°ì¹˜ë¡œ ì‚­ì œ
-- ì œí•œ: ê²ŒìŠ¤íŠ¸ë‹¹ í¬íŠ¸í´ë¦¬ì˜¤ ìµœëŒ€ 3ê°œ
+**??¼Ç °ü??**
+- Å¬¶óÀÌ¾ğÆ®´Â `X-Guest-Session-Id`¸¦ ÀúÀåÇØ ´ÙÀ½ ¿äÃ»¿¡ Æ÷ÇÔ
+- ¸¸·á ??Ã¥: `last_seen_at` ±â?? 30????»ó ºñÈ°????¹èÄ¡??????
+- ??ÇÑ: °Ô½º??´ç ??Æ®??¸®??ÃÖ?? 3??
 
-### Portfolio, ArenaSession ì†Œìœ ê¶Œ í™•ì¥
+### Portfolio, ArenaSession ??À¯????Àå
 
-**ê¸°ì¡´:**
-- `user_id UUID NOT NULL` (íšŒì›ë§Œ ì†Œìœ  ê°€ëŠ¥)
+**±âÁ¸:**
+- `user_id UUID NOT NULL` (??¿ø????À¯ °¡??
 
-**ë³€ê²½:**
-- `user_id UUID NULL` (nullableë¡œ ë³€ê²½)
-- `guest_session_id UUID NULL` ì¶”ê°€
-- **XOR ì œì•½**: ë‘˜ ì¤‘ ì •í™•íˆ í•˜ë‚˜ë§Œ NOT NULLì´ì–´ì•¼ í•¨
+**º¯??**
+- `user_id UUID NULL` (nullable??º¯??
+- `guest_session_id UUID NULL` Ãß??
+- **XOR ??¾à**: ??????È®????³ª??NOT NULL??¾î????
 
 ```sql
 ALTER TABLE portfolios
@@ -666,28 +666,28 @@ ALTER TABLE portfolios
   );
 ```
 
-**ë™ì¼í•œ ì œì•½ì„ `arena_sessions`ì—ë„ ì ìš©**
+**??ÀÏ????¾à??`arena_sessions`??µµ ??¿ë**
 
-### Claim (ì†Œìœ ê¶Œ ì´ì „) ë¡œì§
+### Claim (??À¯????Àü) ·ÎÁ÷
 
-íšŒì›ê°€ì…/ë¡œê·¸ì¸ ì‹œ ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ì‚¬ìš©ì ê³„ì •ìœ¼ë¡œ ì´ì „í•©ë‹ˆë‹¤.
+??¿ø°¡??·Î±×????°Ô½º????Æ®??¸®???? ??¿ë??°èÁ¤??·Î ??Àü??´Ï??
 
-**íŠ¸ëœì­ì…˜ ì²˜ë¦¬:**
+**??·£???? Ã³¸®:**
 ```java
 @Transactional
 public void claimGuestPortfolios(UUID guestSessionId, UUID userId) {
-  // 1) ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ ì¡°íšŒ (FOR UPDATEë¡œ ë™ì‹œì„± ì œì–´)
+  // 1) °Ô½º????Æ®??¸®??Á¶È¸ (FOR UPDATE????½Ã????¾î)
   List<Portfolio> guestPortfolios =
       portfolioRepository.findByGuestSessionIdForUpdate(guestSessionId);
 
-  if (guestPortfolios.isEmpty()) return; // ë©±ë“±ì„±
+  if (guestPortfolios.isEmpty()) return; // ¸èµî??
 
-  // 2) ì†Œìœ ê¶Œ ì´ì „
+  // 2) ??À¯????Àü
   for (Portfolio p : guestPortfolios) {
-    p.claimToUser(userId); // userId ì„¸íŒ… + guestSessionId null
+    p.claimToUser(userId); // userId ??ÆÃ + guestSessionId null
   }
 
-  // 3) ë©”ì¸ í¬íŠ¸í´ë¦¬ì˜¤ ìë™ ì„¤ì • (ì—†ì„ ë•Œë§Œ)
+  // 3) ¸ŞÀÎ ??Æ®??¸®????µ¿ ??Á¤ (??À» ??¸¸)
   User user = userRepository.findByIdForUpdate(userId);
   if (user.getMainPortfolioId() == null) {
     UUID newest = guestPortfolios.stream()
@@ -698,59 +698,59 @@ public void claimGuestPortfolios(UUID guestSessionId, UUID userId) {
 }
 ```
 
-**í•µì‹¬ í¬ì¸íŠ¸:**
-- `FOR UPDATE` ì‚¬ìš©ìœ¼ë¡œ ë™ì‹œ claim ë°©ì§€
-- ë©±ë“±ì„± ë³´ì¥ (ì´ë¯¸ claimëœ ì„¸ì…˜ì€ ìŠ¤í‚µ)
-- ë©”ì¸ í¬íŠ¸í´ë¦¬ì˜¤ ìë™ ì„¤ì • (ìµœì‹  ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤)
+**??½É ??ÀÎ??**
+- `FOR UPDATE` ??¿ë??·Î ??½Ã claim ¹æ??
+- ¸èµî??º¸Àå (???? claim????¼Ç?? ??Åµ)
+- ¸ŞÀÎ ??Æ®??¸®????µ¿ ??Á¤ (ÃÖ½Å °Ô½º????Æ®??¸®??
 
-### ê²ŒìŠ¤íŠ¸ ì„¸ì…˜ ì •ì±…
+### °Ô½º????¼Ç ??Ã¥
 
-**MVP ê·œì¹™:**
-1. **ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ ì œí•œ**: ìµœëŒ€ 3ê°œ
-2. **íšŒì›ê°€ì… ì‹œ ë³‘í•©**: ê¸°ì¡´ ê³„ì • í¬íŠ¸í´ë¦¬ì˜¤ + ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ ëª¨ë‘ ìœ ì§€ (merge)
-3. **ë§Œë£Œ ì •ì±…**: 30ì¼ê°„ ë¯¸ì‚¬ìš© ì‹œ ë°°ì¹˜ë¡œ ì‚­ì œ (`last_seen_at` ê¸°ì¤€)
+**MVP ±ÔÄ¢:**
+1. **°Ô½º????Æ®??¸®????ÇÑ**: ÃÖ?? 3??
+2. **??¿ø°¡????º´ÇÕ**: ±âÁ¸ °èÁ¤ ??Æ®??¸®??+ °Ô½º????Æ®??¸®??¸ğµÎ ???? (merge)
+3. **¸¸·á ??Ã¥**: 30??°£ ¹Ì»ç????¹èÄ¡?????? (`last_seen_at` ±â??)
 
 ---
 
-## ë°°ì¹˜ ìŠ¤ì¼€ì¤„ ì „ì²´ ìš”ì•½
+## ¹èÄ¡ ????????Ã¼ ??¾à
 
-### ì£¼ê°„ ìŠ¤ì¼€ì¤„ (ì¼ìš”ì¼)
+### ÁÖ°£ ??????(??¿ä??
 
-**02:00 KST** - ì¢…ëª© ë°ì´í„° ì—…ë°ì´íŠ¸
+**02:00 KST** - Á¾¸ñ ??ÀÌ????µ¥??Æ®
 ```
 runWeeklyAssetUpdate()
-â”œâ”€ krAssetJob - í•œêµ­ ì£¼ì‹ ì¢…ëª© ì—…ë°ì´íŠ¸
-â”œâ”€ krEtfJob - í•œêµ­ ETF ì¢…ëª© ì—…ë°ì´íŠ¸ + ê³¼ê±° ê°€ê²©
-â”œâ”€ usAssetJob - ë¯¸êµ­ ì£¼ì‹ ì¢…ëª© ì—…ë°ì´íŠ¸
-â””â”€ usEtfJob - ë¯¸êµ­ ETF ì¢…ëª© ì—…ë°ì´íŠ¸ + ê³¼ê±° ê°€ê²©
+???? krAssetJob - ??±¹ ÁÖ½Ä Á¾¸ñ ??µ¥??Æ®
+???? krEtfJob - ??±¹ ETF Á¾¸ñ ??µ¥??Æ® + °ú°Å °¡??
+???? usAssetJob - ¹Ì±¹ ÁÖ½Ä Á¾¸ñ ??µ¥??Æ®
+???? usEtfJob - ¹Ì±¹ ETF Á¾¸ñ ??µ¥??Æ® + °ú°Å °¡??
 ```
 
-**03:00 KST** - ìœ„í—˜ë„ ê³„ì‚°
+**03:00 KST** - ??Çè??°è»ê
 ```
 runWeeklyRiskUpdate()
-â””â”€ assetRiskJob - ì¢…ëª© ìœ„í—˜ë„ ê³„ì‚° ë° ì—…ë°ì´íŠ¸
+???? assetRiskJob - Á¾¸ñ ??Çè??°è»ê ????µ¥??Æ®
 ```
 
-### ì¼ì¼ ìŠ¤ì¼€ì¤„ (í‰ì¼)
+### ??ÀÏ ??????(??ÀÏ)
 
-**07:00 KST (í™”-í† )** - ë¯¸êµ­ ì‹œì¥ ê°€ê²© ì—…ë°ì´íŠ¸
+**07:00 KST (????** - ¹Ì±¹ ??Àå °¡????µ¥??Æ®
 ```
 runUsDailyPriceUpdate()
-â”œâ”€ usDailyPriceJob - ë¯¸êµ­ ì£¼ì‹ ê°€ê²©
-â””â”€ usEtfDailyPriceJob - ë¯¸êµ­ ETF ê°€ê²©
+???? usDailyPriceJob - ¹Ì±¹ ÁÖ½Ä °¡??
+???? usEtfDailyPriceJob - ¹Ì±¹ ETF °¡??
 ```
 
-**12:00 KST (ì›”-ê¸ˆ)** - í™˜ìœ¨ ì—…ë°ì´íŠ¸
+**12:00 KST (????** - ??À² ??µ¥??Æ®
 ```
 runExchangeRateUpdate()
-â””â”€ exchangeRateJob - í™˜ìœ¨ ë°ì´í„°
+???? exchangeRateJob - ??À² ??ÀÌ??
 ```
 
-**18:00 KST (ì›”-ê¸ˆ)** - í•œêµ­ ì‹œì¥ ê°€ê²© ì—…ë°ì´íŠ¸
+**18:00 KST (????** - ??±¹ ??Àå °¡????µ¥??Æ®
 ```
 runKrDailyPriceUpdate()
-â”œâ”€ krDailyPriceJob - í•œêµ­ ì£¼ì‹ ê°€ê²©
-â””â”€ krEtfDailyPriceJob - í•œêµ­ ETF ê°€ê²©
+???? krDailyPriceJob - ??±¹ ÁÖ½Ä °¡??
+???? krEtfDailyPriceJob - ??±¹ ETF °¡??
 ```
 
 ---
@@ -776,10 +776,10 @@ runKrDailyPriceUpdate()
 
 ---
 
-# 0) Guest Session (ë¹„íšŒì› ì§€ì›)
+# 0) Guest Session (ºñÈ¸??Áö??
 
 ## POST /guest-sessions
-**Description**: ë¹„íšŒì›ì„ ìœ„í•œ ê²ŒìŠ¤íŠ¸ ì„¸ì…˜ì„ ìƒì„±í•©ë‹ˆë‹¤. ì„œë²„ëŠ” ìë™ìœ¼ë¡œ ì¿ í‚¤ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
+**Description**: ºñÈ¸??À» ??ÇÑ °Ô½º????¼Ç????¼º??´Ï?? ??¹ö????µ¿??·Î Çì´õ????Á¤??´Ï??
 
 **Auth**: Not required
 
@@ -795,29 +795,29 @@ Response (201 Created)
 }
 ```
 
-**Set-Cookie Header:**
+**Response Header:**
 ```text
-Set-Cookie: porcana_guest={sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000
+X-Guest-Session-Id: {sessionId}
 ```
 
 **Notes:**
-- í”„ë¡ íŠ¸ì—”ë“œëŠ” `porcana_guest` ì¿ í‚¤ê°€ ì—†ì„ ë•Œë§Œ í˜¸ì¶œ
-- ì¿ í‚¤ ìœ íš¨ê¸°ê°„: 30ì¼ (2592000ì´ˆ)
-- ë””ë²„ê¹…ìš©ìœ¼ë¡œ `guestSessionId`ë¥¼ ì‘ë‹µì— í¬í•¨í•˜ì§€ë§Œ, ì‹¤ì œë¡œëŠ” ì¿ í‚¤ë¡œë§Œ ê´€ë¦¬
+- ??·Ğ??¿£??´Â `X-Guest-Session-Id` Çì´õ°¡ ??À» ??¸¸ ??Ãâ
+- Å¬¶óÀÌ¾ğÆ®´Â `X-Guest-Session-Id`¸¦ ÀúÀåÇØ ´ÙÀ½ ¿äÃ»¿¡ Æ÷ÇÔ
+- ??¹ö±ë¿ë??·Î `guestSessionId`????´ä????ÇÔ?????? ??Á¦·Î´Â Çì´õ·Î¸¸ °ü??
 
 ---
 
 # 1) Auth / User
 
 ## POST /auth/signup
-**Description**: íšŒì›ê°€ì…ì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. ìš”ì²­ì— `porcana_guest` ì¿ í‚¤ê°€ ìˆìœ¼ë©´ ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ìë™ìœ¼ë¡œ ì‚¬ìš©ì ê³„ì •ìœ¼ë¡œ ì´ì „í•©ë‹ˆë‹¤.
+**Description**: ??¿ø°¡??À» Ã³¸®??´Ï?? ??Ã»??`X-Guest-Session-Id` Çì´õ°¡ ??À¸??°Ô½º????Æ®??¸®???? ??µ¿??·Î ??¿ë??°èÁ¤??·Î ??Àü??´Ï??
 
 **Auth**: Not required
 
 **Guest Session Claim:**
-- ì„œë²„ëŠ” ìš”ì²­ì˜ `porcana_guest` ì¿ í‚¤ë¥¼ í™•ì¸
-- ê²ŒìŠ¤íŠ¸ ì„¸ì…˜ì´ ìˆìœ¼ë©´ í•´ë‹¹ í¬íŠ¸í´ë¦¬ì˜¤/ì•„ë ˆë‚˜ë¥¼ ì‹ ê·œ ì‚¬ìš©ì ê³„ì •ìœ¼ë¡œ ì´ì „
-- ë©”ì¸ í¬íŠ¸í´ë¦¬ì˜¤ê°€ ì—†ìœ¼ë©´ ê°€ì¥ ìµœê·¼ ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ë©”ì¸ìœ¼ë¡œ ì„¤ì •
+- ??¹ö????Ã»??`X-Guest-Session-Id` Çì´õ????ÀÎ
+- °Ô½º????¼Ç????À¸????´ç ??Æ®??¸®????·¹???? ??±Ô ??¿ë??°èÁ¤??·Î ??Àü
+- ¸ŞÀÎ ??Æ®??¸®???? ??À¸??°¡??ÃÖ±Ù °Ô½º????Æ®??¸®???? ¸ŞÀÎ??·Î ??Á¤
 
 Request
 ```json
@@ -850,16 +850,16 @@ Response
 }
 
 ## POST /auth/login
-**Description**: ë¡œê·¸ì¸ì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. ìš”ì²­ì— `porcana_guest` ì¿ í‚¤ê°€ ìˆìœ¼ë©´ ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ìë™ìœ¼ë¡œ ì‚¬ìš©ì ê³„ì •ìœ¼ë¡œ ì´ì „í•©ë‹ˆë‹¤.
+**Description**: ·Î±×??À» Ã³¸®??´Ï?? ??Ã»??`X-Guest-Session-Id` Çì´õ°¡ ??À¸??°Ô½º????Æ®??¸®???? ??µ¿??·Î ??¿ë??°èÁ¤??·Î ??Àü??´Ï??
 
 **Auth**: Not required
 
-**ì§€ì› Provider**: EMAIL, GOOGLE, APPLE
+**Áö??Provider**: EMAIL, GOOGLE, APPLE
 
 **Guest Session Claim:**
-- ì„œë²„ëŠ” ìš”ì²­ì˜ `porcana_guest` ì¿ í‚¤ë¥¼ í™•ì¸
-- ê²ŒìŠ¤íŠ¸ ì„¸ì…˜ì´ ìˆìœ¼ë©´ í•´ë‹¹ í¬íŠ¸í´ë¦¬ì˜¤/ì•„ë ˆë‚˜ë¥¼ ì‚¬ìš©ì ê³„ì •ìœ¼ë¡œ ì´ì „ (merge)
-- ê¸°ì¡´ í¬íŠ¸í´ë¦¬ì˜¤ì™€ ê²ŒìŠ¤íŠ¸ í¬íŠ¸í´ë¦¬ì˜¤ ëª¨ë‘ ìœ ì§€
+- ??¹ö????Ã»??`X-Guest-Session-Id` Çì´õ????ÀÎ
+- °Ô½º????¼Ç????À¸????´ç ??Æ®??¸®????·¹???? ??¿ë??°èÁ¤??·Î ??Àü (merge)
+- ±âÁ¸ ??Æ®??¸®???? °Ô½º????Æ®??¸®??¸ğµÎ ????
 
 Request (EMAIL provider)
 ```json
@@ -892,9 +892,9 @@ Response (200 OK)
 ```
 
 **Validation Notes:**
-- EMAIL provider: email, password í•„ìˆ˜
-- GOOGLE/APPLE provider: code í•„ìˆ˜ (OAuth authorization code)
-- ì»¤ìŠ¤í…€ validator (@ValidLoginRequest)ë¡œ providerë³„ í•„ìˆ˜ í•„ë“œ ê²€ì¦
+- EMAIL provider: email, password ??¼ö
+- GOOGLE/APPLE provider: code ??¼ö (OAuth authorization code)
+- Ä¿½º?? validator (@ValidLoginRequest)??provider????¼ö ??µå °Ë??
 
 ## POST /auth/refresh
 Request
@@ -908,7 +908,7 @@ Response
 }
 
 ## GET /me
-**Description**: í˜„ì¬ ì¸ì¦ëœ ì‚¬ìš©ìì˜ ìµœì‹  ì •ë³´ë¥¼ ì¡°íšŒí•©ë‹ˆë‹¤. ë¡œê·¸ì¸/íšŒì›ê°€ì… ì‹œ user ì •ë³´ê°€ ì‘ë‹µì— í¬í•¨ë˜ì§€ë§Œ, ì´ APIëŠ” í† í°ìœ¼ë¡œ ìµœì‹  ìœ ì € ì •ë³´ë¥¼ ì¡°íšŒí•  ë•Œ ì‚¬ìš©í•©ë‹ˆë‹¤.
+**Description**: ??Àç ??Áõ????¿ë??ÀÇ ÃÖ½Å ??º¸??Á¶È¸??´Ï?? ·Î±×????¿ø°¡????user ??º¸°¡ ??´ä????ÇÔ?????? ??API????Å«??·Î ÃÖ½Å ???? ??º¸??Á¶È¸??????¿ë??´Ï??
 
 **Auth**: Required (JWT)
 Response
@@ -965,7 +965,7 @@ Response (when has main portfolio)
 }
 
 ## PUT /portfolios/{portfolioId}/main
-**Description**: ì§€ì •í•œ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ë©”ì¸ í¬íŠ¸í´ë¦¬ì˜¤ë¡œ ì„¤ì •í•©ë‹ˆë‹¤. ë‹¤ë¥¸ í¬íŠ¸í´ë¦¬ì˜¤ê°€ ì´ë¯¸ ë©”ì¸ìœ¼ë¡œ ì„¤ì •ë˜ì–´ ìˆë‹¤ë©´ ë³€ê²½ë©ë‹ˆë‹¤.
+**Description**: Áö??ÇÑ ??Æ®??¸®???? ¸ŞÀÎ ??Æ®??¸®??·Î ??Á¤??´Ï?? ??¸¥ ??Æ®??¸®???? ???? ¸ŞÀÎ??·Î ??Á¤??¾î ??´Ù??º¯°æµË??´Ù.
 
 Response
 { "mainPortfolioId": "uuid" }
@@ -975,7 +975,7 @@ Response
 # 3) Portfolio List
 
 ## GET /portfolios
-**Note**: DRAFT ìƒíƒœì˜ í¬íŠ¸í´ë¦¬ì˜¤ëŠ” ë¦¬ìŠ¤íŠ¸ì— í‘œì‹œë˜ì§€ ì•ŠìŠµë‹ˆë‹¤. ACTIVE ë° FINISHED ìƒíƒœë§Œ ì¡°íšŒë©ë‹ˆë‹¤.
+**Note**: DRAFT ??ÅÂ????Æ®??¸®??´Â ¸®½º??¿¡ ??½Ã???? ??½À??´Ù. ACTIVE ??FINISHED ??ÅÂ??Á¶È¸??´Ï??
 
 Response
 [
@@ -994,17 +994,17 @@ Response
 # 4) Portfolio (CRUD minimal for MVP)
 
 ## POST /portfolios
-**Description**: ìƒˆë¡œìš´ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ìƒì„±í•©ë‹ˆë‹¤. ë¹„íšŒì›ë„ ìƒì„± ê°€ëŠ¥í•©ë‹ˆë‹¤.
+**Description**: ??·Î????Æ®??¸®???? ??¼º??´Ï?? ºñÈ¸??µµ ??¼º °¡??ÇÕ??´Ù.
 
-**Auth**: Optional (JWT ë˜ëŠ” Guest Session)
+**Auth**: Optional (JWT ??´Â Guest Session)
 
-**ì†Œìœ ê¶Œ ê²°ì •:**
-- `Authorization` í—¤ë”ê°€ ìˆìœ¼ë©´ â†’ ì‚¬ìš©ì ì†Œìœ  (`user_id` ì„¤ì •)
-- ì—†ìœ¼ë©´ â†’ ê²ŒìŠ¤íŠ¸ ì†Œìœ  (`guest_session_id` ì„¤ì •)
-- ê²ŒìŠ¤íŠ¸ ì„¸ì…˜ì´ ì—†ìœ¼ë©´ ì„œë²„ê°€ ìë™ ìƒì„±
+**??À¯??°áÁ¤:**
+- `Authorization` ??´õ°¡ ??À¸??????¿ë????À¯ (`user_id` ??Á¤)
+- ??À¸????°Ô½º????À¯ (`guest_session_id` ??Á¤)
+- °Ô½º????¼Ç????À¸????¹ö°¡ ??µ¿ ??¼º
 
-**ê²ŒìŠ¤íŠ¸ ì œí•œ:**
-- ê²ŒìŠ¤íŠ¸ë‹¹ ìµœëŒ€ 3ê°œ í¬íŠ¸í´ë¦¬ì˜¤
+**°Ô½º????ÇÑ:**
+- °Ô½º??´ç ÃÖ?? 3????Æ®??¸®??
 
 Request
 ```json
@@ -1054,20 +1054,20 @@ Response
 }
 
 **Portfolio-Level Risk Metrics:**
-- `averageRiskLevel`: ê°€ì¤‘ í‰ê·  ìœ„í—˜ë„ (1.0 - 5.0, null ê°€ëŠ¥)
-  - ê° ìì‚°ì˜ currentRiskLevel Ã— weightPctë¡œ ê³„ì‚°
-  - ì˜ˆ: (4 Ã— 0.25) + (3 Ã— 0.25) + (2 Ã— 0.50) = 2.75
-- `diversityLevel`: ë¶„ì‚°ë„ ìˆ˜ì¤€ ("HIGH" | "MEDIUM" | "LOW")
-  - ì„¹í„° ë‹¤ì–‘ì„± (50%), ìœ„í—˜ë„ ë°´ë“œ ë‹¤ì–‘ì„± (30%), ìì‚° íƒ€ì… ë‹¤ì–‘ì„± (20%) ì¢…í•©
-  - HIGH: 70ì  ì´ìƒ (ì—¬ëŸ¬ ì„¹í„°, ì—¬ëŸ¬ ìœ„í—˜ë„, ì£¼ì‹+ETF í˜¼í•©)
-  - MEDIUM: 40-70ì 
-  - LOW: 40ì  ë¯¸ë§Œ (ë‹¨ì¼ ì„¹í„°, ë‹¨ì¼ ìœ„í—˜ë„, ë‹¨ì¼ íƒ€ì…)
-- `riskDistribution`: ìœ„í—˜ë„ë³„ ë¹„ì¤‘ ë¶„í¬ (Map<Integer, Double>)
-  - Key: ìœ„í—˜ë„ ë ˆë²¨ (1-5)
-  - Value: í•´ë‹¹ ìœ„í—˜ë„ ìì‚°ë“¤ì˜ ë¹„ì¤‘ í•©ê³„ (%)
-  - ì˜ˆ: { "1": 10.0, "2": 20.0, "3": 30.0, "4": 25.0, "5": 15.0 }
-  - ëª¨ë“  ë ˆë²¨ (1-5)ì´ í•­ìƒ í¬í•¨ë˜ë©°, ì—†ëŠ” ë ˆë²¨ì€ 0.0%
-  - í•©ê³„ëŠ” 100%ê°€ ë˜ì–´ì•¼ í•¨ (riskLevelì´ nullì¸ ìì‚° ì œì™¸)
+- `averageRiskLevel`: °¡????±Õ ??Çè??(1.0 - 5.0, null °¡??
+  - ????»ê??currentRiskLevel ¡¿ weightPct??°è»ê
+  - ?? (4 ¡¿ 0.25) + (3 ¡¿ 0.25) + (2 ¡¿ 0.50) = 2.75
+- `diversityLevel`: ºĞ»ê?????? ("HIGH" | "MEDIUM" | "LOW")
+  - ??ÅÍ ??¾ç??(50%), ??Çè??¹êµå ??¾ç??(30%), ??»ê ??????¾ç??(20%) Á¾ÇÕ
+  - HIGH: 70????»ó (??·¯ ??ÅÍ, ??·¯ ??Çè?? ÁÖ½Ä+ETF ??ÇÕ)
+  - MEDIUM: 40-70??
+  - LOW: 40??¹Ì¸¸ (??ÀÏ ??ÅÍ, ??ÀÏ ??Çè?? ??ÀÏ ????
+- `riskDistribution`: ??Çè??º° ºñÁß ºĞÆ÷ (Map<Integer, Double>)
+  - Key: ??Çè????º§ (1-5)
+  - Value: ??´ç ??Çè????»ê??ÀÇ ºñÁß ??°è (%)
+  - ?? { "1": 10.0, "2": 20.0, "3": 30.0, "4": 25.0, "5": 15.0 }
+  - ¸ğµç ??º§ (1-5)?????? ??ÇÔ??¸ç, ??´Â ??º§?? 0.0%
+  - ??°è??100%°¡ ??¾î????(riskLevel??null????»ê ??¿Ü)
 
 
 ---
@@ -1075,14 +1075,14 @@ Response
 # 5) Arena (Hearthstone-style drafting)
 
 ## POST /arena/sessions
-**Description**: í¬íŠ¸í´ë¦¬ì˜¤ì— ëŒ€í•œ ìƒˆë¡œìš´ ì•„ë ˆë‚˜ ë“œë˜í”„íŠ¸ ì„¸ì…˜ì„ ì‹œì‘í•©ë‹ˆë‹¤. ì´ë¯¸ ì§„í–‰ ì¤‘ì¸ ì„¸ì…˜ì´ ìˆìœ¼ë©´ í•´ë‹¹ ì„¸ì…˜ì„ ë°˜í™˜í•©ë‹ˆë‹¤. ë¹„íšŒì›ë„ ì‚¬ìš© ê°€ëŠ¥í•©ë‹ˆë‹¤.
+**Description**: ??Æ®??¸®??¿¡ ??????·Î????·¹????·¡??Æ® ??¼Ç????ÀÛ??´Ï?? ???? ÁøÇà ÁßÀÎ ??¼Ç????À¸????´ç ??¼Ç??¹İÈ¯??´Ï?? ºñÈ¸??µµ ??¿ë °¡??ÇÕ??´Ù.
 
-**Auth**: Optional (JWT ë˜ëŠ” Guest Session)
+**Auth**: Optional (JWT ??´Â Guest Session)
 
-**ì†Œìœ ê¶Œ ê²°ì •:**
-- `Authorization` í—¤ë”ê°€ ìˆìœ¼ë©´ â†’ ì‚¬ìš©ì ì†Œìœ  (`user_id` ì„¤ì •)
-- ì—†ìœ¼ë©´ â†’ ê²ŒìŠ¤íŠ¸ ì†Œìœ  (`guest_session_id` ì„¤ì •)
-- í¬íŠ¸í´ë¦¬ì˜¤ ì†Œìœ ê¶Œê³¼ ì¼ì¹˜í•˜ëŠ” ì„¸ì…˜ë§Œ ìƒì„± ê°€ëŠ¥
+**??À¯??°áÁ¤:**
+- `Authorization` ??´õ°¡ ??À¸??????¿ë????À¯ (`user_id` ??Á¤)
+- ??À¸????°Ô½º????À¯ (`guest_session_id` ??Á¤)
+- ??Æ®??¸®????À¯±Ç°ú ??Ä¡??´Â ??¼Ç????¼º °¡??
 
 Request
 ```json
@@ -1102,13 +1102,13 @@ Response (200 OK)
 ```
 
 Error Responses
-- 400: í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ ì°¾ì„ ìˆ˜ ì—†ê±°ë‚˜ ê¶Œí•œì´ ì—†ìŒ
-- 403: í¬íŠ¸í´ë¦¬ì˜¤ ì†Œìœ ê¶Œì´ ì¼ì¹˜í•˜ì§€ ì•ŠìŒ
+- 400: ??Æ®??¸®???? Ã£À» ????°Å??±ÇÇÑ????À½
+- 403: ??Æ®??¸®????À¯±ÇÀÌ ??Ä¡???? ??À½
 
 ---
 
 ## GET /arena/sessions/{sessionId}
-**Description**: ì§„í–‰ ì¤‘ì´ê±°ë‚˜ ì™„ë£Œëœ ì•„ë ˆë‚˜ ì„¸ì…˜ì˜ ìƒì„¸ ì •ë³´ë¥¼ ì¡°íšŒí•©ë‹ˆë‹¤.
+**Description**: ÁøÇà ÁßÀÌ°Å³ª ??·á????·¹????¼Ç????¼¼ ??º¸??Á¶È¸??´Ï??
 
 **Auth**: Required (JWT)
 
@@ -1125,15 +1125,15 @@ Response (200 OK)
 }
 
 Error Responses
-- 403: ì„¸ì…˜ì„ ì°¾ì„ ìˆ˜ ì—†ê±°ë‚˜ ê¶Œí•œì´ ì—†ìŒ
-- 401: ì¸ì¦ í•„ìš”
+- 403: ??¼Ç??Ã£À» ????°Å??±ÇÇÑ????À½
+- 401: ??Áõ ??¿ä
 
 ---
 
 ## GET /arena/sessions/{sessionId}/rounds/current
-**Description**: í˜„ì¬ ì§„í–‰ ì¤‘ì¸ ë¼ìš´ë“œì˜ ì„ íƒì§€ë¥¼ ì¡°íšŒí•©ë‹ˆë‹¤.
-- Round 0: íˆ¬ì ì„±í–¥ + ì„¹í„° ë™ì‹œ ì„ íƒ (Pre Round)
-- Round 1-10: ìì‚° ì„ íƒ
+**Description**: ??Àç ÁøÇà ÁßÀÎ ??¿î??ÀÇ ??ÅÃÁö??Á¶È¸??´Ï??
+- Round 0: ??ÀÚ ??Çâ + ??ÅÍ ??½Ã ??ÅÃ (Pre Round)
+- Round 1-10: ??»ê ??ÅÃ
 
 **Auth**: Required (JWT)
 
@@ -1145,29 +1145,29 @@ Response for Round 0 (Pre Round - Risk Profile + Sector Selection)
 "riskProfileOptions": [
 {
 "value": "AGGRESSIVE",
-"displayName": "ê³µê²©ì ",
-"description": "ê³ ìœ„í—˜ ê³ ìˆ˜ìµì„ ì¶”êµ¬í•˜ëŠ” íˆ¬ì ì„±í–¥"
+"displayName": "°ø°İ??,
+"description": "°íÀ§??°í¼ö??À» Ãß±¸??´Â ??ÀÚ ??Çâ"
 },
 {
 "value": "BALANCED",
-"displayName": "ê· í˜•",
-"description": "ìœ„í—˜ê³¼ ìˆ˜ìµì˜ ê· í˜•ì„ ì¶”êµ¬í•˜ëŠ” íˆ¬ì ì„±í–¥"
+"displayName": "±ÕÇü",
+"description": "??Çè????ÀÍ??±ÕÇü??Ãß±¸??´Â ??ÀÚ ??Çâ"
 },
 {
 "value": "SAFE",
-"displayName": "ë³´ìˆ˜ì ",
-"description": "ì•ˆì •ì ì¸ ìˆ˜ìµì„ ì¶”êµ¬í•˜ëŠ” ì €ìœ„í—˜ íˆ¬ì ì„±í–¥"
+"displayName": "º¸¼ö??,
+"description": "??Á¤??ÀÎ ??ÀÍ??Ãß±¸??´Â ????Çè ??ÀÚ ??Çâ"
 }
 ],
 "sectorOptions": [
 {
 "value": "INFORMATION_TECHNOLOGY",
-"displayName": "ì •ë³´ê¸°ìˆ ",
+"displayName": "??º¸±â¼ú",
 "assetCount": 45
 },
 {
 "value": "HEALTH_CARE",
-"displayName": "í—¬ìŠ¤ì¼€ì–´",
+"displayName": "??½ºÄÉ??,
 "assetCount": 38
 },
 // ... more sectors
@@ -1177,11 +1177,11 @@ Response for Round 0 (Pre Round - Risk Profile + Sector Selection)
 }
 
 **Field Notes:**
-- `riskProfileOptions`: íˆ¬ì ì„±í–¥ ì„ íƒì§€ (SAFE/BALANCED/AGGRESSIVE ì¤‘ 1ê°œ í•„ìˆ˜ ì„ íƒ)
-- `sectorOptions`: ì„¹í„° ì„ íƒì§€ (0-3ê°œ ì„ íƒ ê°€ëŠ¥)
-- `value`: Sector enum ê°’
-- `displayName`: í•œêµ­ì–´ ì„¹í„°ëª…
-- `assetCount`: í•´ë‹¹ ì„¹í„°ì— ì†í•œ í™œì„± ìì‚° ê°œìˆ˜
+- `riskProfileOptions`: ??ÀÚ ??Çâ ??ÅÃÁö (SAFE/BALANCED/AGGRESSIVE ??1????¼ö ??ÅÃ)
+- `sectorOptions`: ??ÅÍ ??ÅÃÁö (0-3????ÅÃ °¡??
+- `value`: Sector enum ??
+- `displayName`: ??±¹????ÅÍ??
+- `assetCount`: ??´ç ??ÅÍ????ÇÑ ??¼º ??»ê °³¼ö
 
 Response for Round 1-10 (Asset Selection)
 {
@@ -1198,7 +1198,7 @@ Response for Round 1-10 (Asset Selection)
 "assetClass": null,
 "currentRiskLevel": 4,
 "imageUrl": "https://financialmodelingprep.com/image-stock/AAPL.png",
-"impactHint": "ì„±ì¥ ë¹„ì¤‘ â†‘ Â· ë³€ë™ì„± â†‘"
+"impactHint": "??Àå ºñÁß ??¡¤ º¯??¼º ??
 },
 {
 "assetId": "uuid",
@@ -1209,7 +1209,7 @@ Response for Round 1-10 (Asset Selection)
 "assetClass": null,
 "currentRiskLevel": 3,
 "imageUrl": "https://financialmodelingprep.com/image-stock/MSFT.png",
-"impactHint": "ì„±ì¥ ë¹„ì¤‘ â†‘ Â· ê· í˜•"
+"impactHint": "??Àå ºñÁß ??¡¤ ±ÕÇü"
 },
 {
 "assetId": "uuid",
@@ -1220,31 +1220,31 @@ Response for Round 1-10 (Asset Selection)
 "assetClass": "EQUITY_INDEX",
 "currentRiskLevel": 2,
 "imageUrl": "https://financialmodelingprep.com/image-stock/SPY.png",
-"impactHint": "ë¶„ì‚° íš¨ê³¼ Â· ê· í˜•"
+"impactHint": "ºĞ»ê ??°ú ¡¤ ±ÕÇü"
 }
 ]
 }
 
 **Field Notes:**
-- `sector`: ì£¼ì‹(STOCK)ì˜ ê²½ìš° GICS ì„¹í„°, ETFëŠ” null
-- `market`: ì‹œì¥ êµ¬ë¶„ (KR | US)
-- `assetClass`: ETFì˜ ê²½ìš° ìì‚° í´ë˜ìŠ¤ (EQUITY_INDEX, DIVIDEND, BOND ë“±), ì£¼ì‹ì€ null
-- `currentRiskLevel`: ìœ„í—˜ë„ ë ˆë²¨ (1-5, 1: Low, 5: High, null ê°€ëŠ¥)
-- `imageUrl`: íšŒì‚¬ ë¡œê³  ì´ë¯¸ì§€ URL (ë¯¸êµ­ ì£¼ì‹/ETFë§Œ ì œê³µ, í•œêµ­ ì¢…ëª©ì€ null)
-  - FMP API ì œê³µ: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
-- `impactHint`: í¬íŠ¸í´ë¦¬ì˜¤ì— ë¯¸ì¹˜ëŠ” ì˜í–¥ íŒíŠ¸ (ì—­í•  Â· ë¦¬ìŠ¤í¬)
-  - ì—­í• : ETFëŠ” assetClass ê¸°ë°˜ ("ë¶„ì‚° íš¨ê³¼", "ë°°ë‹¹ ê¸°ì—¬", "ë°©ì–´ ì—­í• "), ì£¼ì‹ì€ sector ê¸°ë°˜ ("ì„±ì¥ ë¹„ì¤‘ â†‘", "ê²½ê¸° ë¯¼ê°", "ë°©ì–´ì ")
-  - ë¦¬ìŠ¤í¬: currentRiskLevel ê¸°ë°˜ ("ë³€ë™ì„± â†‘", "ê· í˜•", "ì•ˆì •ì„± â†‘")
+- `sector`: ÁÖ½Ä(STOCK)??°æ¿ì GICS ??ÅÍ, ETF??null
+- `market`: ??Àå ±¸ºĞ (KR | US)
+- `assetClass`: ETF??°æ¿ì ??»ê ??·¡??(EQUITY_INDEX, DIVIDEND, BOND ??, ÁÖ½Ä?? null
+- `currentRiskLevel`: ??Çè????º§ (1-5, 1: Low, 5: High, null °¡??
+- `imageUrl`: ??»ç ·Î°í ????Áö URL (¹Ì±¹ ÁÖ½Ä/ETF????°ø, ??±¹ Á¾¸ñ?? null)
+  - FMP API ??°ø: `https://financialmodelingprep.com/image-stock/{SYMBOL}.png`
+- `impactHint`: ??Æ®??¸®??¿¡ ¹ÌÄ¡????Çâ ??Æ® (???? ¡¤ ¸®½º??
+  - ????: ETF??assetClass ±â¹İ ("ºĞ»ê ??°ú", "¹è´ç ±â¿©", "¹æ¾î ????"), ÁÖ½Ä?? sector ±â¹İ ("??Àå ºñÁß ??, "°æ±â ¹Î°¨", "¹æ¾î??)
+  - ¸®½º?? currentRiskLevel ±â¹İ ("º¯??¼º ??, "±ÕÇü", "??Á¤????)
 
 Error Responses
-- 400: ì„¸ì…˜ì´ ì´ë¯¸ ì™„ë£Œë¨
-- 403: ì„¸ì…˜ì„ ì°¾ì„ ìˆ˜ ì—†ê±°ë‚˜ ê¶Œí•œì´ ì—†ìŒ
-- 401: ì¸ì¦ í•„ìš”
+- 400: ??¼Ç?????? ??·á??
+- 403: ??¼Ç??Ã£À» ????°Å??±ÇÇÑ????À½
+- 401: ??Áõ ??¿ä
 
 ---
 
 ## POST /arena/sessions/{sessionId}/rounds/current/pick-preferences
-**Description**: ì•„ë ˆë‚˜ Round 0 (Pre Round)ì—ì„œ íˆ¬ì ì„±í–¥(ë¦¬ìŠ¤í¬ í”„ë¡œí•„)ê³¼ ê´€ì‹¬ ì„¹í„°ë¥¼ ë™ì‹œì— ì„ íƒí•©ë‹ˆë‹¤. 0-3ê°œì˜ ì„¹í„°ë¥¼ ì„ íƒí•  ìˆ˜ ìˆìœ¼ë©°, ì¤‘ë³µì€ í—ˆìš©ë˜ì§€ ì•ŠìŠµë‹ˆë‹¤.
+**Description**: ??·¹??Round 0 (Pre Round)??¼­ ??ÀÚ ??Çâ(¸®½º????·Î????°ü????ÅÍ????½Ã????ÅÃ??´Ï?? 0-3°³ÀÇ ??ÅÍ????ÅÃ??????À¸?? Áßº¹?? ??¿ë???? ??½À??´Ù.
 
 **Auth**: Required (JWT)
 
@@ -1266,20 +1266,20 @@ Response (200 OK)
 }
 
 Error Responses
-- 400: Round 0ì´ ì•„ë‹ˆê±°ë‚˜ ì„¹í„° ê°œìˆ˜ê°€ 3ê°œ ì´ˆê³¼ ë˜ëŠ” ì¤‘ë³µëœ ì„¹í„° í¬í•¨
-- 403: ì„¸ì…˜ì„ ì°¾ì„ ìˆ˜ ì—†ê±°ë‚˜ ê¶Œí•œì´ ì—†ìŒ
-- 401: ì¸ì¦ í•„ìš”
+- 400: Round 0????´Ï°Å³ª ??ÅÍ °³¼ö°¡ 3??ÃÊ°ú ??´Â Áßº¹????ÅÍ ??ÇÔ
+- 403: ??¼Ç??Ã£À» ????°Å??±ÇÇÑ????À½
+- 401: ??Áõ ??¿ä
 
 ---
 
 ## POST /arena/sessions/{sessionId}/rounds/current/pick-asset
-**Description**: ì•„ë ˆë‚˜ Round 1-10ì—ì„œ ì œì‹œëœ 3ê°œì˜ ìì‚° ì¤‘ 1ê°œë¥¼ ì„ íƒí•©ë‹ˆë‹¤. Round 10 ì™„ë£Œ ì‹œ ì„¸ì…˜ì´ ì¢…ë£Œë˜ê³  í¬íŠ¸í´ë¦¬ì˜¤ê°€ ì™„ì„±ë©ë‹ˆë‹¤.
+**Description**: ??·¹??Round 1-10??¼­ ??½Ã??3°³ÀÇ ??»ê ??1°³?? ??ÅÃ??´Ï?? Round 10 ??·á ????¼Ç??Á¾·á??°í ??Æ®??¸®???? ??¼º??´Ï??
 
 **Auto Actions on Round 10 Completion:**
-1. í¬íŠ¸í´ë¦¬ì˜¤ì— ì„ íƒëœ 10ê°œ ìì‚° ì¶”ê°€ (ê· ë“± ë¹„ì¤‘ 10% ì”©)
-2. í¬íŠ¸í´ë¦¬ì˜¤ ìŠ¤ëƒ…ìƒ· ìƒì„±
-3. **í¬íŠ¸í´ë¦¬ì˜¤ ìë™ ì‹œì‘** (DRAFT â†’ ACTIVE, startedAt = today)
-4. **ë©”ì¸ í¬íŠ¸í´ë¦¬ì˜¤ ìë™ ì„¤ì •** (ì‚¬ìš©ìì˜ mainPortfolioIdê°€ nullì¸ ê²½ìš°)
+1. ??Æ®??¸®??¿¡ ??ÅÃ??10????»ê Ãß?? (±Õµî ºñÁß 10% ??
+2. ??Æ®??¸®????³À????¼º
+3. **??Æ®??¸®????µ¿ ??ÀÛ** (DRAFT ??ACTIVE, startedAt = today)
+4. **¸ŞÀÎ ??Æ®??¸®????µ¿ ??Á¤** (??¿ë??ÀÇ mainPortfolioId°¡ null??°æ¿ì)
 
 **Auth**: Required (JWT)
 
@@ -1297,20 +1297,20 @@ Response (200 OK)
 }
 
 Error Responses
-- 400: Round 1-10ì´ ì•„ë‹ˆê±°ë‚˜ ì œì‹œëœ ìì‚° ëª©ë¡ì— ì—†ëŠ” ìì‚° ì„ íƒ
-- 403: ì„¸ì…˜ì„ ì°¾ì„ ìˆ˜ ì—†ê±°ë‚˜ ê¶Œí•œì´ ì—†ìŒ
-- 401: ì¸ì¦ í•„ìš”
+- 400: Round 1-10????´Ï°Å³ª ??½Ã????»ê ¸ñ·Ï????´Â ??»ê ??ÅÃ
+- 403: ??¼Ç??Ã£À» ????°Å??±ÇÇÑ????À½
+- 401: ??Áõ ??¿ä
 
 ---
 
 # 5-1) Arena Asset Recommendation Logic
 
 ## Overview
-ArenaëŠ” Hearthstone-styleì˜ ë“œë˜í”„íŠ¸ ì‹œìŠ¤í…œìœ¼ë¡œ, ì‚¬ìš©ìê°€ 3ê°œì˜ ì„ íƒì§€ ì¤‘ 1ê°œë¥¼ ì„ íƒí•˜ì—¬ í¬íŠ¸í´ë¦¬ì˜¤ë¥¼ êµ¬ì„±í•©ë‹ˆë‹¤.
+Arena??Hearthstone-style????·¡??Æ® ??½º??À¸?? ??¿ë???? 3°³ÀÇ ??ÅÃÁö ??1°³?? ??ÅÃ??¿© ??Æ®??¸®???? ±¸¼º??´Ï??
 
 ## Round Structure
-- **Round 0 (Pre Round)**: Risk Profile + Sector ë™ì‹œ ì„ íƒ (SAFE/BALANCED/AGGRESSIVE + 0-3ê°œ ì„¹í„°)
-- **Rounds 1-10**: Asset ì„ íƒ (ë¼ìš´ë“œë‹¹ 3ê°œ ì¤‘ 1ê°œ)
+- **Round 0 (Pre Round)**: Risk Profile + Sector ??½Ã ??ÅÃ (SAFE/BALANCED/AGGRESSIVE + 0-3????ÅÍ)
+- **Rounds 1-10**: Asset ??ÅÃ (??¿î??´ç 3????1??
 
 ## Asset Recommendation Algorithm
 
@@ -1321,23 +1321,23 @@ List<Asset> generateRoundOptions(ArenaSession session, int roundNo)
 
 ### Input Context
 - `riskProfile`: SAFE | BALANCED | AGGRESSIVE
-- `preferredSectors`: ì‚¬ìš©ìê°€ ì„ íƒí•œ 2-3ê°œ ì„¹í„°
-- `deckAssetIds`: ì´ë¯¸ ì„ íƒëœ ìì‚° (ì¤‘ë³µ ë°©ì§€)
-- `shownAssetIds`: ì´ì „ ë¼ìš´ë“œì— ì œì‹œëœ ìì‚° (ì¬ì‚¬ìš© ë°©ì§€, í›„ë³´ ë¶€ì¡± ì‹œ ì™„í™”)
+- `preferredSectors`: ??¿ë???? ??ÅÃ??2-3????ÅÍ
+- `deckAssetIds`: ???? ??ÅÃ????»ê (Áßº¹ ¹æ??)
+- `shownAssetIds`: ??Àü ??¿î??¿¡ ??½Ã????»ê (??»ç??¹æ??, ??º¸ ºÎ??????È­)
 
 ### Optimization Strategy
-**ë©”ëª¨ë¦¬ íš¨ìœ¨ì„±ì„ ìœ„í•´ ì „ì²´ ~1000ê°œ assetsë¥¼ ë¡œë“œí•˜ì§€ ì•Šê³ , í•„ìš”í•œ subsetë§Œ ì¡°íšŒ:**
+**¸Ş¸ğ????À²??À» ??ÇØ ??Ã¼ ~1000??assets??·Îµå???? ??°í, ??¿ä??subset??Á¶È¸:**
 
-1. **Preferred Candidates (Normal Picksìš©)**
+1. **Preferred Candidates (Normal Picks??**
    ```java
    List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);
-   // ì„ í˜¸ ì„¹í„° (2-3ê°œ)ì— ì†í•œ ìì‚°ë§Œ ë¡œë“œ (ì•½ 200-300ê°œ)
+   // ??È£ ??ÅÍ (2-3??????ÇÑ ??»ê??·Îµå (??200-300??
    ```
 
-2. **Wild Candidates (Wild Pickìš©)**
+2. **Wild Candidates (Wild Pick??**
    ```java
    List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
-   // ì„ í˜¸ ì„¹í„°ê°€ ì•„ë‹Œ ìì‚°ë“¤ (ì˜ì™¸ì„± ë³´ì¥)
+   // ??È£ ??ÅÍ°¡ ??´Ñ ??»ê??(??¿Ü??º¸Àå)
    ```
 
 3. **Filter Excluded Assets**
@@ -1347,8 +1347,8 @@ List<Asset> generateRoundOptions(ArenaSession session, int roundNo)
 
 ### Selection Process
 
-#### 1) Normal Picks (2ê°œ)
-ì„ í˜¸ ì„¹í„° + ë¦¬ìŠ¤í¬ í”„ë¡œí•„ + ë‹¤ì–‘ì„± íŒ¨ë„í‹° ë°˜ì˜
+#### 1) Normal Picks (2??
+??È£ ??ÅÍ + ¸®½º????·Î??+ ??¾ç????³Î??¹İ¿µ
 
 ```java
 for i in 1..2:
@@ -1358,8 +1358,8 @@ for i in 1..2:
   wildCandidates.remove(next);
 ```
 
-#### 2) Wild Pick (1ê°œ)
-ì„¹í„° ì„ í˜¸ ë¬´ì‹œ, ë‹¤ì–‘ì„±ë§Œ ìœ ì§€ (ì˜ì™¸ì„± ë³´ì¥)
+#### 2) Wild Pick (1??
+??ÅÍ ??È£ ¹«½Ã, ??¾ç??¸¸ ???? (??¿Ü??º¸Àå)
 
 ```java
 wild = weightedPickOne(wildCandidates, riskProfile, preferredSectors, alreadyPicked, useSectorPreference=false);
@@ -1372,10 +1372,10 @@ picked.add(wild);
 ```java
 w = 1.0
 w *= riskWeight(riskProfile, asset.currentRiskLevel);
-w *= sectorWeight(preferredSectors, asset.sector);  // normal picksë§Œ
+w *= sectorWeight(preferredSectors, asset.sector);  // normal picks??
 w *= typeWeight(asset.type);
 w *= diversityPenalty(asset, alreadyPicked);
-w = max(w, 0.0001);  // ì•ˆì „ì¥ì¹˜
+w = max(w, 0.0001);  // ??Àü??Ä¡
 ```
 
 #### Risk Weight
@@ -1405,14 +1405,14 @@ sectorWeight(Set<Sector> preferredSectors, Sector sector):
 ```java
 typeWeight(AssetType assetType):
   return assetType == ETF ? 2.5 : 1.0
-  // ETFë¥¼ "ê°•í•˜ê²Œ" ì„ í˜¸í•˜ì—¬ í¬íŠ¸í´ë¦¬ì˜¤ ë‹¤ì–‘ì„± í™•ë³´
-  // ETFëŠ” sectorê°€ nullì´ë¯€ë¡œ sectorWeight 1.0ì„ ë°›ìŒ
-  // ì£¼ì‹ì€ ì„ í˜¸ ì„¹í„° ì‹œ sectorWeight 1.5ë¥¼ ë°›ìŒ
-  // ë”°ë¼ì„œ ETFì— 2.5x ë¶€ìŠ¤íŠ¸ë¥¼ ì£¼ì–´ ê· í˜• ë§ì¶¤
+  // ETF??"°­ÇÏ?? ??È£??¿© ??Æ®??¸®????¾ç????º¸
+  // ETF??sector°¡ null??????sectorWeight 1.0??¹ŞÀ½
+  // ÁÖ½Ä?? ??È£ ??ÅÍ ??sectorWeight 1.5??¹ŞÀ½
+  // ??¶ó??ETF??2.5x ºÎ??Æ®??ÁÖ¾î ±ÕÇü ¸ÂÃã
 
-  // Wild Pick ì¶”ê°€ ë³´ì •:
-  // Wild Pick(ì„¹í„° ì„ í˜¸ ë¬´ì‹œ)ì—ì„œ ETFëŠ” ì¶”ê°€ë¡œ 1.5x ë³´ì •
-  // ìµœì¢… Wild Pick ETF ê°€ì¤‘ì¹˜: 2.5 Ã— 1.5 = 3.75x
+  // Wild Pick Ãß?? º¸Á¤:
+  // Wild Pick(??ÅÍ ??È£ ¹«½Ã)??¼­ ETF??Ãß????1.5x º¸Á¤
+  // ÃÖÁ¾ Wild Pick ETF °¡ÁßÄ¡: 2.5 ¡¿ 1.5 = 3.75x
 ```
 
 #### Diversity Penalty
@@ -1420,11 +1420,11 @@ typeWeight(AssetType assetType):
 diversityPenalty(Asset candidate, List<Asset> alreadyPicked):
   penalty = 1.0
 
-  // ê°™ì€ ì„¹í„°ë©´ í™•ë¥  í¬ê²Œ ë‹¤ìš´
+  // °°?? ??ÅÍ????·ü ??°Ô ??¿î
   if alreadyPicked.any(p => p.sector == candidate.sector):
     penalty *= 0.35
 
-  // ë¦¬ìŠ¤í¬ ë°´ë“œ ê²¹ì¹˜ë©´ ì¡°ê¸ˆ ë‹¤ìš´
+  // ¸®½º??¹êµå °ãÄ¡??Á¶±İ ??¿î
   candBand = riskBand(candidate.riskScore)  // LOW(1-2) | MID(3) | HIGH(4-5)
   if alreadyPicked.any(p => riskBand(p.riskScore) == candBand):
     penalty *= 0.70
@@ -1433,42 +1433,42 @@ diversityPenalty(Asset candidate, List<Asset> alreadyPicked):
 ```
 
 ### Diversity Condition
-ë¼ìš´ë“œë‹¹ 3ê°œ ì„ íƒì§€ëŠ” ë‹¤ìŒ ì¡°ê±´ì„ ë§Œì¡±í•´ì•¼ í•¨:
+??¿î??´ç 3????ÅÃÁö????À½ Á¶°Ç??¸¸Á·??¾ß ??
 
 ```java
 isDiverseEnough(List<Asset> picked):
-  // ìµœì†Œ 2ê°œ ì„¹í„°
+  // ÃÖ¼Ò 2????ÅÍ
   distinctSectors = picked.map(p => p.sector).distinct().size
   if distinctSectors < 2: return false
 
-  // ìµœì†Œ 2ê°œ ë¦¬ìŠ¤í¬ ë°´ë“œ
+  // ÃÖ¼Ò 2??¸®½º??¹êµå
   distinctBands = picked.map(p => riskBand(p.riskScore)).distinct().size
   return distinctBands >= 2
 ```
 
 **Retry Logic:**
-- ë‹¤ì–‘ì„± ì¡°ê±´ ì‹¤íŒ¨ ì‹œ ìµœëŒ€ 5íšŒ ì¬ì‹œë„
-- ì¬ì‹œë„ ì‹œ `shownAssetIds` ì œì•½ ì™„í™”
+- ??¾ç??Á¶°Ç ??ÆĞ ??ÃÖ?? 5????½Ã??
+- ??½Ã????`shownAssetIds` ??¾à ??È­
 
 ### Fallback Strategy
-í›„ë³´ ë¶€ì¡± ì‹œ ì œì•½ ì¡°ê±´ì„ ë‹¨ê³„ì ìœ¼ë¡œ ì™„í™”:
+??º¸ ºÎ??????¾à Á¶°Ç????°è??À¸????È­:
 
-1. **First Try**: `shownAssetIds` ì œì™¸
-2. **Fallback**: `shownAssetIds` ì œì•½ ì™„í™”, `deckAssetIds`ë§Œ ì œì™¸
-3. **Last Resort**: ë‹¤ì–‘ì„± ì¡°ê±´ ì™„í™” (ê²½ê³  ë¡œê·¸)
+1. **First Try**: `shownAssetIds` ??¿Ü
+2. **Fallback**: `shownAssetIds` ??¾à ??È­, `deckAssetIds`????¿Ü
+3. **Last Resort**: ??¾ç??Á¶°Ç ??È­ (°æ°í ·Î±×)
 
 ### Memory Efficiency
-**Before (ë¹„íš¨ìœ¨):**
+**Before (ºñÈ¿??:**
 ```java
-List<Asset> allAssets = assetRepository.findByActiveTrue();  // ~1000ê°œ
-// ë©”ëª¨ë¦¬: ~100-200KB per round
+List<Asset> allAssets = assetRepository.findByActiveTrue();  // ~1000??
+// ¸Ş¸ğ?? ~100-200KB per round
 ```
 
-**After (íš¨ìœ¨):**
+**After (??À²):**
 ```java
-List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);  // ~200-300ê°œ
+List<Asset> preferredCandidates = assetRepository.findBySectorInAndActiveTrue(preferredSectors);  // ~200-300??
 List<Asset> wildCandidates = assetRepository.findBySectorNotInAndActiveTrue(preferredSectors);
-// ë©”ëª¨ë¦¬: 30-50% ì ˆê°
+// ¸Ş¸ğ?? 30-50% ??°¨
 ```
 
 ### Example Flow
@@ -1479,10 +1479,10 @@ Round 3:
   deckAssetIds = []
   shownAssetIds = []
 
-1. Load preferredCandidates (IT + Healthcare assets, ~150ê°œ)
-2. Load wildCandidates (other sectors, ~650ê°œ)
-3. Pick 2 normal from preferredCandidates (ì„¹í„° ì„ í˜¸ 1.5ë°°, ë¦¬ìŠ¤í¬ ê°€ì¤‘ì¹˜)
-4. Pick 1 wild from wildCandidates (ì„¹í„° ë¬´ì‹œ, ì˜ì™¸ì„±)
+1. Load preferredCandidates (IT + Healthcare assets, ~150??
+2. Load wildCandidates (other sectors, ~650??
+3. Pick 2 normal from preferredCandidates (??ÅÍ ??È£ 1.5?? ¸®½º??°¡ÁßÄ¡)
+4. Pick 1 wild from wildCandidates (??ÅÍ ¹«½Ã, ??¿Ü??
 5. Check diversity (2+ sectors, 2+ risk bands)
 6. Return 3 assets
 
@@ -1497,18 +1497,18 @@ Result:
 ### Query Optimization (Bucket Sampling)
 
 **Problem:**
-ì „ì²´ active assets (~1000ê°œ)ë¥¼ ë¡œë“œí•˜ëŠ” ê²ƒì¡°ì°¨ ì—¬ì „íˆ ë¹„íš¨ìœ¨ì . íŠ¹íˆ `ORDER BY random()`ì€ ëŒ€ìš©ëŸ‰ì—ì„œ ì„±ëŠ¥ ì €í•˜.
+??Ã¼ active assets (~1000????·Îµå??´Â °ÍÁ¶????Àü??ºñÈ¿??Àû. ??È÷ `ORDER BY random()`?? ????·®??¼­ ??´É ????
 
 **Solution: Bucket Sampling**
-DBì—ì„œ **ì„ í˜¸ ì„¹í„° ë²„í‚· + ë¹„ì„ í˜¸ ë²„í‚· + ì™€ì¼ë“œ ë²„í‚·**ìœ¼ë¡œ ê°ê° ì†ŒëŸ‰ ìƒ˜í”Œë§ â†’ ì•±ì—ì„œ ê°€ì¤‘ì¹˜ ê³„ì‚°
+DB??¼­ **??È£ ??ÅÍ ¹öÅ¶ + ºñ¼±??¹öÅ¶ + ????µå ¹öÅ¶**??·Î °¢°¢ ??·® ??ÇÃ??????¿¡??°¡ÁßÄ¡ °è»ê
 
 #### Bucket Sizes (Default)
-- **Preferred Sector Candidates**: 80ê°œ
-- **Non-Preferred Sector Candidates**: 40ê°œ
-- **Wild Candidates**: 20ê°œ
-- **Total**: ~140ê°œ (ì „ì²´ 1000ê°œ ëŒ€ë¹„ 86% ì ˆê°)
+- **Preferred Sector Candidates**: 80??
+- **Non-Preferred Sector Candidates**: 40??
+- **Wild Candidates**: 20??
+- **Total**: ~140??(??Ã¼ 1000??????86% ??°¨)
 
-#### 1) Preferred Sector Bucket (80ê°œ)
+#### 1) Preferred Sector Bucket (80??
 ```sql
 SELECT a.id, a.sector, a.current_risk_level, a.type, a.market
 FROM assets a
@@ -1521,7 +1521,7 @@ ORDER BY a.id
 LIMIT 80;
 ```
 
-#### 2) Non-Preferred Sector Bucket (40ê°œ)
+#### 2) Non-Preferred Sector Bucket (40??
 ```sql
 SELECT a.id, a.sector, a.current_risk_level, a.type, a.market
 FROM assets a
@@ -1534,7 +1534,7 @@ ORDER BY a.id
 LIMIT 40;
 ```
 
-#### 3) Wild Bucket (20ê°œ)
+#### 3) Wild Bucket (20??
 ```sql
 SELECT a.id, a.sector, a.current_risk_level, a.type, a.market
 FROM assets a
@@ -1548,28 +1548,28 @@ LIMIT 20;
 
 #### Random Sampling Strategy (PK Range Random)
 
-**ORDER BY random() ê¸ˆì§€**: ëŒ€ìš©ëŸ‰ í…Œì´ë¸”ì—ì„œ ì„±ëŠ¥ ìµœì•…
+**ORDER BY random() ±İ??**: ????·® ??ÀÌºí¿¡????´É ÃÖ¾Ç
 
-### MVP ì¶”ì²œ: PK ë²”ìœ„ ëœë¤
-1. ì•±ì—ì„œ `minId ~ maxId` ìºì‹œ (ë˜ëŠ” í•˜ë“œì½”ë”©)
-2. `rand_id = random(minId, maxId)` ìƒì„±
+### MVP ÃßÃµ: PK ¹üÀ§ ??´ı
+1. ??¿¡??`minId ~ maxId` Ä³½Ã (??´Â ??µåÄÚµù)
+2. `rand_id = random(minId, maxId)` ??¼º
 3. `WHERE a.id >= :rand_id ORDER BY a.id LIMIT N`
-4. ë¶€ì¡±í•˜ë©´ wrap-around: `WHERE a.id < :rand_id ORDER BY a.id LIMIT N`
+4. ºÎÁ·ÇÏ??wrap-around: `WHERE a.id < :rand_id ORDER BY a.id LIMIT N`
 
-**ì¥ì :**
-- ë¹ ë¦„ (ì¸ë±ìŠ¤ í™œìš©)
-- êµ¬í˜„ ê°„ë‹¨
-- MVPì— ì¶©ë¶„
+**??Á¡:**
+- ºü¸§ (??µ¦????¿ë)
+- ±¸Çö °£´Ü
+- MVP??ÃæºĞ
 
-**ë‹¨ì :**
-- ID ë¶„í¬ê°€ ë§¤ìš° ë¶ˆê· í˜•ì´ë©´ í¸í–¥ ê°€ëŠ¥ (ëŒ€ë¶€ë¶„ ê´œì°®ìŒ)
+**??Á¡:**
+- ID ºĞÆ÷°¡ ¸Å¿ì ºÒ±Õ??ÀÌ????Çâ °¡??(??ºÎ??±¦Âú??
 
-**Advanced (ìš´ì˜ ë‹¨ê³„):**
-- `assets` í…Œì´ë¸”ì— `rand_key DOUBLE PRECISION` (0~1) ì»¬ëŸ¼ ì¶”ê°€
-- ë°°ì¹˜ë¡œ ì£¼ê¸°ì ìœ¼ë¡œ ëœë¤ ê°’ ê°±ì‹ 
-- ì¸ë±ìŠ¤: `(sector, rand_key)`
-- ì¿¼ë¦¬: `WHERE a.rand_key >= :rk ORDER BY a.rand_key LIMIT N`
-- ì§„ì§œ ë¹ ë¥´ê³  ê¹”ë”í•¨
+**Advanced (??¿µ ??°è):**
+- `assets` ??ÀÌºí¿¡ `rand_key DOUBLE PRECISION` (0~1) ÄÃ·³ Ãß??
+- ¹èÄ¡??ÁÖ±â??À¸????´ı ??°»½Å
+- ??µ¦?? `(sector, rand_key)`
+- Äõ¸®: `WHERE a.rand_key >= :rk ORDER BY a.rand_key LIMIT N`
+- ÁøÂ¥ ºü¸£??±ò²û??
 
 #### Required Indexes
 ```sql
@@ -1579,27 +1579,27 @@ CREATE INDEX idx_asset_risk_level ON assets(current_risk_level);
 ```
 
 #### Optimization Benefits
-- **ë©”ëª¨ë¦¬**: 1000ê°œ â†’ 140ê°œ (86% ì ˆê°)
-- **ì¿¼ë¦¬ ì„±ëŠ¥**: ORDER BY random() ì œê±° â†’ PK range scan
-- **ë„¤íŠ¸ì›Œí¬**: ë°ì´í„° ì „ì†¡ëŸ‰ 86% ê°ì†Œ
+- **¸Ş¸ğ??*: 1000????140??(86% ??°¨)
+- **Äõ¸® ??´É**: ORDER BY random() ??°Å ??PK range scan
+- **??Æ®??Å©**: ??ÀÌ????¼Û??86% °¨¼Ò
 
 #### Implementation Flow
 ```
-1. DBì—ì„œ 3ê°œ ë²„í‚· ìƒ˜í”Œë§ (ì´ 140ê°œ)
+1. DB??¼­ 3??¹öÅ¶ ??ÇÃ??(??140??
    - Preferred: 80
    - Non-Preferred: 40
    - Wild: 20
 
-2. Appì—ì„œ ê°€ì¤‘ì¹˜ ê³„ì‚° (140ê°œì— ëŒ€í•´)
-   - riskWeight Ã— sectorWeight Ã— diversityPenalty
+2. App??¼­ °¡ÁßÄ¡ °è»ê (140°³¿¡ ????
+   - riskWeight ¡¿ sectorWeight ¡¿ diversityPenalty
 
-3. Weighted samplingìœ¼ë¡œ ìµœì¢… 3ê°œ ì„ íƒ
-   - Normal picks: 2ê°œ (preferred ìš°ì„ )
-   - Wild pick: 1ê°œ (wild bucket ìš°ì„ )
+3. Weighted sampling??·Î ÃÖÁ¾ 3????ÅÃ
+   - Normal picks: 2??(preferred ??¼±)
+   - Wild pick: 1??(wild bucket ??¼±)
 
-4. Diversity check (ìµœëŒ€ 5íšŒ ì¬ì‹œë„)
+4. Diversity check (ÃÖ?? 5????½Ã??
 
-5. Roundì— ì €ì¥ ë° ë°˜í™˜
+5. Round????????¹İÈ¯
 ```
 
 ---
@@ -1618,7 +1618,7 @@ Response
 
 ---
 
-# 7) Assets (ì¢…ëª©)
+# 7) Assets (Á¾¸ñ)
 
 ## GET /assets/search?query=string
 Response
@@ -1669,3 +1669,7 @@ Response (included)
 "weightPct": 25.0,
 "returnPct": 18.3
 }
+
+
+
+

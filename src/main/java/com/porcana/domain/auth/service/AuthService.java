@@ -97,9 +97,9 @@ public class AuthService {
 
     /**
      * Claim guest portfolios and arena sessions to user account
-     * This should be called after signup or login if a guest session cookie exists
+     * This should be called after signup or login if a guest session header exists
      *
-     * @param guestSessionId Guest session ID from cookie
+     * @param guestSessionId Guest session ID from header
      * @param userId User ID to claim to
      */
     @Transactional
