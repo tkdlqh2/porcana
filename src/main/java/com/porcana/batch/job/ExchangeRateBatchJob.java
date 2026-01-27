@@ -15,8 +15,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Daily exchange rate update batch job
@@ -49,12 +52,20 @@ public class ExchangeRateBatchJob {
                 .tasklet((contribution, chunkContext) -> {
                     log.info("Starting daily exchange rate update");
 
-                    // Use today's date for exchange rate fetch
-                    LocalDate today = LocalDate.now();
+                    // Get timestamp from JobParameters
+                    Map<String, Object> jobParameters = chunkContext.getStepContext().getJobParameters();
+                    Long timestamp = (Long) jobParameters.get("timestamp");
+
+                    // Convert timestamp to LocalDate (KST timezone)
+                    LocalDate targetDate = Instant.ofEpochMilli(timestamp)
+                            .atZone(ZoneId.of("Asia/Seoul"))
+                            .toLocalDate();
+
+                    log.info("Using target date from JobParameters: {}", targetDate);
 
                     try {
-                        List<ExchangeRate> exchangeRates = koreaEximProvider.fetchExchangeRates(today);
-                        log.info("Fetched {} exchange rates for date: {}", exchangeRates.size(), today);
+                        List<ExchangeRate> exchangeRates = koreaEximProvider.fetchExchangeRates(targetDate);
+                        log.info("Fetched {} exchange rates for date: {}", exchangeRates.size(), targetDate);
 
                         int created = 0;
                         int updated = 0;
