@@ -98,9 +98,10 @@ public class AuthService {
         OAuth2Provider provider = oauth2ProviderFactory.getProvider(command.getProvider());
         String email = provider.verifyAndGetEmail(command.getCode());
 
-        log.info("OAuth login with provider {} for email {}", command.getProvider(), email);
+        log.info("OAuth login with provider {} for email {}***", command.getProvider(),
+                email.substring(0, Math.min(3, email.indexOf('@'))));
 
-        // Find existing user or create new one
+                // Find existing user or create new one
         Optional<User> existingUser = userRepository.findByEmail(email);
 
         if (existingUser.isPresent()) {

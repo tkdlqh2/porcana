@@ -84,7 +84,11 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
 
         try {
             JsonNode jsonNode = objectMapper.readTree(response.getBody());
-            return jsonNode.get("access_token").asText();
+            JsonNode accessTokenNode = jsonNode.get("access_token");
+            if (accessTokenNode == null || accessTokenNode.isNull()) {
+                throw new IllegalArgumentException("access_token not found in Google response");
+            }
+            return accessTokenNode.asText();
         } catch (Exception e) {
             log.error("Failed to parse Google token response", e);
             throw new IllegalArgumentException("Invalid token response from Google");
@@ -113,9 +117,13 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
 
         try {
             JsonNode jsonNode = objectMapper.readTree(response.getBody());
-            String email = jsonNode.get("email").asText();
+            JsonNode emailNode = jsonNode.get("email");
+            if (emailNode == null || emailNode.isNull()) {
+                throw new IllegalArgumentException("Email not found in Google user info");
+            }
+            String email = emailNode.asText();
 
-            if (email == null || email.isBlank()) {
+            if (email.isBlank() || "null".equals(email)) {
                 throw new IllegalArgumentException("Email not found in Google user info");
             }
 

@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
  * Returns appropriate OAuth2Provider based on AuthProvider type
  */
 @Component
-@RequiredArgsConstructor
 public class OAuth2ProviderFactory {
 
     private final List<OAuth2Provider> providers;

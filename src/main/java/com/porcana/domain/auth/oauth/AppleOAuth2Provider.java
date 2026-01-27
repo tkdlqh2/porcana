@@ -2,8 +2,8 @@ package com.porcana.domain.auth.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,14 +13,18 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.ByteArrayInputStream;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Apple OAuth2 Provider implementation
@@ -50,6 +54,8 @@ public class AppleOAuth2Provider implements OAuth2Provider {
     private String redirectUri;
 
     private static final String TOKEN_URL = "https://appleid.apple.com/auth/token";
+    private static final String JWKS_URL = "https://appleid.apple.com/auth/keys";
+    private static final String APPLE_ISSUER = "https://appleid.apple.com";
 
     @Override
     public String verifyAndGetEmail(String code) {
@@ -95,7 +101,7 @@ public class AppleOAuth2Provider implements OAuth2Provider {
                     .setExpiration(Date.from(expiration))
                     .setAudience("https://appleid.apple.com")
                     .setSubject(clientId)
-                    .signWith(key, SignatureAlgorithm.ES256)
+                    .signWith(key, Jwts.SIG.ES256)
                     .compact();
 
         } catch (Exception e) {
@@ -149,7 +155,11 @@ public class AppleOAuth2Provider implements OAuth2Provider {
 
         try {
             JsonNode jsonNode = objectMapper.readTree(response.getBody());
-            return jsonNode.get("id_token").asText();
+            JsonNode idTokenNode = jsonNode.get("id_token");
+            if (idTokenNode == null || idTokenNode.isNull()) {
+                throw new IllegalArgumentException("id_token not found in Apple response");
+            }
+            return idTokenNode.asText();
         } catch (Exception e) {
             log.error("Failed to parse Apple token response", e);
             throw new IllegalArgumentException("Invalid token response from Apple");
@@ -157,33 +167,136 @@ public class AppleOAuth2Provider implements OAuth2Provider {
     }
 
     /**
-     * Extract email from Apple ID token (JWT)
+     * Extract email from Apple ID token (JWT) with signature verification
+     * Follows Apple's official OIDC guidelines and OpenID Connect standards
      */
     private String extractEmailFromIdToken(String idToken) {
         try {
-            // Decode JWT payload (without verification since we trust Apple's response)
-            String[] parts = idToken.split("\\.");
-            if (parts.length != 3) {
-                throw new IllegalArgumentException("Invalid JWT format");
-            }
+            // Step 1: Get Apple's public key from JWKS endpoint
+            PublicKey publicKey = getApplePublicKey(idToken);
 
-            String payload = new String(
-                    Base64.getUrlDecoder().decode(parts[1]),
-                    StandardCharsets.UTF_8
-            );
+            // Step 2: Verify signature and parse claims
+            Claims claims = Jwts.parser()
+                    .verifyWith(publicKey)
+                    .requireIssuer(APPLE_ISSUER)
+                    .requireAudience(clientId)
+                    .build()
+                    .parseSignedClaims(idToken)
+                    .getPayload();
 
-            JsonNode jsonNode = objectMapper.readTree(payload);
-            String email = jsonNode.get("email").asText();
-
+            // Step 3: Verify expiration (automatically checked by JJWT)
+            // Step 4: Extract email
+            String email = claims.get("email", String.class);
             if (email == null || email.isBlank()) {
                 throw new IllegalArgumentException("Email not found in Apple ID token");
             }
 
+            log.info("Successfully verified Apple ID token for email: {}", email);
             return email;
 
+        } catch (SignatureException e) {
+            log.error("Apple ID token signature verification failed", e);
+            throw new IllegalArgumentException("Invalid Apple ID token signature");
+        } catch (ExpiredJwtException e) {
+            log.error("Apple ID token has expired", e);
+            throw new IllegalArgumentException("Expired Apple ID token");
+        } catch (MalformedJwtException e) {
+            log.error("Malformed Apple ID token", e);
+            throw new IllegalArgumentException("Malformed Apple ID token");
         } catch (Exception e) {
-            log.error("Failed to extract email from Apple ID token", e);
+            log.error("Failed to verify Apple ID token", e);
             throw new IllegalArgumentException("Invalid Apple ID token");
+        }
+    }
+
+    /**
+     * Get Apple's public key from JWKS endpoint for JWT verification
+     * Uses the 'kid' (key ID) from JWT header to select the correct key
+     */
+    private PublicKey getApplePublicKey(String idToken) {
+        try {
+            // Step 1: Extract 'kid' from JWT header
+            String kid = extractKidFromToken(idToken);
+
+            // Step 2: Fetch JWKS from Apple
+            ResponseEntity<String> response = restTemplate.getForEntity(JWKS_URL, String.class);
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new IllegalStateException("Failed to fetch Apple JWKS");
+            }
+
+            // Step 3: Parse JWKS and find matching key
+            JsonNode jwksNode = objectMapper.readTree(response.getBody());
+            JsonNode keysNode = jwksNode.get("keys");
+            if (keysNode == null || !keysNode.isArray()) {
+                throw new IllegalStateException("Invalid JWKS format from Apple");
+            }
+
+            // Step 4: Find key with matching 'kid'
+            for (JsonNode keyNode : keysNode) {
+                String keyKid = keyNode.get("kid").asText();
+                if (kid.equals(keyKid)) {
+                    return buildPublicKey(keyNode);
+                }
+            }
+
+            throw new IllegalArgumentException("No matching public key found for kid: " + kid);
+
+        } catch (Exception e) {
+            log.error("Failed to get Apple public key", e);
+            throw new IllegalArgumentException("Failed to verify Apple ID token");
+        }
+    }
+
+    /**
+     * Extract 'kid' (key ID) from JWT header
+     */
+    private String extractKidFromToken(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                throw new IllegalArgumentException("Invalid JWT format");
+            }
+
+            String header = new String(
+                    Base64.getUrlDecoder().decode(parts[0]),
+                    StandardCharsets.UTF_8
+            );
+
+            JsonNode headerNode = objectMapper.readTree(header);
+            JsonNode kidNode = headerNode.get("kid");
+            if (kidNode == null || kidNode.isNull()) {
+                throw new IllegalArgumentException("kid not found in JWT header");
+            }
+
+            return kidNode.asText();
+        } catch (Exception e) {
+            log.error("Failed to extract kid from token", e);
+            throw new IllegalArgumentException("Invalid JWT format");
+        }
+    }
+
+    /**
+     * Build RSA public key from JWKS key node
+     * Apple uses RSA-256 for signing ID tokens
+     */
+    private PublicKey buildPublicKey(JsonNode keyNode) {
+        try {
+            String n = keyNode.get("n").asText();
+            String e = keyNode.get("e").asText();
+
+            byte[] nBytes = Base64.getUrlDecoder().decode(n);
+            byte[] eBytes = Base64.getUrlDecoder().decode(e);
+
+            BigInteger modulus = new BigInteger(1, nBytes);
+            BigInteger exponent = new BigInteger(1, eBytes);
+
+            RSAPublicKeySpec spec = new RSAPublicKeySpec(modulus, exponent);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+            return keyFactory.generatePublic(spec);
+        } catch (Exception e) {
+            log.error("Failed to build public key from JWKS", e);
+            throw new IllegalArgumentException("Failed to build Apple public key");
         }
     }
 }
