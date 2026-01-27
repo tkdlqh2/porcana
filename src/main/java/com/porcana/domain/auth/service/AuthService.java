@@ -82,6 +82,10 @@ public class AuthService {
         User user = userRepository.findByEmail(command.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
+        if (user.getProvider() != User.AuthProvider.EMAIL || user.getPassword() == null) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
         if (!passwordEncoder.matches(command.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
