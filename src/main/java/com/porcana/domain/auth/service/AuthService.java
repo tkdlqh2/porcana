@@ -5,6 +5,8 @@ import com.porcana.domain.arena.repository.ArenaSessionRepository;
 import com.porcana.domain.auth.command.LoginCommand;
 import com.porcana.domain.auth.command.SignupCommand;
 import com.porcana.domain.auth.dto.AuthResponse;
+import com.porcana.domain.auth.oauth.OAuth2Provider;
+import com.porcana.domain.auth.oauth.OAuth2ProviderFactory;
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import com.porcana.domain.user.dto.UserResponse;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -33,6 +36,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PortfolioRepository portfolioRepository;
     private final ArenaSessionRepository arenaSessionRepository;
+    private final OAuth2ProviderFactory oauth2ProviderFactory;
 
     @Transactional
     public AuthResponse signup(SignupCommand command) {
@@ -52,18 +56,16 @@ public class AuthService {
         return new AuthResponse(accessToken, refreshToken, userResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginCommand command) {
-        // EMAIL provider only for now
-        if (command.getProvider() != User.AuthProvider.EMAIL) {
-            throw new UnsupportedOperationException("Only EMAIL provider is supported currently");
-        }
+        User user;
 
-        User user = userRepository.findByEmail(command.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
-
-        if (!passwordEncoder.matches(command.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid email or password");
+        if (command.getProvider() == User.AuthProvider.EMAIL) {
+            // EMAIL login
+            user = loginWithEmail(command);
+        } else {
+            // OAuth login (GOOGLE, APPLE)
+            user = loginWithOAuth(command);
         }
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
@@ -71,6 +73,83 @@ public class AuthService {
         UserResponse userResponse = UserResponse.from(user);
 
         return new AuthResponse(accessToken, refreshToken, userResponse);
+    }
+
+    /**
+     * Login with EMAIL provider
+     */
+    private User loginWithEmail(LoginCommand command) {
+        User user = userRepository.findByEmail(command.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(command.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        return user;
+    }
+
+    /**
+     * Login with OAuth provider (GOOGLE, APPLE)
+     * If user doesn't exist, create a new user automatically
+     */
+    private User loginWithOAuth(LoginCommand command) {
+        // Verify OAuth code and get email
+        OAuth2Provider provider = oauth2ProviderFactory.getProvider(command.getProvider());
+        String email = provider.verifyAndGetEmail(command.getCode());
+
+        log.info("OAuth login with provider {} for email {}", command.getProvider(), email);
+
+        // Find existing user or create new one
+        Optional<User> existingUser = userRepository.findByEmail(email);
+
+        if (existingUser.isPresent()) {
+            User user = existingUser.get();
+
+            // Verify provider matches
+            if (user.getProvider() != command.getProvider()) {
+                throw new IllegalArgumentException(
+                        "Email already registered with different provider: " + user.getProvider()
+                );
+            }
+
+            log.info("Existing OAuth user found: {}", email);
+            return user;
+        }
+
+        // Create new user for OAuth
+        log.info("Creating new OAuth user for email: {}", email);
+
+        User newUser = User.builder()
+                .email(email)
+                .password(null) // OAuth users don't have password
+                .nickname(generateNicknameFromEmail(email))
+                .provider(command.getProvider())
+                .build();
+
+        return userRepository.save(newUser);
+    }
+
+    /**
+     * Generate nickname from email (use part before @)
+     */
+    private String generateNicknameFromEmail(String email) {
+        String baseNickname = email.split("@")[0];
+
+        // Check if nickname exists
+        if (!userRepository.existsByNickname(baseNickname)) {
+            return baseNickname;
+        }
+
+        // If exists, append random suffix
+        String nickname;
+        int suffix = 1;
+        do {
+            nickname = baseNickname + suffix;
+            suffix++;
+        } while (userRepository.existsByNickname(nickname));
+
+        return nickname;
     }
 
     @Transactional(readOnly = true)
