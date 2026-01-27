@@ -157,7 +157,7 @@ public class BatchConfig {
         try {
             // Update ETF prices
             JobParameters etfParams = new JobParametersBuilder()
-                    .addLong("time", System.currentTimeMillis())
+                    .addLong("timestamp", System.currentTimeMillis())
                     .addString("market", "KR")
                     .addString("type", "ETF")
                     .toJobParameters();

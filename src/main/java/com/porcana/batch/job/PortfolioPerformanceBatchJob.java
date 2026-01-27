@@ -23,6 +23,7 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
@@ -30,7 +31,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -68,7 +71,7 @@ public class PortfolioPerformanceBatchJob {
         return new StepBuilder("calculatePortfolioPerformanceStep", jobRepository)
                 .<Portfolio, PortfolioPerformanceResult>chunk(CHUNK_SIZE, transactionManager)
                 .reader(portfolioReader())
-                .processor(portfolioPerformanceProcessor())
+                .processor(portfolioPerformanceProcessor(null))
                 .writer(portfolioPerformanceWriter())
                 .build();
     }
@@ -94,10 +97,19 @@ public class PortfolioPerformanceBatchJob {
      */
     @Bean
     @StepScope
-    public ItemProcessor<Portfolio, PortfolioPerformanceResult> portfolioPerformanceProcessor() {
+    public ItemProcessor<Portfolio, PortfolioPerformanceResult> portfolioPerformanceProcessor(
+            @Value("#{jobParameters['timestamp']}") Long timestamp) {
+
+        // Convert timestamp to LocalDate (KST timezone) and subtract 1 day
+        // (EOD prices are available for the previous day)
+        LocalDate targetDate = Instant.ofEpochMilli(timestamp)
+                .atZone(ZoneId.of("Asia/Seoul"))
+                .toLocalDate()
+                .minusDays(1);
+
+        log.info("Portfolio Performance Processor initialized with target date: {}", targetDate);
+
         return portfolio -> {
-            // Use yesterday as target date (EOD prices are available for yesterday)
-            LocalDate targetDate = LocalDate.now().minusDays(1);
 
             // Skip if performance already exists for this date
             if (dailyReturnRepository.existsByPortfolioIdAndReturnDate(portfolio.getId(), targetDate)) {

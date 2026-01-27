@@ -10,6 +10,7 @@ import lombok.Getter;
 public class LoginCommand {
     private final String email;
     private final String password;
+    private final String code;
     private final User.AuthProvider provider;
 
     public static LoginCommand from(LoginRequest request) {
@@ -20,6 +21,7 @@ public class LoginCommand {
         return LoginCommand.builder()
                 .email(request.email())
                 .password(request.password())
+                .code(request.code())
                 .provider(provider)
                 .build();
     }

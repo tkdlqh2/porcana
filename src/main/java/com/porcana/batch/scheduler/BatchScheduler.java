@@ -9,6 +9,11 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
 /**
  * Scheduler for batch jobs
  * Executes batch jobs at scheduled intervals
@@ -29,6 +34,7 @@ public class BatchScheduler {
     private final Job usEtfDailyPriceJob;
     private final Job exchangeRateJob;
     private final Job assetRiskJob;
+    private final Job portfolioPerformanceJob;
 
     /**
      * Execute Korean asset batch job every 30 minutes
@@ -214,13 +220,15 @@ public class BatchScheduler {
      * Execute exchange rate update batch job every 24 hours
      * Uncomment @Scheduled annotation to enable
      */
-    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
     public void runExchangeRateBatch() {
         try {
             log.info("Starting scheduled exchange rate update batch job");
 
+            // Use specific date/time: 2026-01-22 08:00 KST
+            ZonedDateTime targetDateTime = ZonedDateTime.of(2026, 1, 21, 12, 0, 1, 0, ZoneId.of("Asia/Seoul"));
             JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("timestamp", System.currentTimeMillis())
+                    .addLong("timestamp", targetDateTime.toInstant().toEpochMilli())
                     .toJobParameters();
 
             jobLauncher.run(exchangeRateJob, jobParameters);
@@ -252,6 +260,32 @@ public class BatchScheduler {
 
         } catch (Exception e) {
             log.error("Failed to execute weekly asset risk calculation batch job", e);
+        }
+    }
+
+    /**
+     * Execute portfolio performance calculation batch job every 24 hours
+     * Calculates daily returns for all ACTIVE portfolios
+     * Should run after daily price updates (after 18:00 KST for KR, 07:00 KST for US)
+     * Uncomment @Scheduled annotation to enable
+     */
+//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    public void runPortfolioPerformanceBatch() {
+        try {
+            log.info("Starting scheduled portfolio performance calculation batch job");
+
+            // Use specific date/time: 2026-01-22 08:00 KST
+            ZonedDateTime targetDateTime = ZonedDateTime.of(2026, 1, 24, 8, 0, 1, 0, ZoneId.of("Asia/Seoul"));
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", targetDateTime.toInstant().toEpochMilli())
+                    .toJobParameters();
+
+            jobLauncher.run(portfolioPerformanceJob, jobParameters);
+
+            log.info("Portfolio performance calculation batch job completed successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to execute portfolio performance calculation batch job", e);
         }
     }
 }
