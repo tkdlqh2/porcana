@@ -201,30 +201,35 @@ public class Portfolio {
 
 **Check Constraint**: `(userId IS NULL XOR guestSessionId IS NULL)`
 
-### PortfolioPosition (포지션)
+### PortfolioAsset (포트폴리오 자산)
 
-포트폴리오 내 자산 비중
+포트폴리오 내 자산 구성
 
 ```java
 @Entity
-@Table(name = "portfolio_positions")
-public class PortfolioPosition {
+@Table(name = "portfolio_assets")
+public class PortfolioAsset {
     @Id
     private UUID id;
 
-    @ManyToOne
-    private Portfolio portfolio;
+    private UUID portfolioId;
+    private UUID assetId;
 
-    @ManyToOne
-    private Asset asset;
-
+    /**
+     * 초기 설정 비중 (%)
+     * ⚠️ 실제 현재 비중은 SnapshotAssetDailyReturn.weightUsed 참조
+     */
     private BigDecimal weightPct;  // 0-100
 
-    private LocalDateTime createdAt;
+    private LocalDateTime addedAt;
 }
 ```
 
 **Unique Index**: `(portfolio_id, asset_id)`
+
+**중요:**
+- `weightPct`는 초기 설정 비중 (고정값)
+- **실제 현재 비중**은 `portfolio-domain` skill 참조 → `SnapshotAssetDailyReturn.weightUsed`
 
 ### ArenaSession (아레나 세션)
 
@@ -307,13 +312,16 @@ public class ArenaRound {
 ```
 User 1 --- * Portfolio (mainPortfolioId)
 GuestSession 1 --- * Portfolio
-Portfolio 1 --- * PortfolioPosition
+Portfolio 1 --- * PortfolioAsset
 Portfolio 1 --- 1 ArenaSession
-Asset 1 --- * PortfolioPosition
+Asset 1 --- * PortfolioAsset
 Asset 1 --- * AssetPrice
 Asset 1 --- * AssetRiskHistory
 ArenaSession 1 --- * ArenaRound
 ```
+
+**포트폴리오 수익률 추적:**
+- `PortfolioSnapshot`, `SnapshotAssetDailyReturn` 등은 `portfolio-domain` skill 참조
 
 ## Key Constraints
 
@@ -323,5 +331,11 @@ ArenaSession 1 --- * ArenaRound
    - `(asset_id, price_date)` - AssetPrice
    - `(asset_id, week)` - AssetRiskHistory
    - `(currency_code, exchange_date)` - ExchangeRate
-   - `(portfolio_id, asset_id)` - PortfolioPosition
+   - `(portfolio_id, asset_id)` - PortfolioAsset
 3. **Guest Limits**: 게스트당 최대 3개 포트폴리오
+
+## Related Skills
+
+- **portfolio-domain**: 포트폴리오 수익률 추적, 스냅샷, 일별 리턴 엔티티 상세
+- **arena-specs**: Arena 드래프트 알고리즘 및 추천 로직
+- **batch-jobs**: 배치 작업 및 스케줄링
