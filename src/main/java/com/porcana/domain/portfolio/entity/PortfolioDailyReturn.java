@@ -68,6 +68,13 @@ public class PortfolioDailyReturn {
     private BigDecimal returnFx;
 
     /**
+     * 포트폴리오 전체 평가금액 (원화 기준)
+     * 기준: 초기 10,000,000원 투자 가정
+     */
+    @Column(nullable = false, precision = 20, scale = 2, name = "total_value_krw")
+    private BigDecimal totalValueKrw;
+
+    /**
      * 계산 완료 시각
      */
     @CreationTimestamp
@@ -76,17 +83,20 @@ public class PortfolioDailyReturn {
 
     @Builder(access = AccessLevel.PRIVATE)
     public PortfolioDailyReturn(UUID portfolioId, UUID snapshotId, LocalDate returnDate,
-                                BigDecimal returnTotal, BigDecimal returnLocal, BigDecimal returnFx) {
+                                BigDecimal returnTotal, BigDecimal returnLocal, BigDecimal returnFx,
+                                BigDecimal totalValueKrw) {
         this.portfolioId = portfolioId;
         this.snapshotId = snapshotId;
         this.returnDate = returnDate;
         this.returnTotal = returnTotal;
         this.returnLocal = returnLocal;
         this.returnFx = returnFx;
+        this.totalValueKrw = totalValueKrw;
     }
 
     public static PortfolioDailyReturn from(UUID portfolioId, UUID snapshotId, LocalDate returnDate,
-                                            BigDecimal returnTotal, BigDecimal returnLocal, BigDecimal returnFx) {
+                                            BigDecimal returnTotal, BigDecimal returnLocal, BigDecimal returnFx,
+                                            BigDecimal totalValueKrw) {
         return PortfolioDailyReturn.builder()
                 .portfolioId(portfolioId)
                 .snapshotId(snapshotId)
@@ -94,6 +104,7 @@ public class PortfolioDailyReturn {
                 .returnTotal(returnTotal)
                 .returnLocal(returnLocal)
                 .returnFx(returnFx)
+                .totalValueKrw(totalValueKrw)
                 .build();
     }
 }

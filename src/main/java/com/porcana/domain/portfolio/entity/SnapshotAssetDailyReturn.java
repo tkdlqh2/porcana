@@ -83,6 +83,14 @@ public class SnapshotAssetDailyReturn {
     private BigDecimal contributionTotal;
 
     /**
+     * 자산 평가금액 (원화 기준)
+     * 초기 비중 × 초기 투자금 × (1 + 수익률)
+     * 예: 10% × 10,000,000원 × 1.20 = 1,200,000원
+     */
+    @Column(nullable = false, precision = 20, scale = 2, name = "value_krw")
+    private BigDecimal valueKrw;
+
+    /**
      * 계산 완료 시각
      */
     @CreationTimestamp
@@ -92,7 +100,7 @@ public class SnapshotAssetDailyReturn {
     @Builder(access = AccessLevel.PRIVATE)
     public SnapshotAssetDailyReturn(UUID portfolioId, UUID snapshotId, UUID assetId, LocalDate returnDate,
                                     BigDecimal weightUsed, BigDecimal assetReturnLocal, BigDecimal assetReturnTotal,
-                                    BigDecimal fxReturn, BigDecimal contributionTotal) {
+                                    BigDecimal fxReturn, BigDecimal contributionTotal, BigDecimal valueKrw) {
         this.portfolioId = portfolioId;
         this.snapshotId = snapshotId;
         this.assetId = assetId;
@@ -102,12 +110,13 @@ public class SnapshotAssetDailyReturn {
         this.assetReturnTotal = assetReturnTotal;
         this.fxReturn = fxReturn;
         this.contributionTotal = contributionTotal;
+        this.valueKrw = valueKrw;
     }
 
     public static SnapshotAssetDailyReturn from(UUID portfolioId, UUID snapshotId, UUID assetId, LocalDate returnDate,
                                                 BigDecimal weightUsed, BigDecimal assetReturnLocal,
                                                 BigDecimal assetReturnTotal, BigDecimal fxReturn,
-                                                BigDecimal contributionTotal) {
+                                                BigDecimal contributionTotal, BigDecimal valueKrw) {
         return SnapshotAssetDailyReturn.builder()
                 .portfolioId(portfolioId)
                 .snapshotId(snapshotId)
@@ -118,6 +127,7 @@ public class SnapshotAssetDailyReturn {
                 .assetReturnTotal(assetReturnTotal)
                 .fxReturn(fxReturn)
                 .contributionTotal(contributionTotal)
+                .valueKrw(valueKrw)
                 .build();
     }
 }
