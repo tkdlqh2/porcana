@@ -1,9 +1,11 @@
 package com.porcana.batch.runner;
 
 import com.porcana.domain.portfolio.entity.Portfolio;
+import com.porcana.domain.portfolio.entity.PortfolioDailyReturn;
 import com.porcana.domain.portfolio.entity.PortfolioSnapshot;
 import com.porcana.domain.portfolio.entity.PortfolioSnapshotAsset;
 import com.porcana.domain.portfolio.entity.SnapshotAssetDailyReturn;
+import com.porcana.domain.portfolio.repository.PortfolioDailyReturnRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import com.porcana.domain.portfolio.repository.PortfolioSnapshotAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioSnapshotRepository;
@@ -44,8 +46,14 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
 
     private final PortfolioRepository portfolioRepository;
     private final SnapshotAssetDailyReturnRepository snapshotAssetDailyReturnRepository;
+    private final PortfolioDailyReturnRepository dailyReturnRepository;
     private final PortfolioSnapshotRepository portfolioSnapshotRepository;
     private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
+
+    /**
+     * 초기 가상 투자금 (원화 기준)
+     */
+    private static final BigDecimal INITIAL_INVESTMENT_KRW = new BigDecimal("10000000.00");
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -109,6 +117,13 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
             return 0;
         }
 
+        // Get all portfolio daily returns, ordered by date
+        List<PortfolioDailyReturn> portfolioDailyReturns = dailyReturnRepository
+                .findByPortfolioIdOrderByReturnDateAsc(portfolioId);
+
+        Map<LocalDate, PortfolioDailyReturn> portfolioReturnMap = portfolioDailyReturns.stream()
+                .collect(Collectors.toMap(PortfolioDailyReturn::getReturnDate, pdr -> pdr));
+
         // Group by return date
         Map<LocalDate, List<SnapshotAssetDailyReturn>> returnsByDate = allReturns.stream()
                 .collect(Collectors.groupingBy(SnapshotAssetDailyReturn::getReturnDate));
@@ -121,9 +136,10 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
 
         for (LocalDate returnDate : sortedDates) {
             List<SnapshotAssetDailyReturn> returns = returnsByDate.get(returnDate);
+            PortfolioDailyReturn portfolioDailyReturn = portfolioReturnMap.get(returnDate);
 
             try {
-                recalculateWeightsForDate(portfolioId, returnDate, returns);
+                recalculateWeightsForDate(portfolioId, returnDate, returns, portfolioDailyReturn);
                 recalculated += returns.size();
             } catch (Exception e) {
                 log.error("Failed to recalculate weights for portfolio {} on {}: {}",
@@ -138,17 +154,14 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
      * Recalculate market-cap based weights for a specific date
      */
     private void recalculateWeightsForDate(UUID portfolioId, LocalDate returnDate,
-                                           List<SnapshotAssetDailyReturn> returns) {
+                                           List<SnapshotAssetDailyReturn> returns,
+                                           PortfolioDailyReturn portfolioDailyReturn) {
         if (returns.isEmpty()) {
             return;
         }
 
         // Get snapshot (should be same for all returns in this date)
         UUID snapshotId = returns.get(0).getSnapshotId();
-
-        // Get snapshot to find effective date
-        PortfolioSnapshot snapshot = portfolioSnapshotRepository.findById(snapshotId)
-                .orElseThrow(() -> new IllegalStateException("Snapshot not found: " + snapshotId));
 
         // Get initial weights from snapshot
         List<PortfolioSnapshotAsset> snapshotAssets = portfolioSnapshotAssetRepository.findBySnapshotId(snapshotId);
@@ -158,9 +171,9 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
                         PortfolioSnapshotAsset::getWeight
                 ));
 
-        // Calculate current values
-        BigDecimal totalCurrentValue = BigDecimal.ZERO;
-        Map<UUID, BigDecimal> currentValueMap = new HashMap<>();
+        // Calculate current values (KRW-based)
+        BigDecimal totalCurrentValueKrw = BigDecimal.ZERO;
+        Map<UUID, BigDecimal> currentValueKrwMap = new HashMap<>();
 
         for (SnapshotAssetDailyReturn dailyReturn : returns) {
             UUID assetId = dailyReturn.getAssetId();
@@ -171,45 +184,73 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
                 continue;
             }
 
-            // Calculate current value: initialWeight × (1 + totalReturn/100)
+            // Calculate initial investment amount in KRW
+            BigDecimal initialValueKrw = INITIAL_INVESTMENT_KRW
+                    .multiply(initialWeight)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            // Calculate current value: initialValueKrw × (1 + totalReturn/100)
+            // assetReturnTotal is cumulative return from snapshot start date
             BigDecimal returnMultiplier = BigDecimal.ONE.add(
                     dailyReturn.getAssetReturnTotal().divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP)
             );
-            BigDecimal currentValue = initialWeight.multiply(returnMultiplier);
-            currentValueMap.put(assetId, currentValue);
-            totalCurrentValue = totalCurrentValue.add(currentValue);
+            BigDecimal currentValueKrw = initialValueKrw.multiply(returnMultiplier)
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            currentValueKrwMap.put(assetId, currentValueKrw);
+            totalCurrentValueKrw = totalCurrentValueKrw.add(currentValueKrw);
         }
 
-        // Update weights using reflection
+        // Update asset returns (weights and values) using reflection
         List<SnapshotAssetDailyReturn> updatedReturns = new ArrayList<>();
 
         for (SnapshotAssetDailyReturn dailyReturn : returns) {
             UUID assetId = dailyReturn.getAssetId();
-            BigDecimal currentValue = currentValueMap.get(assetId);
+            BigDecimal currentValueKrw = currentValueKrwMap.get(assetId);
 
-            if (currentValue == null || totalCurrentValue.compareTo(BigDecimal.ZERO) == 0) {
+            if (currentValueKrw == null || totalCurrentValueKrw.compareTo(BigDecimal.ZERO) == 0) {
                 continue;
             }
 
-            // Calculate current weight based on market value
-            BigDecimal currentWeight = currentValue
-                    .divide(totalCurrentValue, 6, RoundingMode.HALF_UP)
+            // Calculate current weight based on market value (KRW)
+            BigDecimal currentWeight = currentValueKrw
+                    .divide(totalCurrentValueKrw, 6, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
 
-            // Update weightUsed using reflection
+            // Update weightUsed and valueKrw using reflection
             try {
                 java.lang.reflect.Field weightUsedField = SnapshotAssetDailyReturn.class.getDeclaredField("weightUsed");
                 weightUsedField.setAccessible(true);
                 weightUsedField.set(dailyReturn, currentWeight);
+
+                java.lang.reflect.Field valueKrwField = SnapshotAssetDailyReturn.class.getDeclaredField("valueKrw");
+                valueKrwField.setAccessible(true);
+                valueKrwField.set(dailyReturn, currentValueKrw);
+
                 updatedReturns.add(dailyReturn);
             } catch (Exception e) {
-                log.error("Failed to update weightUsed for asset {}: {}", assetId, e.getMessage());
+                log.error("Failed to update fields for asset {}: {}", assetId, e.getMessage());
             }
         }
 
-        // Save updated returns
+        // Save updated asset returns
         if (!updatedReturns.isEmpty()) {
             snapshotAssetDailyReturnRepository.saveAll(updatedReturns);
+        }
+
+        // Update portfolio daily return's totalValueKrw
+        if (portfolioDailyReturn != null) {
+            try {
+                java.lang.reflect.Field totalValueKrwField = PortfolioDailyReturn.class.getDeclaredField("totalValueKrw");
+                totalValueKrwField.setAccessible(true);
+                totalValueKrwField.set(portfolioDailyReturn, totalCurrentValueKrw);
+
+                dailyReturnRepository.save(portfolioDailyReturn);
+                log.debug("Updated portfolio daily return for {}: totalValueKrw={}", returnDate, totalCurrentValueKrw);
+            } catch (Exception e) {
+                log.error("Failed to update totalValueKrw for portfolio daily return on {}: {}",
+                        returnDate, e.getMessage());
+            }
         }
     }
 }
