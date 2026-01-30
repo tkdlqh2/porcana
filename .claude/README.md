@@ -8,9 +8,11 @@
 .claude/
 ├── skills/              # 참고 자료 및 간단한 작업
 │   ├── api-conventions/     # API 설계 패턴
+│   ├── api-specs/           # API 엔드포인트 상세 스펙
+│   ├── entity-reference/    # Core Entity 구조
+│   ├── portfolio-domain/    # 포트폴리오 수익률 추적
 │   ├── batch-jobs/          # 배치 작업 레퍼런스
 │   ├── arena-specs/         # Arena 알고리즘 상세
-│   ├── entity-reference/    # Entity 구조 참고
 │   └── test-patterns/       # 테스트 작성 패턴
 │
 ├── agents/              # 복잡한 독립 작업
@@ -93,10 +95,10 @@ Arena 관련 작업 시 자동으로 참조합니다.
 ---
 
 ### 4. entity-reference
-**설명**: Entity 구조 및 관계 참고 자료
+**설명**: Core Entity 구조 및 관계 참고 자료
 
 **사용 시기**:
-- Entity 구조 확인할 때
+- Entity 기본 구조 확인할 때
 - 테이블 관계 파악할 때
 - 새로운 Entity 추가할 때
 
@@ -108,12 +110,42 @@ Entity 관련 작업 시 자동으로 참조합니다.
 **주요 내용**:
 - Core Entities (Asset, Portfolio, User, ArenaSession 등)
 - Enum 정의 (Market, Sector, AssetClass 등)
-- 관계 및 제약 조건
+- 기본 관계 및 제약 조건
 - XOR 소유권 패턴
 
 ---
 
-### 5. test-patterns
+### 5. portfolio-domain
+**설명**: 포트폴리오 수익률 추적 심화 (Snapshot, DailyReturn, weightUsed)
+
+**사용 시기**:
+- 포트폴리오 수익률 계산 로직 작업할 때
+- weightUsed(시가총액 기반 동적 비중) 이해할 때
+- PortfolioSnapshot, SnapshotAssetDailyReturn 구조 확인할 때
+- 배치 수익률 계산 로직 수정할 때
+
+**호출 방법**:
+```
+포트폴리오 수익률 관련 작업 시 자동으로 참조합니다.
+```
+
+**주요 내용**:
+- PortfolioSnapshot, PortfolioSnapshotAsset (리밸런싱 이력)
+- PortfolioDailyReturn, SnapshotAssetDailyReturn
+- **weightUsed**: 시가총액 기반 동적 비중 (❌ 고정 → ✅ 동적)
+- Two-Pass 비중 계산 로직
+- 환율 효과 분리 (로컬 수익률 + 환율 수익률)
+- API에서 최신 weightUsed 조회 방법
+
+**핵심 차이점**:
+```
+초기 비중: PortfolioSnapshotAsset.weight (고정)
+현재 비중: SnapshotAssetDailyReturn.weightUsed (동적, 매일 변함)
+```
+
+---
+
+### 6. test-patterns
 **설명**: 테스트 작성 패턴 및 컨벤션
 
 **사용 시기**:
