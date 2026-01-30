@@ -54,4 +54,17 @@ public interface SnapshotAssetDailyReturnRepository extends JpaRepository<Snapsh
      * Find all asset daily returns for a specific snapshot
      */
     List<SnapshotAssetDailyReturn> findBySnapshotIdOrderByReturnDateAsc(UUID snapshotId);
+
+    /**
+     * Find the most recent asset daily return for a specific portfolio and asset
+     * (Used to get the latest market-cap based weight)
+     */
+    Optional<SnapshotAssetDailyReturn> findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(
+            UUID portfolioId, UUID assetId);
+
+    /**
+     * Find all asset daily returns for the most recent date of a portfolio
+     */
+    List<SnapshotAssetDailyReturn> findByPortfolioIdAndReturnDateOrderByAssetIdAsc(
+            UUID portfolioId, LocalDate returnDate);
 }

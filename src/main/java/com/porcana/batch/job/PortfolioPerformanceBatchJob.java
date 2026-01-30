@@ -217,6 +217,10 @@ public class PortfolioPerformanceBatchJob {
             return Optional.empty();
         }
 
+        // First pass: Calculate returns and current values for all assets
+        List<AssetCalculation> calculations = new ArrayList<>();
+        BigDecimal totalCurrentValue = BigDecimal.ZERO;
+
         for (PortfolioSnapshotAsset snapshotAsset : snapshotAssets) {
             Asset asset = assetMap.get(snapshotAsset.getAssetId());
 
@@ -228,43 +232,66 @@ public class PortfolioPerformanceBatchJob {
             }
 
             AssetReturnResult result = resultOpt.get();
-            BigDecimal weight = snapshotAsset.getWeight();
+            BigDecimal initialWeight = snapshotAsset.getWeight();
 
-            // Calculate contribution to portfolio return
-            BigDecimal contributionTotal = result.assetReturnTotal
-                    .multiply(weight)
+            // Calculate current value: initialWeight × (1 + totalReturn/100)
+            BigDecimal returnMultiplier = BigDecimal.ONE.add(
+                    result.assetReturnTotal.divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP)
+            );
+            BigDecimal currentValue = initialWeight.multiply(returnMultiplier);
+            totalCurrentValue = totalCurrentValue.add(currentValue);
+
+            calculations.add(new AssetCalculation(
+                    asset,
+                    snapshotAsset,
+                    result,
+                    initialWeight,
+                    currentValue
+            ));
+        }
+
+        // Second pass: Calculate normalized weights and contributions
+        for (AssetCalculation calc : calculations) {
+            // Calculate current weight based on market value
+            BigDecimal currentWeight = calc.currentValue
+                    .divide(totalCurrentValue, 6, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+
+            // Calculate contribution to portfolio return using current weight
+            BigDecimal contributionTotal = calc.result.assetReturnTotal
+                    .multiply(calc.initialWeight)  // Use initial weight for contribution
                     .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
-            // Build asset daily return record
+            // Build asset daily return record with current weight
             SnapshotAssetDailyReturn assetReturn = SnapshotAssetDailyReturn.from(
                     portfolio.getId(),
                     snapshot.getId(),
-                    asset.getId(),
+                    calc.asset.getId(),
                     targetDate,
-                    weight,
-                    result.assetReturnLocal,
-                    result.assetReturnTotal,
-                    result.fxReturn,
+                    currentWeight,  // Use calculated current weight (시가총액 기반)
+                    calc.result.assetReturnLocal,
+                    calc.result.assetReturnTotal,
+                    calc.result.fxReturn,
                     contributionTotal
             );
 
             assetReturns.add(assetReturn);
 
-            // Accumulate weighted returns
-            BigDecimal weightedReturnLocal = result.assetReturnLocal
-                    .multiply(weight)
+            // Accumulate weighted returns using initial weight
+            BigDecimal weightedReturnLocal = calc.result.assetReturnLocal
+                    .multiply(calc.initialWeight)
                     .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
-            BigDecimal weightedReturnFx = result.fxReturn
-                    .multiply(weight)
+            BigDecimal weightedReturnFx = calc.result.fxReturn
+                    .multiply(calc.initialWeight)
                     .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
             totalReturnLocal = totalReturnLocal.add(weightedReturnLocal);
             totalReturnFx = totalReturnFx.add(weightedReturnFx);
 
-            log.debug("Asset {}: local={}%, fx={}%, total={}%, weight={}%, contribution={}%",
-                    asset.getSymbol(), result.assetReturnLocal, result.fxReturn,
-                    result.assetReturnTotal, weight, contributionTotal);
+            log.debug("Asset {}: local={}%, fx={}%, total={}%, initialWeight={}%, currentWeight={}%, contribution={}%",
+                    calc.asset.getSymbol(), calc.result.assetReturnLocal, calc.result.fxReturn,
+                    calc.result.assetReturnTotal, calc.initialWeight, currentWeight, contributionTotal);
         }
 
         // Calculate total portfolio return
@@ -446,6 +473,18 @@ public class PortfolioPerformanceBatchJob {
             BigDecimal assetReturnLocal,
             BigDecimal fxReturn,
             BigDecimal assetReturnTotal
+    ) {
+    }
+
+    /**
+     * 자산별 계산 중간 결과 (시가총액 기반 비중 계산용)
+     */
+    private record AssetCalculation(
+            Asset asset,
+            PortfolioSnapshotAsset snapshotAsset,
+            AssetReturnResult result,
+            BigDecimal initialWeight,
+            BigDecimal currentValue
     ) {
     }
 }

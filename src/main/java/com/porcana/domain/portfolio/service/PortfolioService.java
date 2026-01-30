@@ -36,6 +36,7 @@ public class PortfolioService {
     private final UserRepository userRepository;
     private final PortfolioReturnCalculator portfolioReturnCalculator;
     private final PortfolioSnapshotService portfolioSnapshotService;
+    private final SnapshotAssetDailyReturnRepository snapshotAssetDailyReturnRepository;
 
     private static final int MAX_GUEST_PORTFOLIOS = 3;
 
@@ -209,6 +210,9 @@ public class PortfolioService {
         // Calculate individual asset returns
         Map<UUID, Double> assetReturns = portfolioReturnCalculator.calculateAssetReturns(portfolioId, assetIds);
 
+        // Get latest market-cap based weights
+        Map<UUID, Double> latestWeights = getLatestWeights(portfolioId, assetIds);
+
         return portfolioAssets.stream()
                 .map(pa -> {
                     Asset asset = assetMap.get(pa.getAssetId());
@@ -217,6 +221,8 @@ public class PortfolioService {
                     }
 
                     Double returnPct = assetReturns.getOrDefault(pa.getAssetId(), 0.0);
+                    // Use latest market-cap based weight, fallback to initial weight if not available
+                    Double weightPct = latestWeights.getOrDefault(pa.getAssetId(), pa.getWeightPct().doubleValue());
 
                     return PortfolioDetailResponse.PositionInfo.builder()
                             .assetId(asset.getId().toString())
@@ -224,13 +230,31 @@ public class PortfolioService {
                             .name(asset.getName())
                             .currentRiskLevel(asset.getCurrentRiskLevel())
                             .imageUrl(asset.getImageUrl())
-                            .weightPct(pa.getWeightPct().doubleValue())
+                            .weightPct(weightPct)
                             .returnPct(returnPct)
                             .build();
                 })
                 .filter(Objects::nonNull)
                 .sorted((p1, p2) -> Double.compare(p2.getWeightPct(), p1.getWeightPct())) // Sort by weight descending
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get latest market-cap based weights for assets
+     * Returns the most recent weightUsed from SnapshotAssetDailyReturn
+     */
+    private Map<UUID, Double> getLatestWeights(UUID portfolioId, Set<UUID> assetIds) {
+        Map<UUID, Double> weights = new HashMap<>();
+
+        for (UUID assetId : assetIds) {
+            snapshotAssetDailyReturnRepository
+                    .findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId)
+                    .ifPresent(dailyReturn ->
+                            weights.put(assetId, dailyReturn.getWeightUsed().doubleValue())
+                    );
+        }
+
+        return weights;
     }
 
     /**
