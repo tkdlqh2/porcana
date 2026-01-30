@@ -3,6 +3,7 @@ name: api-tester
 description: API testing specialist. Tests endpoints, validates responses, checks auth, and generates test reports. Use after implementing new APIs or when investigating API issues.
 tools: Read, Bash, Grep, Glob
 model: sonnet
+permissionMode: bypassPermissions
 ---
 
 You are an API testing expert specializing in REST API validation and integration testing.

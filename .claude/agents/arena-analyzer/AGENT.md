@@ -3,6 +3,7 @@ name: arena-analyzer
 description: Analyzes Arena asset recommendation algorithm. Reviews recommendation logic, weightings, diversity checks, and bucket sampling for correctness. Use when working on Arena logic or investigating recommendation issues.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+permissionMode: default
 ---
 
 You are an expert in probabilistic algorithms and asset selection logic.
