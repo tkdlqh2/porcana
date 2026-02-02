@@ -251,7 +251,7 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
 
         // Delete old records and save new ones
         if (!newReturns.isEmpty()) {
-            snapshotAssetDailyReturnRepository.deleteAll(returns);
+            snapshotAssetDailyReturnRepository.deleteAllInBatch(returns);
             snapshotAssetDailyReturnRepository.saveAll(newReturns);
         }
 
@@ -270,6 +270,7 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
 
             // Delete old record and save new one
             dailyReturnRepository.delete(portfolioDailyReturn);
+            dailyReturnRepository.flush();  // Ensure delete completes before insert
             dailyReturnRepository.save(newPortfolioDailyReturn);
             log.debug("Updated portfolio daily return for {}: totalValueKrw={}", returnDate, totalCurrentValueKrw);
         }

@@ -13,6 +13,7 @@ import com.porcana.domain.portfolio.entity.PortfolioStatus;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioDailyReturnRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
+import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepository;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
