@@ -201,8 +201,8 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
             totalCurrentValueKrw = totalCurrentValueKrw.add(currentValueKrw);
         }
 
-        // Update asset returns (weights and values) using reflection
-        List<SnapshotAssetDailyReturn> updatedReturns = new ArrayList<>();
+        // Delete old records and create new ones with updated values
+        List<SnapshotAssetDailyReturn> newReturns = new ArrayList<>();
 
         for (SnapshotAssetDailyReturn dailyReturn : returns) {
             UUID assetId = dailyReturn.getAssetId();
@@ -217,40 +217,51 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
                     .divide(totalCurrentValueKrw, 6, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
 
-            // Update weightUsed and valueKrw using reflection
-            try {
-                java.lang.reflect.Field weightUsedField = SnapshotAssetDailyReturn.class.getDeclaredField("weightUsed");
-                weightUsedField.setAccessible(true);
-                weightUsedField.set(dailyReturn, currentWeight);
+            // Recalculate contribution with new weight
+            BigDecimal newContribution = dailyReturn.getAssetReturnTotal()
+                    .multiply(currentWeight)
+                    .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
 
-                java.lang.reflect.Field valueKrwField = SnapshotAssetDailyReturn.class.getDeclaredField("valueKrw");
-                valueKrwField.setAccessible(true);
-                valueKrwField.set(dailyReturn, currentValueKrw);
+            // Create new entity with updated values
+            SnapshotAssetDailyReturn newReturn = SnapshotAssetDailyReturn.from(
+                    dailyReturn.getPortfolioId(),
+                    dailyReturn.getSnapshotId(),
+                    assetId,
+                    dailyReturn.getReturnDate(),
+                    currentWeight,  // Updated weight
+                    dailyReturn.getAssetReturnLocal(),
+                    dailyReturn.getAssetReturnTotal(),
+                    dailyReturn.getFxReturn(),
+                    newContribution,  // Updated contribution
+                    currentValueKrw  // Updated value
+            );
 
-                updatedReturns.add(dailyReturn);
-            } catch (Exception e) {
-                log.error("Failed to update fields for asset {}: {}", assetId, e.getMessage());
-            }
+            newReturns.add(newReturn);
         }
 
-        // Save updated asset returns
-        if (!updatedReturns.isEmpty()) {
-            snapshotAssetDailyReturnRepository.saveAll(updatedReturns);
+        // Delete old records and save new ones
+        if (!newReturns.isEmpty()) {
+            snapshotAssetDailyReturnRepository.deleteAll(returns);
+            snapshotAssetDailyReturnRepository.saveAll(newReturns);
         }
 
         // Update portfolio daily return's totalValueKrw
         if (portfolioDailyReturn != null) {
-            try {
-                java.lang.reflect.Field totalValueKrwField = PortfolioDailyReturn.class.getDeclaredField("totalValueKrw");
-                totalValueKrwField.setAccessible(true);
-                totalValueKrwField.set(portfolioDailyReturn, totalCurrentValueKrw);
+            // Create new entity with updated totalValueKrw
+            PortfolioDailyReturn newPortfolioDailyReturn = PortfolioDailyReturn.from(
+                    portfolioDailyReturn.getPortfolioId(),
+                    portfolioDailyReturn.getSnapshotId(),
+                    portfolioDailyReturn.getReturnDate(),
+                    portfolioDailyReturn.getReturnTotal(),
+                    portfolioDailyReturn.getReturnLocal(),
+                    portfolioDailyReturn.getReturnFx(),
+                    totalCurrentValueKrw  // Updated value
+            );
 
-                dailyReturnRepository.save(portfolioDailyReturn);
-                log.debug("Updated portfolio daily return for {}: totalValueKrw={}", returnDate, totalCurrentValueKrw);
-            } catch (Exception e) {
-                log.error("Failed to update totalValueKrw for portfolio daily return on {}: {}",
-                        returnDate, e.getMessage());
-            }
+            // Delete old record and save new one
+            dailyReturnRepository.delete(portfolioDailyReturn);
+            dailyReturnRepository.save(newPortfolioDailyReturn);
+            log.debug("Updated portfolio daily return for {}: totalValueKrw={}", returnDate, totalCurrentValueKrw);
         }
     }
 }
