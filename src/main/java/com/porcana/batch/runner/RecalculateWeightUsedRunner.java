@@ -189,11 +189,9 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
             BigDecimal initialWeight = initialWeightMap.get(assetId);
 
             if (initialWeight == null) {
-                // Use equal distribution if initial weight is missing
-                log.warn("No initial weight found for asset {} in snapshot {}. Using equal distribution (100 / {} assets).",
-                        assetId, snapshotId, snapshotAssets.size());
-                initialWeight = BigDecimal.valueOf(100.0)
-                        .divide(BigDecimal.valueOf(snapshotAssets.size()), 6, RoundingMode.HALF_UP);
+                log.warn("No initial weight found for asset {} in snapshot {} on {}. Skipping this date to prevent data loss.",
+                        assetId, snapshotId, returnDate);
+                return;  // Skip entire date to preserve existing data
             }
 
             // Calculate initial investment amount in KRW
