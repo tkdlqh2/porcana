@@ -12,9 +12,11 @@ import com.porcana.domain.portfolio.repository.PortfolioSnapshotRepository;
 import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +53,17 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
     private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
 
     /**
+     * Self-injection to enable @Transactional on recalculatePortfolioWeights()
+     * Without this, self-invocation bypasses Spring AOP proxy
+     */
+    private RecalculateWeightUsedRunner self;
+
+    @Autowired
+    public void setSelf(@Lazy RecalculateWeightUsedRunner self) {
+        this.self = self;
+    }
+
+    /**
      * 초기 가상 투자금 (원화 기준)
      */
     private static final BigDecimal INITIAL_INVESTMENT_KRW = new BigDecimal("10000000.00");
@@ -79,7 +92,7 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
                     i + 1, portfolios.size(), portfolio.getName(), portfolio.getId());
 
             try {
-                int processed = recalculatePortfolioWeights(portfolio);
+                int processed = self.recalculatePortfolioWeights(portfolio);
                 totalProcessed += processed;
                 log.info("  ✓ Recalculated {} daily returns", processed);
             } catch (Exception e) {
@@ -105,7 +118,7 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
      * @return Number of daily returns recalculated
      */
     @Transactional
-    protected int recalculatePortfolioWeights(Portfolio portfolio) {
+    public int recalculatePortfolioWeights(Portfolio portfolio) {
         UUID portfolioId = portfolio.getId();
 
         // Get all asset daily returns for this portfolio, ordered by date
