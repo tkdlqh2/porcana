@@ -2,14 +2,9 @@ package com.porcana.batch.runner;
 
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioDailyReturn;
-import com.porcana.domain.portfolio.entity.PortfolioSnapshot;
 import com.porcana.domain.portfolio.entity.PortfolioSnapshotAsset;
 import com.porcana.domain.portfolio.entity.SnapshotAssetDailyReturn;
-import com.porcana.domain.portfolio.repository.PortfolioDailyReturnRepository;
-import com.porcana.domain.portfolio.repository.PortfolioRepository;
-import com.porcana.domain.portfolio.repository.PortfolioSnapshotAssetRepository;
-import com.porcana.domain.portfolio.repository.PortfolioSnapshotRepository;
-import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepository;
+import com.porcana.domain.portfolio.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -157,6 +152,7 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
             } catch (Exception e) {
                 log.error("Failed to recalculate weights for portfolio {} on {}: {}",
                         portfolioId, returnDate, e.getMessage());
+                throw e;
             }
         }
 
@@ -193,8 +189,11 @@ public class RecalculateWeightUsedRunner implements ApplicationRunner {
             BigDecimal initialWeight = initialWeightMap.get(assetId);
 
             if (initialWeight == null) {
-                log.warn("No initial weight found for asset {} in snapshot {}", assetId, snapshotId);
-                continue;
+                // Use equal distribution if initial weight is missing
+                log.warn("No initial weight found for asset {} in snapshot {}. Using equal distribution (100 / {} assets).",
+                        assetId, snapshotId, snapshotAssets.size());
+                initialWeight = BigDecimal.valueOf(100.0)
+                        .divide(BigDecimal.valueOf(snapshotAssets.size()), 6, RoundingMode.HALF_UP);
             }
 
             // Calculate initial investment amount in KRW
