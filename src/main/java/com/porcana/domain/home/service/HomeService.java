@@ -187,8 +187,11 @@ public class HomeService {
         for (UUID assetId : assetIds) {
             snapshotAssetDailyReturnRepository
                     .findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId)
-                    .ifPresent(dailyReturn ->
-                            weights.put(assetId, dailyReturn.getWeightUsed().doubleValue())
+                    .ifPresent(dailyReturn -> {
+                        if (dailyReturn.getWeightUsed() != null) {
+                                weights.put(assetId, dailyReturn.getWeightUsed().doubleValue());
+                            }
+                        }
                     );
         }
 

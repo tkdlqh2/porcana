@@ -271,9 +271,12 @@ public class PortfolioPerformanceBatchJob {
 
             // Calculate current weight based on market value (KRW)
             // 예: 1,200,000 / 11,000,000 × 100 = 10.91%
-            BigDecimal currentWeight = valueKrw
-                    .divide(totalCurrentValueKrw, 6, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100));
+            BigDecimal currentWeight = calc.initialWeight;
+            if (totalCurrentValueKrw.compareTo(BigDecimal.ZERO) > 0) {
+                currentWeight = valueKrw
+                        .divide(totalCurrentValueKrw, 6, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
+            }
 
             // Calculate contribution to portfolio return using initial weight
             BigDecimal contributionTotal = calc.result.assetReturnTotal
