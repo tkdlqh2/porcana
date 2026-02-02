@@ -319,12 +319,21 @@ w = riskWeight × sectorWeight × typeWeight × diversityPenalty
 
 ## 참고 자료
 
-### Skills (자동 로드되는 참고 자료)
+### Skills (도메인별 참고 자료)
+
+**API & Conventions:**
 - `api-conventions` - API 설계 패턴 및 컨벤션
 - `api-specs` - API 엔드포인트 상세 스펙
-- `entity-reference` - Entity 구조 및 관계
+
+**Domain Models:**
+- `entity-reference` - Core Entity 구조 및 관계
+- `portfolio-domain` - 포트폴리오 수익률 추적 (Snapshot, DailyReturn, weightUsed)
+
+**Business Logic:**
+- `arena-specs` - Arena 드래프트 알고리즘
 - `batch-jobs` - Spring Batch 작업 레퍼런스
-- `arena-specs` - Arena 알고리즘 상세
+
+**Testing:**
 - `test-patterns` - 테스트 작성 패턴
 
 ### Subagents (특수 작업용 AI 어시스턴트)

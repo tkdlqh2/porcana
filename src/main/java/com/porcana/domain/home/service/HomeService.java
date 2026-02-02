@@ -10,6 +10,7 @@ import com.porcana.domain.portfolio.entity.PortfolioDailyReturn;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioDailyReturnRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
+import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepository;
 import com.porcana.domain.portfolio.service.PortfolioReturnCalculator;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
@@ -17,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +33,7 @@ public class HomeService {
     private final PortfolioDailyReturnRepository portfolioDailyReturnRepository;
     private final AssetRepository assetRepository;
     private final PortfolioReturnCalculator portfolioReturnCalculator;
+    private final SnapshotAssetDailyReturnRepository snapshotAssetDailyReturnRepository;
 
     public HomeResponse getHome(UUID userId) {
         User user = userRepository.findById(userId)
@@ -148,6 +149,9 @@ public class HomeService {
         // Calculate individual asset returns
         Map<UUID, Double> assetReturns = calculateAssetReturns(portfolioId, assetIds);
 
+        // Get latest market-cap based weights
+        Map<UUID, Double> latestWeights = getLatestWeights(portfolioId, assetIds);
+
         return portfolioAssets.stream()
                 .map(pa -> {
                     Asset asset = assetMap.get(pa.getAssetId());
@@ -156,19 +160,42 @@ public class HomeService {
                     }
 
                     Double returnPct = assetReturns.getOrDefault(pa.getAssetId(), 0.0);
+                    // Use latest market-cap based weight, fallback to initial weight if not available
+                    Double weightPct = latestWeights.getOrDefault(pa.getAssetId(), pa.getWeightPct().doubleValue());
 
                     return HomeResponse.PositionInfo.builder()
                             .assetId(asset.getId().toString())
                             .ticker(asset.getSymbol())
                             .name(asset.getName())
                             .imageUrl(asset.getImageUrl())
-                            .weightPct(pa.getWeightPct().doubleValue())
+                            .weightPct(weightPct)
                             .returnPct(returnPct)
                             .build();
                 })
                 .filter(Objects::nonNull)
                 .sorted((p1, p2) -> Double.compare(p2.getWeightPct(), p1.getWeightPct())) // Sort by weight descending
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get latest market-cap based weights for assets
+     * Returns the most recent weightUsed from SnapshotAssetDailyReturn
+     */
+    private Map<UUID, Double> getLatestWeights(UUID portfolioId, Set<UUID> assetIds) {
+        Map<UUID, Double> weights = new HashMap<>();
+
+        for (UUID assetId : assetIds) {
+            snapshotAssetDailyReturnRepository
+                    .findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId)
+                    .ifPresent(dailyReturn -> {
+                        if (dailyReturn.getWeightUsed() != null) {
+                                weights.put(assetId, dailyReturn.getWeightUsed().doubleValue());
+                            }
+                        }
+                    );
+        }
+
+        return weights;
     }
 
     private Map<UUID, Double> calculateAssetReturns(UUID portfolioId, Set<UUID> assetIds) {

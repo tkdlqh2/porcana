@@ -57,12 +57,27 @@ disable-model-invocation: false
 ./gradlew bootRun --args='--spring.batch.job.names=krEtfDailyPriceJob'
 ```
 
+**19:00 KST (매일) - 포트폴리오 수익률 계산**
+```bash
+# 포트폴리오 일별 수익률 계산
+./gradlew bootRun --args='--spring.batch.job.names=portfolioPerformanceJob'
+```
+
 ## 특수 배치 Job
 
 **US 이미지 업데이트 (수동 실행)**
 ```bash
 # 미국 주식 이미지 URL 업데이트
 ./gradlew bootRun --args='--spring.batch.job.names=usImageUpdateJob'
+```
+
+**포트폴리오 비중 재계산 (일회성 수동 실행)**
+```bash
+# application.yml에서 enabled=true 설정 후 실행
+# 또는 환경변수로 활성화
+RECALCULATE_WEIGHT_USED_ENABLED=true ./gradlew bootRun
+
+# 기존 SnapshotAssetDailyReturn의 weightUsed를 시가총액 기반으로 재계산
 ```
 
 ## Batch Job 구조 패턴
@@ -122,9 +137,154 @@ public void runKrDailyPriceUpdate()
 public void runUsDailyPriceUpdate()
 ```
 
+## 포트폴리오 수익률 계산 (Portfolio Performance Batch)
+
+### 목적
+- ACTIVE 상태 포트폴리오의 일별 수익률 계산
+- 시가총액 기반 동적 비중 계산 및 저장
+- 환율 효과 분리 추적 (로컬 수익률 vs 환율 수익률)
+
+### 계산 로직
+
+**1. 적용 스냅샷 찾기**
+```java
+// effectiveDate <= targetDate 중 가장 최근 스냅샷 사용
+PortfolioSnapshot snapshot = findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+    portfolioId, targetDate
+);
+```
+
+**2. 금액 기반 비중 계산 (초기 투자금 10,000,000원 가정)**
+```java
+// 초기 가상 투자금
+private static final BigDecimal INITIAL_INVESTMENT_KRW = new BigDecimal("10000000.00");
+
+// First pass: 자산별 현재 평가금액 계산 (KRW)
+for (각 자산) {
+    초기비중 = snapshotAsset.getWeight();  // 예: 10.0%
+    초기금액 = 10,000,000 × 0.10 = 1,000,000원
+
+    수익률 = calculateAssetReturn(...);
+    현재평가금액 = 초기금액 × (1 + 수익률/100);  // valueKrw
+
+    전체평가금액 += 현재평가금액;
+}
+
+// Second pass: 비중 자동 계산 및 저장
+for (각 자산) {
+    현재비중 = (valueKrw / totalValueKrw) × 100;  // weightUsed
+    // SnapshotAssetDailyReturn에 weightUsed, valueKrw 저장
+}
+
+// PortfolioDailyReturn에 totalValueKrw 저장
+```
+
+**예시:**
+- 삼성전자: 초기 10%(1,000,000원), 수익률 +20% → valueKrw 1,200,000원 → 비중 약 10.9%
+- 카카오: 초기 10%(1,000,000원), 수익률 -10% → valueKrw 900,000원 → 비중 약 9.1%
+- 전체: totalValueKrw = 11,000,000원
+
+**3. 환율 효과 분리**
+```java
+// 미국 자산의 경우
+assetReturnTotal = assetReturnLocal + fxReturn
+
+// 한국 자산의 경우
+fxReturn = 0
+assetReturnTotal = assetReturnLocal
+```
+
+### 저장 데이터
+
+**PortfolioDailyReturn (포트폴리오 전체)**
+- `return_total`: 전체 수익률 (%)
+- `return_local`: 로컬 가격 변동 수익률 (%)
+- `return_fx`: 환율 변동 수익률 (%)
+- `total_value_krw`: **포트폴리오 전체 평가금액 (원화)** 💰
+
+**SnapshotAssetDailyReturn (자산별)**
+- `weight_used`: **금액 기반 동적 비중** (%)
+- `value_krw`: **자산 평가금액 (원화)** 💰
+- `asset_return_local`: 자산 로컬 수익률 (%)
+- `asset_return_total`: 자산 전체 수익률 (%)
+- `fx_return`: 환율 수익률 (%)
+- `contribution_total`: 포트폴리오 수익률 기여도 (%)
+
+### 중요 포인트
+
+**금액 기반 계산 (가장 중요):**
+- 초기 투자금: **10,000,000원** 가정
+- `valueKrw`: 자산 평가금액 (원화) - 실제 금액
+- `totalValueKrw`: 포트폴리오 전체 평가금액 (원화)
+- `weightUsed`: 금액 기반으로 자동 계산된 동적 비중 (%)
+
+**weightUsed 계산 변화:**
+- ❌ **이전**: 스냅샷의 고정 비중을 그대로 복사 (시간이 지나도 변하지 않음)
+- ✅ **현재**: 금액 기반 동적 비중 (가격 변동에 따라 자동 조정)
+
+**API에서 사용:**
+```java
+// HomeService, PortfolioService
+// 최신 weightUsed를 조회하여 현재 비중 표시
+Optional<SnapshotAssetDailyReturn> latest =
+    findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId);
+Double currentWeight = latest.get().getWeightUsed();
+```
+
+## 포트폴리오 비중 재계산 (Recalculate Weight Used)
+
+### 목적
+기존에 잘못 계산된 `weightUsed` 데이터를 시가총액 기반으로 재계산
+
+### 사용법
+```bash
+# 방법 1: 환경변수 사용 (권장)
+RECALCULATE_WEIGHT_USED_ENABLED=true ./gradlew bootRun
+
+# 방법 2: application.yml 수정
+# batch.runner.recalculate-weight-used.enabled: true 설정 후
+./gradlew bootRun
+```
+
+### 설정
+```yaml
+# application.yml
+batch:
+  runner:
+    recalculate-weight-used:
+      enabled: false  # 기본값: false (비활성화)
+```
+
+### 처리 흐름
+```
+1. 모든 포트폴리오 조회
+2. 각 포트폴리오에 대해:
+   ├─ 모든 SnapshotAssetDailyReturn 조회 (날짜순)
+   ├─ 날짜별로 그룹핑
+   └─ 각 날짜에 대해 시가총액 기반 비중 재계산
+3. Reflection을 사용하여 weightUsed 필드 업데이트
+```
+
+### 로그 예시
+```
+[1/15] Processing portfolio: My Portfolio (uuid-123)
+  ✓ Recalculated 45 daily returns
+[2/15] Processing portfolio: Test Portfolio (uuid-456)
+  ✓ Recalculated 30 daily returns
+...
+========================================
+WeightUsed Recalculation completed
+Total portfolios: 15
+Successfully processed: 15
+Failed: 0
+Total daily returns recalculated: 675
+========================================
+```
+
 ## 공통 처리 원칙
 
 - **Upsert 전략**: symbol + market을 natural key로 사용
 - **as_of 관리**: 배치 실행일을 기록
 - **active 플래그**: 유니버스 포함 종목만 true
 - **이력 관리**: as_of 기준으로 과거 데이터 조회 가능
+- **동적 비중**: weightUsed는 시가총액 기반으로 매일 자동 조정

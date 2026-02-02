@@ -60,6 +60,9 @@ batch:
       base-url: https://financialmodelingprep.com
     exchangerate:
       api-key: ${KOREAEXIM_API_KEY:}
+  runner:
+    recalculate-weight-used:
+      enabled: ${RECALCULATE_WEIGHT_USED_ENABLED:false}  # Enable to recalculate existing weightUsed data
 
 management:
   endpoints:
