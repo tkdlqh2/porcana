@@ -104,7 +104,7 @@ public class PortfolioPerformanceBatchJob {
     @Bean
     @StepScope
     public ItemProcessor<Portfolio, PortfolioPerformanceResult> portfolioPerformanceProcessor(
-            @Value("#{jobParameters['timestamp']}") Long timestamp) {
+            @Value("#{jobParameters['timestamp'] ?: T(System).currentTimeMillis()}") Long timestamp) {
 
         // Convert timestamp to LocalDate (KST timezone) and subtract 1 day
         // (EOD prices are available for the previous day)
