@@ -2,18 +2,25 @@ package com.porcana.domain.auth.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.Base64;
 
 /**
  * Google OAuth2 Provider implementation
- * Verifies Google authorization code and extracts user email
+ * Verifies Google ID Token and extracts user email
  */
 @Slf4j
 @Component
@@ -26,27 +33,17 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
     @Value("${oauth.google.client-id:}")
     private String clientId;
 
-    @Value("${oauth.google.client-secret:}")
-    private String clientSecret;
-
-    @Value("${oauth.google.redirect-uri:}")
-    private String redirectUri;
-
-    private static final String TOKEN_URL = "https://oauth2.googleapis.com/token";
-    private static final String USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
+    private static final String JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
+    private static final String GOOGLE_ISSUER = "https://accounts.google.com";
+    private static final String GOOGLE_ISSUER_ALT = "accounts.google.com";
 
     @Override
-    public String verifyAndGetEmail(String code) {
+    public String verifyAndGetEmail(String idToken) {
         try {
-            // Step 1: Exchange authorization code for access token
-            String accessToken = exchangeCodeForToken(code);
-
-            // Step 2: Get user info using access token
-            return getUserEmail(accessToken);
-
+            return extractEmailFromIdToken(idToken);
         } catch (Exception e) {
-            log.error("Failed to verify Google OAuth code", e);
-            throw new IllegalArgumentException("Invalid Google authorization code");
+            log.error("Failed to verify Google ID token", e);
+            throw new IllegalArgumentException("Invalid Google ID token");
         }
     }
 
@@ -56,81 +53,147 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
     }
 
     /**
-     * Exchange authorization code for access token
+     * Extract email from Google ID token (JWT) with signature verification
      */
-    private String exchangeCodeForToken(String code) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("code", code);
-        params.add("client_id", clientId);
-        params.add("client_secret", clientSecret);
-        params.add("redirect_uri", redirectUri);
-        params.add("grant_type", "authorization_code");
-
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                TOKEN_URL,
-                HttpMethod.POST,
-                request,
-                String.class
-        );
-
-        if (response.getStatusCode() != HttpStatus.OK) {
-            throw new IllegalArgumentException("Failed to exchange code for token");
-        }
-
+    private String extractEmailFromIdToken(String idToken) {
         try {
-            JsonNode jsonNode = objectMapper.readTree(response.getBody());
-            JsonNode accessTokenNode = jsonNode.get("access_token");
-            if (accessTokenNode == null || accessTokenNode.isNull()) {
-                throw new IllegalArgumentException("access_token not found in Google response");
+            // Step 1: Get Google's public key from JWKS endpoint
+            PublicKey publicKey = getGooglePublicKey(idToken);
+
+            // Step 2: Verify signature and parse claims
+            Claims claims = Jwts.parser()
+                    .verifyWith(publicKey)
+                    .build()
+                    .parseSignedClaims(idToken)
+                    .getPayload();
+
+            // Step 3: Verify issuer
+            String issuer = claims.getIssuer();
+            if (!GOOGLE_ISSUER.equals(issuer) && !GOOGLE_ISSUER_ALT.equals(issuer)) {
+                throw new IllegalArgumentException("Invalid issuer: " + issuer);
             }
-            return accessTokenNode.asText();
-        } catch (Exception e) {
-            log.error("Failed to parse Google token response", e);
-            throw new IllegalArgumentException("Invalid token response from Google");
+
+            // Step 4: Verify audience (client ID)
+            Object audClaim = claims.get("aud");
+            boolean audienceValid = false;
+            if (audClaim instanceof String) {
+                audienceValid = clientId.equals(audClaim);
+            } else if (audClaim instanceof java.util.Collection) {
+                audienceValid = ((java.util.Collection<?>) audClaim).contains(clientId);
+            }
+            if (!audienceValid) {
+                log.warn("Audience mismatch - expected: {}, actual: {}", clientId, audClaim);
+                throw new IllegalArgumentException("Invalid audience");
+            }
+
+            // Step 5: Extract email
+            String email = claims.get("email", String.class);
+            if (email == null || email.isBlank()) {
+                throw new IllegalArgumentException("Email not found in Google ID token");
+            }
+
+            log.info("Successfully verified Google ID token for email: {}", email);
+            return email;
+
+        } catch (SignatureException e) {
+            log.error("Google ID token signature verification failed", e);
+            throw new IllegalArgumentException("Invalid Google ID token signature");
+        } catch (ExpiredJwtException e) {
+            log.error("Google ID token has expired", e);
+            throw new IllegalArgumentException("Expired Google ID token");
+        } catch (MalformedJwtException e) {
+            log.error("Malformed Google ID token", e);
+            throw new IllegalArgumentException("Malformed Google ID token");
         }
     }
 
     /**
-     * Get user email using access token
+     * Get Google's public key from JWKS endpoint for JWT verification
+     * Uses the 'kid' (key ID) from JWT header to select the correct key
      */
-    private String getUserEmail(String accessToken) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                USER_INFO_URL,
-                HttpMethod.GET,
-                request,
-                String.class
-        );
-
-        if (response.getStatusCode() != HttpStatus.OK) {
-            throw new IllegalArgumentException("Failed to get user info from Google");
-        }
-
+    private PublicKey getGooglePublicKey(String idToken) {
         try {
-            JsonNode jsonNode = objectMapper.readTree(response.getBody());
-            JsonNode emailNode = jsonNode.get("email");
-            if (emailNode == null || emailNode.isNull()) {
-                throw new IllegalArgumentException("Email not found in Google user info");
-            }
-            String email = emailNode.asText();
+            // Step 1: Extract 'kid' from JWT header
+            String kid = extractKidFromToken(idToken);
 
-            if (email.isBlank() || "null".equals(email)) {
-                throw new IllegalArgumentException("Email not found in Google user info");
+            // Step 2: Fetch JWKS from Google
+            ResponseEntity<String> response = restTemplate.getForEntity(JWKS_URL, String.class);
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new IllegalStateException("Failed to fetch Google JWKS");
             }
 
-            return email;
+            // Step 3: Parse JWKS and find matching key
+            JsonNode jwksNode = objectMapper.readTree(response.getBody());
+            JsonNode keysNode = jwksNode.get("keys");
+            if (keysNode == null || !keysNode.isArray()) {
+                throw new IllegalStateException("Invalid JWKS format from Google");
+            }
+
+            // Step 4: Find key with matching 'kid'
+            for (JsonNode keyNode : keysNode) {
+                String keyKid = keyNode.get("kid").asText();
+                if (kid.equals(keyKid)) {
+                    return buildPublicKey(keyNode);
+                }
+            }
+
+            throw new IllegalArgumentException("No matching public key found for kid: " + kid);
+
         } catch (Exception e) {
-            log.error("Failed to parse Google user info response", e);
-            throw new IllegalArgumentException("Invalid user info response from Google");
+            log.error("Failed to get Google public key", e);
+            throw new IllegalArgumentException("Failed to verify Google ID token");
+        }
+    }
+
+    /**
+     * Extract 'kid' (key ID) from JWT header
+     */
+    private String extractKidFromToken(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                throw new IllegalArgumentException("Invalid JWT format");
+            }
+
+            String header = new String(
+                    Base64.getUrlDecoder().decode(parts[0]),
+                    StandardCharsets.UTF_8
+            );
+
+            JsonNode headerNode = objectMapper.readTree(header);
+            JsonNode kidNode = headerNode.get("kid");
+            if (kidNode == null || kidNode.isNull()) {
+                throw new IllegalArgumentException("kid not found in JWT header");
+            }
+
+            return kidNode.asText();
+        } catch (Exception e) {
+            log.error("Failed to extract kid from token", e);
+            throw new IllegalArgumentException("Invalid JWT format");
+        }
+    }
+
+    /**
+     * Build RSA public key from JWKS key node
+     */
+    private PublicKey buildPublicKey(JsonNode keyNode) {
+        try {
+            String n = keyNode.get("n").asText();
+            String e = keyNode.get("e").asText();
+
+            byte[] nBytes = Base64.getUrlDecoder().decode(n);
+            byte[] eBytes = Base64.getUrlDecoder().decode(e);
+
+            BigInteger modulus = new BigInteger(1, nBytes);
+            BigInteger exponent = new BigInteger(1, eBytes);
+
+            RSAPublicKeySpec spec = new RSAPublicKeySpec(modulus, exponent);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+            return keyFactory.generatePublic(spec);
+        } catch (Exception e) {
+            log.error("Failed to build public key from JWKS", e);
+            throw new IllegalArgumentException("Failed to build Google public key");
         }
     }
 }
