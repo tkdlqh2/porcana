@@ -67,7 +67,8 @@ public class PortfolioService {
                 .map(portfolio -> {
                     Double totalReturnPct = calculateTotalReturn(portfolio.getId());
                     boolean isMain = portfolio.getId().equals(finalMainPortfolioId);
-                    return PortfolioListResponse.from(portfolio, isMain, totalReturnPct);
+                    List<PortfolioListResponse.TopAsset> topAssets = getTopAssets(portfolio.getId());
+                    return PortfolioListResponse.from(portfolio, isMain, totalReturnPct, topAssets);
                 })
                 .collect(Collectors.toList());
     }
@@ -389,6 +390,14 @@ public class PortfolioService {
         } else {
             return "HIGH";
         }
+    }
+
+    /**
+     * Get top 3 assets by weight for portfolio list
+     * Uses QueryDSL to fetch latest market-cap based weights in a single query
+     */
+    private List<PortfolioListResponse.TopAsset> getTopAssets(UUID portfolioId) {
+        return snapshotAssetDailyReturnRepository.findTopAssetsByWeight(portfolioId, 3);
     }
 
     @Transactional
