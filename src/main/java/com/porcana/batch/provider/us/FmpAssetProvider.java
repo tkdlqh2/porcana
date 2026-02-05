@@ -35,7 +35,7 @@ import java.util.Set;
 public class FmpAssetProvider implements UsAssetDataProvider {
 
     private static final String PROFILE_ENDPOINT = "/stable/profile";
-    private static final String HISTORICAL_PRICE_ENDPOINT = "/stable/historical-price-eod/light";
+    private static final String HISTORICAL_PRICE_ENDPOINT = "/stable/historical-price-eod/full";
     private static final String SP500_CSV = "batch/s&p500.csv";
     private static final String NASDAQ100_CSV = "batch/nasdaq100.csv";
 
@@ -250,10 +250,19 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             // Get the most recent price (first in array, as FMP returns newest first)
             FmpHistoricalPrice latestPrice = prices[0];
 
+            // Use OHLC if available, otherwise fallback to price field
+            Double openVal = latestPrice.getOpen();
+            Double highVal = latestPrice.getHigh();
+            Double lowVal = latestPrice.getLow();
+            Double closeVal = latestPrice.getClose();
+
             return AssetPrice.builder()
                     .asset(asset)
                     .priceDate(LocalDate.parse(latestPrice.getDate()))
-                    .price(BigDecimal.valueOf(latestPrice.getPrice()))
+                    .openPrice(BigDecimal.valueOf(openVal))
+                    .highPrice(BigDecimal.valueOf(highVal))
+                    .lowPrice(BigDecimal.valueOf(lowVal))
+                    .closePrice(BigDecimal.valueOf(closeVal))
                     .volume(latestPrice.getVolume())
                     .build();
 
@@ -294,10 +303,19 @@ public class FmpAssetProvider implements UsAssetDataProvider {
 
             List<AssetPrice> assetPrices = new ArrayList<>();
             for (FmpHistoricalPrice price : prices) {
+                // Use OHLC if available, otherwise fallback to price field
+                Double openVal = price.getOpen();
+                Double highVal = price.getHigh();
+                Double lowVal = price.getLow();
+                Double closeVal = price.getClose();
+
                 AssetPrice assetPrice = AssetPrice.builder()
                         .asset(asset)
                         .priceDate(LocalDate.parse(price.getDate()))
-                        .price(BigDecimal.valueOf(price.getPrice()))
+                        .openPrice(BigDecimal.valueOf(openVal))
+                        .highPrice(BigDecimal.valueOf(highVal))
+                        .lowPrice(BigDecimal.valueOf(lowVal))
+                        .closePrice(BigDecimal.valueOf(closeVal))
                         .volume(price.getVolume())
                         .build();
                 assetPrices.add(assetPrice);
@@ -362,8 +380,17 @@ public class FmpAssetProvider implements UsAssetDataProvider {
         @JsonProperty("date")
         private String date;
 
-        @JsonProperty("price")
-        private Double price;
+        @JsonProperty("open")
+        private Double open;
+
+        @JsonProperty("high")
+        private Double high;
+
+        @JsonProperty("low")
+        private Double low;
+
+        @JsonProperty("close")
+        private Double close;
 
         @JsonProperty("volume")
         private Long volume;

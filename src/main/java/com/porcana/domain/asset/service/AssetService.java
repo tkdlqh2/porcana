@@ -85,7 +85,11 @@ public class AssetService {
         List<AssetChartResponse.ChartPoint> points = prices.stream()
                 .map(price -> AssetChartResponse.ChartPoint.builder()
                         .date(price.getPriceDate())
-                        .price(price.getPrice().doubleValue())
+                        .open(price.getOpenPrice().doubleValue())
+                        .high(price.getHighPrice().doubleValue())
+                        .low(price.getLowPrice().doubleValue())
+                        .close(price.getClosePrice().doubleValue())
+                        .volume(price.getVolume())
                         .build())
                 .collect(Collectors.toList());
 

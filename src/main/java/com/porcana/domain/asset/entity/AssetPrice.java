@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * End-of-Day (EOD) price data for assets
- * Stores historical daily price information
+ * Stores historical daily OHLC (Open, High, Low, Close) price information
  */
 @Entity
 @Table(name = "asset_prices", indexes = {
@@ -37,9 +37,33 @@ public class AssetPrice {
     @Column(nullable = false, name = "price_date")
     private LocalDate priceDate;
 
-    @Column(nullable = false, precision = 20, scale = 4)
-    private BigDecimal price;
+    /**
+     * Opening price (시가)
+     */
+    @Column(name = "open_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal openPrice;
 
+    /**
+     * Highest price (고가)
+     */
+    @Column(name = "high_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal highPrice;
+
+    /**
+     * Lowest price (저가)
+     */
+    @Column(name = "low_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal lowPrice;
+
+    /**
+     * Closing price (종가)
+     */
+    @Column(name = "close_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal closePrice;
+
+    /**
+     * Trading volume (거래량)
+     */
     @Column(nullable = false)
     private Long volume;
 
@@ -48,10 +72,22 @@ public class AssetPrice {
     private LocalDateTime createdAt;
 
     @Builder
-    public AssetPrice(Asset asset, LocalDate priceDate, BigDecimal price, Long volume) {
+    public AssetPrice(Asset asset, LocalDate priceDate, BigDecimal openPrice, BigDecimal highPrice,
+                      BigDecimal lowPrice, BigDecimal closePrice, Long volume) {
         this.asset = asset;
         this.priceDate = priceDate;
-        this.price = price;
+        this.openPrice = openPrice;
+        this.highPrice = highPrice;
+        this.lowPrice = lowPrice;
+        this.closePrice = closePrice;
         this.volume = volume;
+    }
+
+    /**
+     * Legacy getter for backward compatibility
+     * Returns close price as the representative price
+     */
+    public BigDecimal getPrice() {
+        return closePrice;
     }
 }

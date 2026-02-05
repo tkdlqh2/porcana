@@ -17,6 +17,10 @@ public class AssetChartResponse {
     @Builder
     public static class ChartPoint {
         private final LocalDate date;
-        private final Double price;
+        private final Double open;
+        private final Double high;
+        private final Double low;
+        private final Double close;
+        private final Long volume;
     }
 }
