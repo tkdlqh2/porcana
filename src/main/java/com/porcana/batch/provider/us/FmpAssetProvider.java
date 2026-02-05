@@ -251,10 +251,10 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             FmpHistoricalPrice latestPrice = prices[0];
 
             // Use OHLC if available, otherwise fallback to price field
-            Double openVal = latestPrice.getOpen() != null ? latestPrice.getOpen() : latestPrice.getPrice();
-            Double highVal = latestPrice.getHigh() != null ? latestPrice.getHigh() : latestPrice.getPrice();
-            Double lowVal = latestPrice.getLow() != null ? latestPrice.getLow() : latestPrice.getPrice();
-            Double closeVal = latestPrice.getClose() != null ? latestPrice.getClose() : latestPrice.getPrice();
+            Double openVal = latestPrice.getOpen();
+            Double highVal = latestPrice.getHigh();
+            Double lowVal = latestPrice.getLow();
+            Double closeVal = latestPrice.getClose();
 
             return AssetPrice.builder()
                     .asset(asset)
@@ -304,10 +304,10 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             List<AssetPrice> assetPrices = new ArrayList<>();
             for (FmpHistoricalPrice price : prices) {
                 // Use OHLC if available, otherwise fallback to price field
-                Double openVal = price.getOpen() != null ? price.getOpen() : price.getPrice();
-                Double highVal = price.getHigh() != null ? price.getHigh() : price.getPrice();
-                Double lowVal = price.getLow() != null ? price.getLow() : price.getPrice();
-                Double closeVal = price.getClose() != null ? price.getClose() : price.getPrice();
+                Double openVal = price.getOpen();
+                Double highVal = price.getHigh();
+                Double lowVal = price.getLow();
+                Double closeVal = price.getClose();
 
                 AssetPrice assetPrice = AssetPrice.builder()
                         .asset(asset)
