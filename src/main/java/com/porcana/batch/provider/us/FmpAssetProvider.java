@@ -255,6 +255,13 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             Double highVal = latestPrice.getHigh();
             Double lowVal = latestPrice.getLow();
             Double closeVal = latestPrice.getClose();
+            if (closeVal == null) {
+                log.warn("No close price for symbol: {}", asset.getSymbol());
+                return null;
+            }
+            if (openVal == null) openVal = closeVal;
+            if (highVal == null) highVal = closeVal;
+            if (lowVal == null) lowVal = closeVal;
 
             return AssetPrice.builder()
                     .asset(asset)

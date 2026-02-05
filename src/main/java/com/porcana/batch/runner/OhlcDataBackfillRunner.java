@@ -45,7 +45,7 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
     private final DataGoKrEtfPriceProvider dataGoKrEtfPriceProvider;
     private final FmpAssetProvider fmpAssetProvider;
 
-    private static final LocalDate BACKFILL_START_DATE = LocalDate.of(2025, 1, 13);
+    private static final LocalDate BACKFILL_START_DATE = LocalDate.of(2025, 2, 5);
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
