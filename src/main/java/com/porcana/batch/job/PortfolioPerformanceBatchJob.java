@@ -106,9 +106,16 @@ public class PortfolioPerformanceBatchJob {
     public ItemProcessor<Portfolio, PortfolioPerformanceResult> portfolioPerformanceProcessor(
             @Value("#{jobParameters['timestamp'] ?: T(System).currentTimeMillis()}") Long timestamp) {
 
+        // If timestamp is null, use current time
+        long effectiveTimestamp = (timestamp != null) ? timestamp : System.currentTimeMillis();
+
+        if (timestamp == null) {
+            log.info("timestamp parameter is null, using current time: {}", effectiveTimestamp);
+        }
+
         // Convert timestamp to LocalDate (KST timezone) and subtract 1 day
         // (EOD prices are available for the previous day)
-        LocalDate targetDate = Instant.ofEpochMilli(timestamp)
+        LocalDate targetDate = Instant.ofEpochMilli(effectiveTimestamp)
                 .atZone(ZoneId.of("Asia/Seoul"))
                 .toLocalDate()
                 .minusDays(1);

@@ -61,6 +61,8 @@ batch:
   runner:
     recalculate-weight-used:
       enabled: ${RECALCULATE_WEIGHT_USED_ENABLED:false}  # Enable to recalculate existing weightUsed data
+    ohlc-backfill:
+      enabled: ${OHLC_BACKFILL_ENABLED:false}  # Enable to backfill OHLC data from 2025-01-13
 
 management:
   endpoints:

@@ -2,6 +2,8 @@ package com.porcana.domain.portfolio.repository;
 
 import com.porcana.domain.portfolio.entity.SnapshotAssetDailyReturn;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -10,7 +12,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SnapshotAssetDailyReturnRepository extends JpaRepository<SnapshotAssetDailyReturn, UUID> {
+public interface SnapshotAssetDailyReturnRepository extends JpaRepository<SnapshotAssetDailyReturn, UUID>,
+        SnapshotAssetDailyReturnRepositoryCustom {
 
     /**
      * Find asset daily return for a specific portfolio, snapshot, asset, and date

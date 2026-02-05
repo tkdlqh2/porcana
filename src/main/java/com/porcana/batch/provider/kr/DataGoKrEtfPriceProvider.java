@@ -88,19 +88,30 @@ public class DataGoKrEtfPriceProvider {
             DataGoKrResponse.Item latestItem = body.getItems().getItem().get(0);
 
             LocalDate priceDate = parseDate(latestItem.getBasDt());
-            BigDecimal price = parsePrice(latestItem.getClpr());
+            BigDecimal openPrice = parsePrice(String.valueOf(latestItem.getMkp()));
+            BigDecimal highPrice = parsePrice(String.valueOf(latestItem.getHipr()));
+            BigDecimal lowPrice = parsePrice(String.valueOf(latestItem.getLopr()));
+            BigDecimal closePrice = parsePrice(latestItem.getClpr());
             Long volume = latestItem.getTrqu();
 
-            if (priceDate == null || price == null || volume == null) {
-                log.warn("Invalid price data for ETF symbol: {} (date: {}, price: {}, volume: {})",
-                        asset.getSymbol(), priceDate, price, volume);
+            if (priceDate == null || closePrice == null || volume == null) {
+                log.warn("Invalid price data for ETF symbol: {} (date: {}, close: {}, volume: {})",
+                        asset.getSymbol(), priceDate, closePrice, volume);
                 return null;
             }
+
+            // Fallback to close price if OHLC data is missing
+            if (openPrice == null) openPrice = closePrice;
+            if (highPrice == null) highPrice = closePrice;
+            if (lowPrice == null) lowPrice = closePrice;
 
             return AssetPrice.builder()
                     .asset(asset)
                     .priceDate(priceDate)
-                    .price(price)
+                    .openPrice(openPrice)
+                    .highPrice(highPrice)
+                    .lowPrice(lowPrice)
+                    .closePrice(closePrice)
                     .volume(volume)
                     .build();
 
@@ -164,14 +175,25 @@ public class DataGoKrEtfPriceProvider {
             for (DataGoKrResponse.Item item : body.getItems().getItem()) {
                 try {
                     LocalDate priceDate = parseDate(item.getBasDt());
-                    BigDecimal price = parsePrice(item.getClpr());
+                    BigDecimal openPrice = parsePrice(String.valueOf(item.getMkp()));
+                    BigDecimal highPrice = parsePrice(String.valueOf(item.getHipr()));
+                    BigDecimal lowPrice = parsePrice(String.valueOf(item.getLopr()));
+                    BigDecimal closePrice = parsePrice(item.getClpr());
                     Long volume = item.getTrqu();
 
-                    if (priceDate != null && price != null && volume != null) {
+                    if (priceDate != null && closePrice != null && volume != null) {
+                        // Fallback to close price if OHLC data is missing
+                        if (openPrice == null) openPrice = closePrice;
+                        if (highPrice == null) highPrice = closePrice;
+                        if (lowPrice == null) lowPrice = closePrice;
+
                         AssetPrice assetPrice = AssetPrice.builder()
                                 .asset(asset)
                                 .priceDate(priceDate)
-                                .price(price)
+                                .openPrice(openPrice)
+                                .highPrice(highPrice)
+                                .lowPrice(lowPrice)
+                                .closePrice(closePrice)
                                 .volume(volume)
                                 .build();
                         assetPrices.add(assetPrice);

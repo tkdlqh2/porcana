@@ -42,6 +42,12 @@ public interface AssetPriceRepository extends JpaRepository<AssetPrice, UUID> {
     void deleteByPriceDateBefore(LocalDate date);
 
     /**
+     * Delete price data from a specific date onwards
+     */
+    @Modifying
+    void deleteByPriceDateGreaterThanEqual(LocalDate date);
+
+    /**
      * Check if any price data exists for an asset
      * Used to avoid re-fetching historical data
      */
