@@ -56,6 +56,12 @@ public class ExchangeRateBatchJob {
                     Map<String, Object> jobParameters = chunkContext.getStepContext().getJobParameters();
                     Long timestamp = (Long) jobParameters.get("timestamp");
 
+                    // If timestamp is null, use current time
+                    if (timestamp == null) {
+                        timestamp = System.currentTimeMillis();
+                        log.info("timestamp parameter is null, using current time: {}", timestamp);
+                    }
+
                     // Convert timestamp to LocalDate (KST timezone)
                     LocalDate targetDate = Instant.ofEpochMilli(timestamp)
                             .atZone(ZoneId.of("Asia/Seoul"))
