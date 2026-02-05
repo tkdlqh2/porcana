@@ -9,9 +9,11 @@ import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,17 +47,27 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
     private final DataGoKrEtfPriceProvider dataGoKrEtfPriceProvider;
     private final FmpAssetProvider fmpAssetProvider;
 
+    /**
+     * Self-injection to enable @Transactional on methods
+     * Without this, self-invocation bypasses Spring AOP proxy
+     */
+    private OhlcDataBackfillRunner self;
+
+    @Autowired
+    public void setSelf(@Lazy OhlcDataBackfillRunner self) {
+        this.self = self;
+    }
+
     private static final LocalDate BACKFILL_START_DATE = LocalDate.of(2025, 2, 5);
 
-    @Transactional
     @Override
     public void run(ApplicationArguments args) {
         log.info("========================================");
         log.info("Starting OHLC Data Backfill from {}", BACKFILL_START_DATE);
         log.info("========================================");
 
-        // Step 1: Delete existing data from backfill date onwards
-        deleteExistingData();
+        // Step 1: Delete existing data from backfill date onwards (separate transaction)
+        self.deleteExistingData();
 
         // Step 2: Fetch OHLC data for all active assets
         backfillOhlcData();
@@ -65,6 +77,7 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
         log.info("========================================");
     }
 
+    @Transactional
     protected void deleteExistingData() {
         log.info("Deleting price data from {} onwards...", BACKFILL_START_DATE);
         assetPriceRepository.deleteByPriceDateGreaterThanEqual(BACKFILL_START_DATE);
@@ -123,7 +136,7 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
                             .toList();
 
                     if (!filteredPrices.isEmpty()) {
-                        saveAssetPrices(filteredPrices);
+                        self.saveAssetPrices(filteredPrices);
                         success++;
                         log.info("  ✓ Saved {} price records for {}", filteredPrices.size(), asset.getSymbol());
                     } else {
@@ -179,7 +192,7 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
                             .toList();
 
                     if (!filteredPrices.isEmpty()) {
-                        saveAssetPrices(filteredPrices);
+                        self.saveAssetPrices(filteredPrices);
                         success++;
                         log.info("  ✓ Saved {} price records for {}", filteredPrices.size(), asset.getSymbol());
                     } else {
@@ -212,6 +225,7 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
         log.info("US assets backfill complete: {} success, {} failed", success, failed);
     }
 
+    @Transactional
     protected void saveAssetPrices(List<AssetPrice> prices) {
         assetPriceRepository.saveAll(prices);
     }
