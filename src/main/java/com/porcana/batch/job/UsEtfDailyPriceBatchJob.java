@@ -1,5 +1,6 @@
 package com.porcana.batch.job;
 
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.us.FmpAssetProvider;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
@@ -33,10 +34,12 @@ public class UsEtfDailyPriceBatchJob {
     private final FmpAssetProvider fmpProvider;
     private final AssetRepository assetRepository;
     private final AssetPriceRepository assetPriceRepository;
+    private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job usEtfDailyPriceJob() {
         return new JobBuilder("usEtfDailyPriceJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(updateUsEtfDailyPricesStep())
                 .build();
     }

@@ -1,5 +1,6 @@
 package com.porcana.batch.job;
 
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.exchangerate.KoreaEximProvider;
 import com.porcana.domain.exchangerate.ExchangeRateRepository;
 import com.porcana.domain.exchangerate.entity.ExchangeRate;
@@ -34,10 +35,12 @@ public class ExchangeRateBatchJob {
     private final PlatformTransactionManager transactionManager;
     private final KoreaEximProvider koreaEximProvider;
     private final ExchangeRateRepository exchangeRateRepository;
+    private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job exchangeRateJob() {
         return new JobBuilder("exchangeRateJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(updateExchangeRatesStep())
                 .build();
     }

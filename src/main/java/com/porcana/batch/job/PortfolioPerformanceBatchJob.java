@@ -1,5 +1,6 @@
 package com.porcana.batch.job;
 
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
@@ -56,6 +57,7 @@ public class PortfolioPerformanceBatchJob {
     private final ExchangeRateRepository exchangeRateRepository;
     private final PortfolioDailyReturnRepository dailyReturnRepository;
     private final SnapshotAssetDailyReturnRepository assetDailyReturnRepository;
+    private final BatchNotificationListener batchNotificationListener;
 
     private static final int CHUNK_SIZE = 10;
 
@@ -68,6 +70,7 @@ public class PortfolioPerformanceBatchJob {
     @Bean
     public Job portfolioPerformanceJob() {
         return new JobBuilder("portfolioPerformanceJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(calculatePortfolioPerformanceStep())
                 .build();
     }
