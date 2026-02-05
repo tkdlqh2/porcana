@@ -73,6 +73,11 @@ management:
     health:
       show-details: when-authorized
 
+notification:
+  discord:
+    enabled: ${DISCORD_NOTIFICATION_ENABLED:false}  # Enable Discord notifications
+    webhook-url: ${DISCORD_WEBHOOK_URL:}  # Discord webhook URL
+
 logging:
   level:
     com.porcana: DEBUG
