@@ -1,5 +1,6 @@
 package com.porcana.batch.job;
 
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.service.risk.AssetRiskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +29,12 @@ public class AssetRiskBatchJob {
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
     private final AssetRiskService assetRiskService;
+    private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job assetRiskJob() {
         return new JobBuilder("assetRiskJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(calculateAssetRisksStep())
                 .build();
     }
