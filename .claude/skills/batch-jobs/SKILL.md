@@ -80,6 +80,15 @@ RECALCULATE_WEIGHT_USED_ENABLED=true ./gradlew bootRun
 # 기존 SnapshotAssetDailyReturn의 weightUsed를 시가총액 기반으로 재계산
 ```
 
+**OHLC 데이터 백필 (일회성 수동 실행)**
+```bash
+# application.yml에서 enabled=true 설정 후 실행
+# 또는 환경변수로 활성화
+OHLC_BACKFILL_ENABLED=true ./gradlew bootRun
+
+# 특정 날짜 이후의 AssetPrice 데이터를 삭제하고 OHLC 형식으로 재수집
+```
+
 ## Batch Job 구조 패턴
 
 ### 한국 종목 배치
@@ -281,6 +290,193 @@ Total daily returns recalculated: 675
 ========================================
 ```
 
+## OHLC 데이터 백필 (OhlcDataBackfillRunner)
+
+### 목적
+특정 날짜 이후의 모든 종목 가격 데이터를 OHLC(Open-High-Low-Close) 형식으로 재수집
+
+### 사용법
+```bash
+# 방법 1: 환경변수 사용 (권장)
+OHLC_BACKFILL_ENABLED=true ./gradlew bootRun
+
+# 방법 2: application.yml 수정
+# batch.runner.ohlc-backfill.enabled: true 설정 후
+./gradlew bootRun
+```
+
+### 설정
+```yaml
+# application.yml
+batch:
+  runner:
+    ohlc-backfill:
+      enabled: false  # 기본값: false (비활성화)
+```
+
+### 처리 흐름
+```
+1. 특정 날짜(BACKFILL_START_DATE) 이후의 AssetPrice 데이터 삭제
+   ├─ 별도 트랜잭션으로 즉시 커밋
+   └─ 삭제 완료 후 재수집 시작
+
+2. 모든 active=true 자산에 대해:
+   ├─ DataProvider를 통해 OHLC 데이터 수집
+   └─ AssetPrice에 저장 (openPrice, highPrice, lowPrice, closePrice)
+
+3. Rate Limiting
+   ├─ 한국 API: 100ms 딜레이
+   └─ 미국 API: 150ms 딜레이
+```
+
+### 트랜잭션 처리 (Self-Injection Pattern)
+
+**문제점:**
+- 같은 클래스 내에서 `this.method()`로 호출 시 Spring AOP Proxy가 작동하지 않음
+- @Transactional이 적용되지 않아 트랜잭션이 분리되지 않음
+
+**해결책: Self-Injection Pattern**
+```java
+@Component
+public class OhlcDataBackfillRunner implements ApplicationRunner {
+
+    private OhlcDataBackfillRunner self;
+
+    @Autowired
+    public void setSelf(@Lazy OhlcDataBackfillRunner self) {
+        this.self = self;  // Proxy 객체 주입
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        // self를 통해 호출 → Proxy를 거쳐 @Transactional 적용
+        self.deleteExistingData();  // 별도 트랜잭션, 즉시 커밋
+        backfillOhlcData();         // 재수집
+    }
+
+    @Transactional
+    protected void deleteExistingData() {
+        assetPriceRepository.deleteByPriceDateGreaterThanEqual(BACKFILL_START_DATE);
+        log.info("Deleted existing AssetPrice data from {}", BACKFILL_START_DATE);
+    }
+
+    @Transactional
+    protected void saveAssetPrices(List<AssetPrice> prices) {
+        assetPriceRepository.saveAll(prices);
+    }
+}
+```
+
+**핵심 포인트:**
+- `@Lazy` 사용: 순환 의존성 방지
+- `self.method()` 호출: Spring Proxy를 통해 AOP 적용
+- 삭제와 삽입을 **별도 트랜잭션**으로 분리
+- 삭제 트랜잭션이 즉시 커밋되어 DB 반영 후 재수집 시작
+
+## Discord Webhook 알림 시스템
+
+### 목적
+배치 작업의 성공/실패/경고 상태를 Discord 채널로 실시간 알림
+
+### 설정
+```yaml
+# application.yml
+notification:
+  discord:
+    enabled: ${DISCORD_NOTIFICATION_ENABLED:false}
+    webhook-url: ${DISCORD_WEBHOOK_URL:}
+```
+
+```bash
+# 환경변수 설정 (권장)
+export DISCORD_NOTIFICATION_ENABLED=true
+export DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
+```
+
+### 자동 적용
+
+**BatchNotificationListener**가 모든 배치 작업을 자동 모니터링:
+
+```java
+@Component
+public class BatchNotificationListener implements JobExecutionListener {
+
+    @Override
+    public void afterJob(JobExecution jobExecution) {
+        if (status == BatchStatus.COMPLETED) {
+            // ✅ 성공 알림 (녹색)
+            discordNotificationService.sendBatchSuccess(jobName, durationMs, summary);
+        } else if (status == BatchStatus.FAILED) {
+            // ❌ 실패 알림 (빨간색)
+            discordNotificationService.sendBatchFailure(jobName, durationMs, errorMessage);
+        } else {
+            // ⚠️ 경고 알림 (주황색)
+            discordNotificationService.sendBatchWarning(jobName, message);
+        }
+    }
+}
+```
+
+### 배치 작업에 적용 방법
+
+각 배치 Job에 리스너 추가:
+
+```java
+@Configuration
+@RequiredArgsConstructor
+public class YourBatchJob {
+
+    private final BatchNotificationListener batchNotificationListener;
+
+    @Bean
+    public Job yourJob() {
+        return new JobBuilder("yourJobName", jobRepository)
+                .listener(batchNotificationListener)  // 추가
+                .start(yourStep())
+                .build();
+    }
+}
+```
+
+### 알림 형식
+
+**성공 알림 (녹색)**
+```
+✅ Batch Job Success
+krAssetJob completed successfully
+
+Duration: 2m 35s
+Time: 2024-01-15 14:30:00
+Summary:
+**fetchKrAssetsStep**
+- Read: 500
+- Write: 500
+- Skip: 0
+- Commit: 10
+```
+
+**실패 알림 (빨간색)**
+```
+❌ Batch Job Failed
+krAssetJob failed
+
+Duration: 1m 20s
+Time: 2024-01-15 14:30:00
+Error:
+**DataIntegrityViolationException**
+```
+Duplicate key value violates unique constraint
+```
+
+**Failed Step:** fetchKrAssetsStep
+- Read: 250
+- Write: 200
+- Skip: 0
+- Error: Constraint violation
+```
+
+> 📖 **상세 설정 가이드**: 프로젝트 루트의 `DISCORD_NOTIFICATION_GUIDE.md` 참조
+
 ## 공통 처리 원칙
 
 - **Upsert 전략**: symbol + market을 natural key로 사용
@@ -288,3 +484,5 @@ Total daily returns recalculated: 675
 - **active 플래그**: 유니버스 포함 종목만 true
 - **이력 관리**: as_of 기준으로 과거 데이터 조회 가능
 - **동적 비중**: weightUsed는 시가총액 기반으로 매일 자동 조정
+- **트랜잭션 분리**: Self-Injection Pattern으로 별도 트랜잭션 보장
+- **모니터링**: Discord Webhook으로 모든 배치 작업 자동 알림
