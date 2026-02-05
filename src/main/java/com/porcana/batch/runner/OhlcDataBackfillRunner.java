@@ -47,8 +47,9 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
 
     private static final LocalDate BACKFILL_START_DATE = LocalDate.of(2025, 2, 5);
 
+    @Transactional
     @Override
-    public void run(ApplicationArguments args) throws Exception {
+    public void run(ApplicationArguments args) {
         log.info("========================================");
         log.info("Starting OHLC Data Backfill from {}", BACKFILL_START_DATE);
         log.info("========================================");
@@ -64,7 +65,6 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
         log.info("========================================");
     }
 
-    @Transactional
     protected void deleteExistingData() {
         log.info("Deleting price data from {} onwards...", BACKFILL_START_DATE);
         assetPriceRepository.deleteByPriceDateGreaterThanEqual(BACKFILL_START_DATE);
@@ -212,7 +212,6 @@ public class OhlcDataBackfillRunner implements ApplicationRunner {
         log.info("US assets backfill complete: {} success, {} failed", success, failed);
     }
 
-    @Transactional
     protected void saveAssetPrices(List<AssetPrice> prices) {
         assetPriceRepository.saveAll(prices);
     }
