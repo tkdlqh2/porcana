@@ -1,6 +1,7 @@
 package com.porcana.domain.portfolio.dto;
 
 import com.porcana.domain.portfolio.entity.Portfolio;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -42,25 +43,18 @@ public class PortfolioListResponse {
     }
 
     /**
-     * Top asset information for portfolio list
-     */
-    @Getter
-    @Builder
-    public static class TopAsset {
-        private final UUID assetId;
-        private final String symbol;
-        private final String name;
-        private final String imageUrl;
-        private final BigDecimal weight;
-
-        public static TopAsset from(UUID assetId, String symbol, String name, String imageUrl, BigDecimal weight) {
-            return TopAsset.builder()
-                    .assetId(assetId)
-                    .symbol(symbol)
-                    .name(name)
-                    .imageUrl(imageUrl)
-                    .weight(weight)
-                    .build();
+         * Top asset information for portfolio list
+         */
+        @Builder
+        public record TopAsset(UUID assetId, String symbol, String name, String imageUrl, BigDecimal weight) {
+            public static TopAsset from(UUID assetId, String symbol, String name, String imageUrl, BigDecimal weight) {
+                return TopAsset.builder()
+                        .assetId(assetId)
+                        .symbol(symbol)
+                        .name(name)
+                        .imageUrl(imageUrl)
+                        .weight(weight)
+                        .build();
+            }
         }
-    }
 }

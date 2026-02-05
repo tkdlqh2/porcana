@@ -101,13 +101,13 @@ public class DataGoKrResponse {
         private Double fltRt;  // 등락률
 
         @JsonProperty("mkp")
-        private Integer mkp;  // 시가
+        private String mkp;  // 시가
 
         @JsonProperty("hipr")
-        private Integer hipr;  // 고가
+        private String hipr;  // 고가
 
         @JsonProperty("lopr")
-        private Integer lopr;  // 저가
+        private String lopr;  // 저가
 
         @JsonProperty("trqu")
         private Long trqu;  // 거래량
