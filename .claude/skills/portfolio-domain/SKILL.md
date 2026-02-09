@@ -363,17 +363,35 @@ Asset 1 --- * SnapshotAssetDailyReturn
 사용자가 수동으로 비중을 조정할 경우:
 
 ```
-1. 사용자가 비중 변경 요청
+1. 사용자가 비중 변경 요청 (PUT /portfolios/{id}/weights)
    └─> PortfolioAsset.weightPct 업데이트 (기존 테이블)
 
-2. 새 PortfolioSnapshot 생성
+2. PortfolioSnapshot 생성/업데이트
    ├─> effectiveDate = today
    ├─> note = "Portfolio rebalancing"
+   ├─> 같은 날 스냅샷이 이미 있으면 → 업데이트 (기존 자산 구성 삭제 후 재생성)
    └─> PortfolioSnapshotAsset 생성 (새 비중)
 
-3. 이후 배치 실행
-   └─> 새 스냅샷 기준으로 수익률 계산
+3. UI 즉시 반영 (Fallback 로직)
+   ├─> PortfolioService.buildPositions()
+   │   └─> dailyReturnAsset 없으면 PortfolioAsset.weightPct 사용 ✅
+   └─> PortfolioService.getTopAssets()
+       └─> dailyReturnAsset 없으면 PortfolioAsset 사용 ✅
+
+4. 다음 날 배치 실행 (targetDate = today)
+   ├─> 오늘 날짜 스냅샷 기준으로 수익률 계산
+   ├─> SnapshotAssetDailyReturn 생성 (시가총액 기반 weightUsed)
+   └─> 이후 UI는 weightUsed 사용
 ```
+
+**비중 표시 우선순위:**
+1. `SnapshotAssetDailyReturn.weightUsed` (시가총액 기반, 배치 생성) - 우선
+2. `PortfolioAsset.weightPct` (사용자 설정, 즉시 반영) - Fallback
+
+**같은 날 여러 번 수정:**
+- ✅ 지원됨: 같은 날 스냅샷이 있으면 업데이트
+- 사용자가 하루에 여러 번 리밸런싱 가능
+- 최종 비중만 스냅샷에 기록됨
 
 ## Key Points 요약
 
