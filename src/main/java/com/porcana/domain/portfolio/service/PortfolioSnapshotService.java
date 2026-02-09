@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -107,15 +108,6 @@ public class PortfolioSnapshotService {
             LocalDate effectiveDate,
             String note) {
 
-        // 동일한 날짜에 이미 스냅샷이 있는지 확인
-        boolean exists = snapshotRepository.existsByPortfolioIdAndEffectiveDate(portfolioId, effectiveDate);
-        if (exists) {
-            log.warn("Snapshot already exists for portfolio {} on {}", portfolioId, effectiveDate);
-            throw new IllegalStateException(
-                    String.format("Snapshot already exists for this date: %s", effectiveDate)
-            );
-        }
-
         if (assetWeights.isEmpty()) {
             throw new IllegalArgumentException("Cannot create snapshot: asset weights are empty");
         }
@@ -128,16 +120,42 @@ public class PortfolioSnapshotService {
             log.warn("Portfolio {} total weight is {} instead of 100%", portfolioId, totalWeight);
         }
 
-        // 스냅샷 생성
-        PortfolioSnapshot snapshot = PortfolioSnapshot.builder()
-                .portfolioId(portfolioId)
-                .effectiveDate(effectiveDate)
-                .note(note)
-                .build();
+        // 동일한 날짜에 이미 스냅샷이 있는지 확인
+        Optional<PortfolioSnapshot> existingSnapshotOpt =
+                snapshotRepository.findByPortfolioIdAndEffectiveDate(portfolioId, effectiveDate);
 
-        PortfolioSnapshot savedSnapshot = snapshotRepository.save(snapshot);
+        PortfolioSnapshot savedSnapshot;
 
-        // 스냅샷 자산 구성 저장
+        if (existingSnapshotOpt.isPresent()) {
+            // 기존 스냅샷이 있으면 업데이트
+            savedSnapshot = existingSnapshotOpt.get();
+            log.info("Updating existing snapshot {} for portfolio {} on {}",
+                    savedSnapshot.getId(), portfolioId, effectiveDate);
+
+            // 기존 스냅샷 자산 구성 삭제
+            List<PortfolioSnapshotAsset> existingAssets = snapshotAssetRepository.findBySnapshotId(savedSnapshot.getId());
+            snapshotAssetRepository.deleteAll(existingAssets);
+            log.debug("Deleted {} existing snapshot assets", existingAssets.size());
+
+            // 노트 업데이트 (새로운 노트가 제공된 경우)
+            if (note != null && !note.isBlank()) {
+                // PortfolioSnapshot에 updateNote 메서드 추가 필요
+                // savedSnapshot.updateNote(note);
+            }
+        } else {
+            // 새 스냅샷 생성
+            PortfolioSnapshot snapshot = PortfolioSnapshot.builder()
+                    .portfolioId(portfolioId)
+                    .effectiveDate(effectiveDate)
+                    .note(note)
+                    .build();
+
+            savedSnapshot = snapshotRepository.save(snapshot);
+            log.info("Created new snapshot {} for portfolio {} on {}",
+                    savedSnapshot.getId(), portfolioId, effectiveDate);
+        }
+
+        // 스냅샷 자산 구성 저장 (새 비중으로)
         for (Map.Entry<UUID, BigDecimal> entry : assetWeights.entrySet()) {
             PortfolioSnapshotAsset snapshotAsset = PortfolioSnapshotAsset.builder()
                     .snapshotId(savedSnapshot.getId())
@@ -148,7 +166,7 @@ public class PortfolioSnapshotService {
             snapshotAssetRepository.save(snapshotAsset);
         }
 
-        log.info("Created snapshot {} for portfolio {} with {} assets on {}",
+        log.info("Saved snapshot {} for portfolio {} with {} assets on {}",
                 savedSnapshot.getId(), portfolioId, assetWeights.size(), effectiveDate);
 
         return savedSnapshot;
