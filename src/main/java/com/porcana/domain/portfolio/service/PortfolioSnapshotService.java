@@ -132,9 +132,9 @@ public class PortfolioSnapshotService {
             log.info("Updating existing snapshot {} for portfolio {} on {}",
                     savedSnapshot.getId(), portfolioId, effectiveDate);
 
-            // 기존 스냅샷 자산 구성 삭제
+            // 기존 스냅샷 자산 구성 삭제 (즉시 실행)
             List<PortfolioSnapshotAsset> existingAssets = snapshotAssetRepository.findBySnapshotId(savedSnapshot.getId());
-            snapshotAssetRepository.deleteAll(existingAssets);
+            snapshotAssetRepository.deleteAllInBatch(existingAssets);
             log.debug("Deleted {} existing snapshot assets", existingAssets.size());
 
             // 노트 업데이트 (새로운 노트가 제공된 경우)
