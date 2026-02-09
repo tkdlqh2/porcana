@@ -1,5 +1,6 @@
 package com.porcana.batch.job;
 
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.us.FmpAssetProvider;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
@@ -34,10 +35,12 @@ public class UsImageUpdateBatchJob {
     private final PlatformTransactionManager transactionManager;
     private final FmpAssetProvider fmpProvider;
     private final AssetRepository assetRepository;
+    private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job usImageUpdateJob() {
         return new JobBuilder("usImageUpdateJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(updateUsAssetImagesStep())
                 .build();
     }

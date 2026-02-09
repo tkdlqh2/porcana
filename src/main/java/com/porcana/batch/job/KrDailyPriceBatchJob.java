@@ -1,5 +1,6 @@
 package com.porcana.batch.job;
 
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.kr.DataGoKrAssetProvider;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
@@ -33,10 +34,12 @@ public class KrDailyPriceBatchJob {
     private final DataGoKrAssetProvider dataGoKrProvider;
     private final AssetRepository assetRepository;
     private final AssetPriceRepository assetPriceRepository;
+    private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job krDailyPriceJob() {
         return new JobBuilder("krDailyPriceJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(updateKrDailyPricesStep())
                 .build();
     }

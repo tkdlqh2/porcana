@@ -1,6 +1,7 @@
 package com.porcana.batch.job;
 
 import com.porcana.batch.dto.AssetBatchDto;
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.kr.DataGoKrAssetProvider;
 import com.porcana.batch.provider.kr.UniverseTaggingProvider;
 import com.porcana.domain.asset.AssetPriceRepository;
@@ -44,10 +45,12 @@ public class KrAssetBatchJob {
     private final UniverseTaggingProvider taggingProvider;
     private final AssetRepository assetRepository;
     private final AssetPriceRepository assetPriceRepository;
+    private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job krAssetJob() {
         return new JobBuilder("krAssetJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(fetchKrAssetsStep())
                 .next(tagKospi200Step())
                 .next(tagKosdaq150Step())

@@ -55,7 +55,7 @@ public class Asset {
 
 ### AssetPrice (가격 데이터)
 
-일별 종가 및 거래량
+OHLC(Open-High-Low-Close) 일봉 데이터 및 거래량
 
 ```java
 @Entity
@@ -68,14 +68,39 @@ public class AssetPrice {
     private Asset asset;
 
     private LocalDate priceDate;
-    private BigDecimal price;
+
+    // OHLC 데이터
+    @Column(name = "open_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal openPrice;
+
+    @Column(name = "high_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal highPrice;
+
+    @Column(name = "low_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal lowPrice;
+
+    @Column(name = "close_price", nullable = false, precision = 20, scale = 4)
+    private BigDecimal closePrice;
+
     private Long volume;
 
     private LocalDateTime createdAt;
+
+    // 하위 호환성을 위한 메서드
+    public BigDecimal getPrice() {
+        return closePrice;
+    }
 }
 ```
 
 **Unique Index**: `(asset_id, price_date)`
+
+**OHLC 데이터:**
+- `openPrice`: 시가
+- `highPrice`: 고가
+- `lowPrice`: 저가
+- `closePrice`: 종가
+- 기존 `getPrice()` 메서드는 `closePrice` 반환 (하위 호환)
 
 ### AssetRiskHistory (위험도 이력)
 
@@ -333,6 +358,99 @@ ArenaSession 1 --- * ArenaRound
    - `(currency_code, exchange_date)` - ExchangeRate
    - `(portfolio_id, asset_id)` - PortfolioAsset
 3. **Guest Limits**: 게스트당 최대 3개 포트폴리오
+
+## QueryDSL Custom Repository Pattern
+
+복잡한 쿼리나 타입 안전성이 필요한 경우 QueryDSL 사용
+
+### 설정
+
+**build.gradle:**
+```gradle
+implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
+annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+```
+
+**QueryDslConfig.java:**
+```java
+@Configuration
+public class QueryDslConfig {
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Bean
+    public JPAQueryFactory jpaQueryFactory() {
+        return new JPAQueryFactory(entityManager);
+    }
+}
+```
+
+### 사용 예시
+
+**Custom Repository Interface:**
+```java
+public interface SnapshotAssetDailyReturnRepositoryCustom {
+    List<PortfolioListResponse.TopAsset> findTopAssetsByWeight(UUID portfolioId, int limit);
+}
+```
+
+**Custom Repository Implementation:**
+```java
+@RequiredArgsConstructor
+public class SnapshotAssetDailyReturnRepositoryImpl
+        implements SnapshotAssetDailyReturnRepositoryCustom {
+
+    private final JPAQueryFactory queryFactory;
+
+    @Override
+    public List<PortfolioListResponse.TopAsset> findTopAssetsByWeight(UUID portfolioId, int limit) {
+        QSnapshotAssetDailyReturn sadr = QSnapshotAssetDailyReturn.snapshotAssetDailyReturn;
+        QSnapshotAssetDailyReturn sadr2 = new QSnapshotAssetDailyReturn("sadr2");
+        QAsset asset = QAsset.asset;
+
+        return queryFactory
+            .select(Projections.constructor(
+                PortfolioListResponse.TopAsset.class,
+                asset.id,
+                asset.symbol,
+                asset.name,
+                asset.imageUrl,
+                sadr.weightUsed
+            ))
+            .from(sadr)
+            .join(asset).on(sadr.assetId.eq(asset.id))
+            .where(
+                sadr.portfolioId.eq(portfolioId),
+                sadr.returnDate.eq(
+                    JPAExpressions
+                        .select(sadr2.returnDate.max())
+                        .from(sadr2)
+                        .where(sadr2.portfolioId.eq(portfolioId))
+                )
+            )
+            .orderBy(sadr.weightUsed.desc())
+            .limit(limit)
+            .fetch();
+    }
+}
+```
+
+**Main Repository:**
+```java
+public interface SnapshotAssetDailyReturnRepository
+        extends JpaRepository<SnapshotAssetDailyReturn, UUID>,
+                SnapshotAssetDailyReturnRepositoryCustom {
+    // JPA 메서드와 QueryDSL 메서드 모두 사용 가능
+}
+```
+
+**장점:**
+- 타입 안전성 (컴파일 타임 오류 검출)
+- IDE 자동완성 지원
+- 복잡한 조인 및 서브쿼리 간결하게 작성
+- N+1 문제 방지 (한 번의 쿼리로 처리)
 
 ## Related Skills
 

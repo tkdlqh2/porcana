@@ -10,6 +10,29 @@
 
 ---
 
+## Technology Stack
+
+### Core Technologies
+- **Spring Boot 3.2.1** - Application framework
+- **PostgreSQL** - Primary database
+- **Spring Batch** - Batch processing
+- **Spring Security + JWT** - Authentication
+- **QueryDSL 5.0.0** - Type-safe queries
+- **Flyway** - Database migration
+- **Swagger/OpenAPI** - API documentation
+
+### Key Libraries
+- **RestTemplate** - External API calls (data.go.kr, FMP)
+- **Lombok** - Boilerplate reduction
+- **Jackson** - JSON processing
+- **HikariCP** - Connection pooling
+
+### Development Tools
+- **Discord Webhook** - Batch monitoring & alerts
+- **Spring Boot Actuator** - Health checks & metrics
+
+---
+
 ## Development Philosophy
 
 ### 1. Request DTO as Record
@@ -126,6 +149,14 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 - Sector (주식 전용), AssetClass (ETF 전용)
 - `currentRiskLevel`: 1~5 (현재 위험도)
 - `active`: 카드 풀 포함 여부
+- `imageUrl`: 로고 이미지 URL
+
+**AssetPrice (가격 데이터)**
+- **OHLC 일봉 데이터**: Open, High, Low, Close
+- `volume`: 거래량
+- `priceDate`: 가격 날짜
+- Unique constraint: (asset_id, price_date)
+- 하위호환: `getPrice()` → closePrice 반환
 
 **Portfolio (포트폴리오)**
 - 상태: DRAFT | ACTIVE | FINISHED
@@ -167,6 +198,15 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 
 **18:00 KST (월-금) - 한국 시장**
 - krDailyPriceJob, krEtfDailyPriceJob
+
+### 배치 모니터링
+
+**Discord Webhook 알림**
+- 모든 배치 작업의 성공/실패/경고 알림
+- 자동으로 작업 실행 결과, 소요 시간, 에러 정보 전송
+- 설정: `application.yml`에서 `notification.discord` 설정
+
+> 📖 **Discord 설정 가이드**: `DISCORD_NOTIFICATION_GUIDE.md` 참조
 
 ### 위험도 계산 방식
 
@@ -311,6 +351,9 @@ w = riskWeight × sectorWeight × typeWeight × diversityPenalty
 
 # 위험도 계산
 ./gradlew bootRun --args='--spring.batch.job.names=assetRiskJob'
+
+# OHLC 데이터 백필 (일회성)
+OHLC_BACKFILL_ENABLED=true ./gradlew bootRun
 ```
 
 > 📖 **배치 작업 상세**: `.claude/skills/batch-jobs/SKILL.md` 참조

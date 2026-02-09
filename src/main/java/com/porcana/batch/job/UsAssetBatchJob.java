@@ -1,6 +1,7 @@
 package com.porcana.batch.job;
 
 import com.porcana.batch.dto.AssetBatchDto;
+import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.us.FmpAssetProvider;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
@@ -37,10 +38,12 @@ public class UsAssetBatchJob {
     private final FmpAssetProvider fmpProvider;
     private final AssetRepository assetRepository;
     private final AssetPriceRepository assetPriceRepository;
+    private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job usAssetJob() {
         return new JobBuilder("usAssetJob", jobRepository)
+                .listener(batchNotificationListener)
                 .start(fetchUsAssetsStep())
                 .next(fetchUsHistoricalPricesStep())
                 .build();
