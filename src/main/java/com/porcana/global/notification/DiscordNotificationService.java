@@ -52,10 +52,10 @@ public class DiscordNotificationService {
                 "✅ Batch Job Success",
                 String.format("**%s** completed successfully", jobName),
                 0x00FF00, // Green
-                List.of(
-                        createField("Duration", formatDuration(durationMs), true),
-                        createField("Time", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), true),
-                        createField("Summary", summary, false)
+                    List.of(
+                            createField("Duration", formatDuration(durationMs), true),
+                            createField("Time", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), true),
+                            createField("Summary", truncate(summary, 1000), false)
                 )
         );
 

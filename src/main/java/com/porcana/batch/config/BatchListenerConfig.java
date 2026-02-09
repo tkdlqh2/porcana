@@ -11,8 +11,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.batch.core.job.builder.JobBuilder;
 
 /**
- * Configuration for automatically adding listeners to all batch jobs
- * Uses BeanPostProcessor to inject notification listener into every Job bean
+ * Configuration scaffold documenting listener wiring.
+ * Actual listener attachment must happen in each Job builder.
  */
 @Slf4j
 @Configuration
