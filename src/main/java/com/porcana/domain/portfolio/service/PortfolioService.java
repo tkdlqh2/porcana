@@ -395,9 +395,64 @@ public class PortfolioService {
     /**
      * Get top 3 assets by weight for portfolio list
      * Uses QueryDSL to fetch latest market-cap based weights in a single query
+     * Falls back to PortfolioAsset if no daily return data exists
      */
     private List<PortfolioListResponse.TopAsset> getTopAssets(UUID portfolioId) {
-        return snapshotAssetDailyReturnRepository.findTopAssetsByWeight(portfolioId, 3);
+        // Try to get from dailyReturnAsset first (시가총액 기반 최신 비중)
+        List<PortfolioListResponse.TopAsset> topAssets =
+            snapshotAssetDailyReturnRepository.findTopAssetsByWeight(portfolioId, 3);
+
+        // If no data exists, fallback to PortfolioAsset (사용자가 설정한 비중)
+        if (topAssets.isEmpty()) {
+            return getTopAssetsFromPortfolioAsset(portfolioId, 3);
+        }
+
+        return topAssets;
+    }
+
+    /**
+     * Get top assets by weight from PortfolioAsset (fallback method)
+     * Used when no daily return data is available yet (e.g., after weight update)
+     */
+    private List<PortfolioListResponse.TopAsset> getTopAssetsFromPortfolioAsset(UUID portfolioId, int limit) {
+        List<PortfolioAsset> portfolioAssets = portfolioAssetRepository.findByPortfolioId(portfolioId);
+
+        if (portfolioAssets.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Sort by weight descending and take top N
+        List<PortfolioAsset> sortedAssets = portfolioAssets.stream()
+            .sorted((a, b) -> b.getWeightPct().compareTo(a.getWeightPct()))
+            .limit(limit)
+            .toList();
+
+        // Load asset information
+        Set<UUID> assetIds = sortedAssets.stream()
+            .map(PortfolioAsset::getAssetId)
+            .collect(Collectors.toSet());
+
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+            .collect(Collectors.toMap(Asset::getId, asset -> asset));
+
+        // Build TopAsset DTOs
+        return sortedAssets.stream()
+            .map(pa -> {
+                Asset asset = assetMap.get(pa.getAssetId());
+                if (asset == null) {
+                    return null;
+                }
+
+                return new PortfolioListResponse.TopAsset(
+                    asset.getId(),
+                    asset.getSymbol(),
+                    asset.getName(),
+                    asset.getImageUrl(),
+                    pa.getWeightPct()
+                );
+            })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
     }
 
     @Transactional

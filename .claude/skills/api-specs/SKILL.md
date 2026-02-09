@@ -336,6 +336,86 @@ Response
     - 모든 레벨 (1-5)이 항상 포함되며, 없는 레벨은 0.0%
     - 합계는 100%가 되어야 함 (riskLevel이 null인 자산 제외)
 
+### PATCH /portfolios/{portfolioId}/name
+**Description**: 포트폴리오의 이름을 수정합니다.
+
+**Auth**: Required (JWT)
+
+Request
+```json
+{
+  "name": "string"
+}
+```
+
+Response (200 OK)
+```json
+{
+  "portfolioId": "uuid",
+  "name": "string"
+}
+```
+
+Error Responses
+- 400: 포트폴리오를 찾을 수 없거나 권한이 없음
+- 401: 인증 필요
+
+### PUT /portfolios/{portfolioId}/weights
+**Description**: 포트폴리오 내 자산들의 비중을 일괄 수정합니다. 비중의 합계는 반드시 100%가 되어야 합니다.
+
+**Auth**: Required (JWT)
+
+**비중 수정 시 동작:**
+1. `PortfolioAsset.weightPct` 업데이트 → 사용자가 설정한 비중 저장
+2. 오늘 날짜로 `PortfolioSnapshot` 생성/업데이트 → 리밸런싱 이력 기록
+   - 같은 날 여러 번 수정 가능 (기존 스냅샷 업데이트)
+3. UI 즉시 반영:
+   - 수정 직후: `PortfolioAsset.weightPct` 사용 (사용자가 설정한 비중)
+   - 다음 날 배치 후: `SnapshotAssetDailyReturn.weightUsed` 사용 (시가총액 기반 비중)
+
+Request
+```json
+{
+  "weights": [
+    {
+      "assetId": "uuid",
+      "weightPct": 30.0
+    },
+    {
+      "assetId": "uuid",
+      "weightPct": 70.0
+    }
+  ]
+}
+```
+
+Response (200 OK)
+```json
+{
+  "portfolioId": "uuid",
+  "name": "string",
+  "weights": [
+    {
+      "assetId": "uuid",
+      "weightPct": 30.0
+    },
+    {
+      "assetId": "uuid",
+      "weightPct": 70.0
+    }
+  ]
+}
+```
+
+Error Responses
+- 400: 비중 합계가 100%가 아님, 포트폴리오를 찾을 수 없음, 자산이 포트폴리오에 없음
+- 401: 인증 필요
+
+**Validation Rules:**
+- 비중 합계는 정확히 100.0% 이어야 함
+- 모든 `assetId`는 포트폴리오에 존재하는 자산이어야 함
+- `weightPct`는 0 이상 100 이하
+
 ---
 
 ## 5) Arena (Hearthstone-style drafting)
