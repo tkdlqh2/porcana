@@ -253,4 +253,171 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 // 비중이 즉시 반영되어야 함 (PortfolioAsset fallback)
                 .body("positions.weightPct", hasItems(70.0f, 30.0f));
     }
+
+    @Test
+    @DisplayName("자산 비중 수정 후 모든 Read API에서 새 비중 반영 확인 (상세/리스트/홈)")
+    void updateAssetWeights_reflectedInAllReadApis() {
+        String accessToken = createAccessToken();
+
+        // 1. 비중 수정: 70/30
+        UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                List.of(
+                        new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
+                        new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
+                )
+        );
+
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(ContentType.JSON)
+                .body(request)
+        .when()
+                .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(200)
+                .body("weights", hasSize(2))
+                .body("weights[0].weightPct", anyOf(equalTo(70.0f), equalTo(30.0f)))
+                .body("weights[1].weightPct", anyOf(equalTo(70.0f), equalTo(30.0f)));
+
+        // 2. 포트폴리오 상세 조회에서 새 비중 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
+                .body("positions", hasSize(2))
+                .body("positions.weightPct", hasItems(70.0f, 30.0f));
+
+        // 3. 포트폴리오 리스트 조회에서 새 비중 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("$", hasSize(greaterThanOrEqualTo(1)))
+                // 테스트 포트폴리오 찾기
+                .body("find { it.portfolioId == '" + TEST_PORTFOLIO_ID + "' }.topAssets", hasSize(2))
+                .body("find { it.portfolioId == '" + TEST_PORTFOLIO_ID + "' }.topAssets.weight", hasItems(70.0f, 30.0f));
+
+        // 4. 메인 포트폴리오로 설정
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .put("/portfolios/{portfolioId}/main", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(200)
+                .body("mainPortfolioId", equalTo(TEST_PORTFOLIO_ID.toString()));
+
+        // 5. 홈 화면 조회에서 새 비중 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/home")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("hasMainPortfolio", equalTo(true))
+                .body("mainPortfolio.portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
+                .body("positions", hasSize(2))
+                .body("positions.weightPct", hasItems(70.0f, 30.0f));
+    }
+
+    @Test
+    @DisplayName("일별 수익률로 비중이 변경된 포트폴리오에서 비중 재조정 후 모든 Read API 반영 확인")
+    @Sql(scripts = "/sql/portfolio-with-daily-returns-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void updateAssetWeights_afterDailyReturns_reflectedInAllReadApis() {
+        // Test user and portfolio from the daily returns SQL
+        UUID testUserId = UUID.fromString("660e8400-e29b-41d4-a716-446655440000");
+        UUID testPortfolioId = UUID.fromString("77777777-7777-7777-7777-777777777777");
+        UUID testAssetKrId = UUID.fromString("88888888-8888-8888-8888-888888888888");
+        UUID testAssetUsId = UUID.fromString("99999999-9999-9999-9999-999999999999");
+
+        String accessToken = jwtTokenProvider.createAccessToken(testUserId);
+
+        // 1. 비중 변경 전 상태 확인: weightUsed가 55/45로 변경되어 있어야 함
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios/{portfolioId}", testPortfolioId)
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("positions", hasSize(2))
+                // weightUsed가 시장 변동으로 55/45로 변경된 상태
+                .body("positions.weightPct", hasItems(55.0f, 45.0f));
+
+        // 2. 비중 재조정: 70/30으로 변경
+        UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                List.of(
+                        new UpdateAssetWeightsRequest.AssetWeight(testAssetKrId.toString(), 70.00),
+                        new UpdateAssetWeightsRequest.AssetWeight(testAssetUsId.toString(), 30.00)
+                )
+        );
+
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(ContentType.JSON)
+                .body(request)
+        .when()
+                .put("/portfolios/{portfolioId}/weights", testPortfolioId)
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("weights", hasSize(2))
+                .body("weights[0].weightPct", anyOf(equalTo(70.0f), equalTo(30.0f)))
+                .body("weights[1].weightPct", anyOf(equalTo(70.0f), equalTo(30.0f)));
+
+        // 3. 포트폴리오 상세 조회에서 새 비중 70/30 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios/{portfolioId}", testPortfolioId)
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("portfolioId", equalTo(testPortfolioId.toString()))
+                .body("positions", hasSize(2))
+                // 재조정된 비중 70/30이 반영되어야 함
+                .body("positions.weightPct", hasItems(70.0f, 30.0f));
+
+        // 4. 포트폴리오 리스트 조회에서 새 비중 70/30 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("$", hasSize(greaterThanOrEqualTo(1)))
+                .body("find { it.portfolioId == '" + testPortfolioId + "' }.topAssets", hasSize(2))
+                .body("find { it.portfolioId == '" + testPortfolioId + "' }.topAssets.weight", hasItems(70.0f, 30.0f));
+
+        // 5. 메인 포트폴리오로 설정
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .put("/portfolios/{portfolioId}/main", testPortfolioId)
+        .then()
+                .statusCode(200)
+                .body("mainPortfolioId", equalTo(testPortfolioId.toString()));
+
+        // 6. 홈 화면 조회에서 새 비중 70/30 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/home")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("hasMainPortfolio", equalTo(true))
+                .body("mainPortfolio.portfolioId", equalTo(testPortfolioId.toString()))
+                .body("positions", hasSize(2))
+                // 재조정된 비중 70/30이 홈 화면에도 반영되어야 함
+                .body("positions.weightPct", hasItems(70.0f, 30.0f));
+    }
 }

@@ -6,14 +6,8 @@ import com.porcana.domain.portfolio.command.CreatePortfolioCommand;
 import com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand;
 import com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand;
 import com.porcana.domain.portfolio.dto.*;
-import com.porcana.domain.portfolio.entity.Portfolio;
-import com.porcana.domain.portfolio.entity.PortfolioAsset;
-import com.porcana.domain.portfolio.entity.PortfolioDailyReturn;
-import com.porcana.domain.portfolio.entity.PortfolioStatus;
-import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
-import com.porcana.domain.portfolio.repository.PortfolioDailyReturnRepository;
-import com.porcana.domain.portfolio.repository.PortfolioRepository;
-import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepository;
+import com.porcana.domain.portfolio.entity.*;
+import com.porcana.domain.portfolio.repository.*;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +32,8 @@ public class PortfolioService {
     private final PortfolioReturnCalculator portfolioReturnCalculator;
     private final PortfolioSnapshotService portfolioSnapshotService;
     private final SnapshotAssetDailyReturnRepository snapshotAssetDailyReturnRepository;
+    private final PortfolioSnapshotRepository portfolioSnapshotRepository;
+    private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
 
     private static final int MAX_GUEST_PORTFOLIOS = 3;
 
@@ -243,17 +239,54 @@ public class PortfolioService {
 
     /**
      * Get latest market-cap based weights for assets
-     * Returns the most recent weightUsed from SnapshotAssetDailyReturn
+     * Priority:
+     * 1. Most recent weightUsed from SnapshotAssetDailyReturn (if exists for latest snapshot)
+     * 2. Latest PortfolioSnapshotAsset weight (after rebalancing)
+     * 3. PortfolioAsset weight (fallback in buildPositions)
      */
     private Map<UUID, Double> getLatestWeights(UUID portfolioId, Set<UUID> assetIds) {
         Map<UUID, Double> weights = new HashMap<>();
 
+        // Get the latest snapshot
+        Optional<PortfolioSnapshot> latestSnapshotOpt = portfolioSnapshotRepository
+                .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+                        portfolioId, LocalDate.now());
+
+        if (latestSnapshotOpt.isEmpty()) {
+            return weights; // No snapshot yet, will fallback to PortfolioAsset weights
+        }
+
+        PortfolioSnapshot latestSnapshot = latestSnapshotOpt.get();
+
+        // Get snapshot assets for the latest snapshot (this includes rebalanced weights)
+        List<PortfolioSnapshotAsset> snapshotAssets = portfolioSnapshotAssetRepository
+                .findBySnapshotId(latestSnapshot.getId());
+        Map<UUID, BigDecimal> snapshotWeightMap = snapshotAssets.stream()
+                .collect(Collectors.toMap(
+                        PortfolioSnapshotAsset::getAssetId,
+                        PortfolioSnapshotAsset::getWeight
+                ));
+
+        // For each asset, try to get the most recent weightUsed from daily returns
+        // If daily return exists for the latest snapshot, use it (market-adjusted weight)
+        // Otherwise, use the snapshot weight (rebalanced weight)
         for (UUID assetId : assetIds) {
-            snapshotAssetDailyReturnRepository
-                    .findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId)
-                    .ifPresent(dailyReturn ->
-                            weights.put(assetId, dailyReturn.getWeightUsed().doubleValue())
-                    );
+            Optional<SnapshotAssetDailyReturn> dailyReturnOpt = snapshotAssetDailyReturnRepository
+                    .findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId);
+
+            if (dailyReturnOpt.isPresent()) {
+                SnapshotAssetDailyReturn dailyReturn = dailyReturnOpt.get();
+                // Only use daily return if it's from the current snapshot (or later)
+                if (!dailyReturn.getReturnDate().isBefore(latestSnapshot.getEffectiveDate())) {
+                    weights.put(assetId, dailyReturn.getWeightUsed().doubleValue());
+                    continue;
+                }
+            }
+
+            // Fallback to snapshot weight (after rebalancing)
+            if (snapshotWeightMap.containsKey(assetId)) {
+                weights.put(assetId, snapshotWeightMap.get(assetId).doubleValue());
+            }
         }
 
         return weights;
@@ -398,16 +431,46 @@ public class PortfolioService {
      * Falls back to PortfolioAsset if no daily return data exists
      */
     private List<PortfolioListResponse.TopAsset> getTopAssets(UUID portfolioId) {
-        // Try to get from dailyReturnAsset first (시가총액 기반 최신 비중)
-        List<PortfolioListResponse.TopAsset> topAssets =
-            snapshotAssetDailyReturnRepository.findTopAssetsByWeight(portfolioId, 3);
+        List<PortfolioAsset> portfolioAssets = portfolioAssetRepository.findByPortfolioId(portfolioId);
 
-        // If no data exists, fallback to PortfolioAsset (사용자가 설정한 비중)
-        if (topAssets.isEmpty()) {
-            return getTopAssetsFromPortfolioAsset(portfolioId, 3);
+        if (portfolioAssets.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        return topAssets;
+        // Get latest weights using the same logic as buildPositions
+        Set<UUID> assetIds = portfolioAssets.stream()
+                .map(PortfolioAsset::getAssetId)
+                .collect(Collectors.toSet());
+
+        Map<UUID, Double> latestWeights = getLatestWeights(portfolioId, assetIds);
+
+        // Load asset information
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+                .collect(Collectors.toMap(Asset::getId, asset -> asset));
+
+        // Build TopAsset DTOs with latest weights
+        return portfolioAssets.stream()
+                .map(pa -> {
+                    Asset asset = assetMap.get(pa.getAssetId());
+                    if (asset == null) {
+                        return null;
+                    }
+
+                    // Use latest weight, fallback to PortfolioAsset weight if not available
+                    Double weight = latestWeights.getOrDefault(pa.getAssetId(), pa.getWeightPct().doubleValue());
+
+                    return new PortfolioListResponse.TopAsset(
+                            asset.getId(),
+                            asset.getSymbol(),
+                            asset.getName(),
+                            asset.getImageUrl(),
+                            BigDecimal.valueOf(weight)
+                    );
+                })
+                .filter(Objects::nonNull)
+                .sorted((a, b) -> b.weight().compareTo(a.weight())) // Sort by weight descending
+                .limit(3)
+                .collect(Collectors.toList());
     }
 
     /**

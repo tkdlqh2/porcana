@@ -4,13 +4,8 @@ import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.home.dto.HomeResponse;
 import com.porcana.domain.home.dto.MainPortfolioIdResponse;
-import com.porcana.domain.portfolio.entity.Portfolio;
-import com.porcana.domain.portfolio.entity.PortfolioAsset;
-import com.porcana.domain.portfolio.entity.PortfolioDailyReturn;
-import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
-import com.porcana.domain.portfolio.repository.PortfolioDailyReturnRepository;
-import com.porcana.domain.portfolio.repository.PortfolioRepository;
-import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepository;
+import com.porcana.domain.portfolio.entity.*;
+import com.porcana.domain.portfolio.repository.*;
 import com.porcana.domain.portfolio.service.PortfolioReturnCalculator;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
@@ -18,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,6 +30,8 @@ public class HomeService {
     private final AssetRepository assetRepository;
     private final PortfolioReturnCalculator portfolioReturnCalculator;
     private final SnapshotAssetDailyReturnRepository snapshotAssetDailyReturnRepository;
+    private final PortfolioSnapshotRepository portfolioSnapshotRepository;
+    private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
 
     public HomeResponse getHome(UUID userId) {
         User user = userRepository.findById(userId)
@@ -179,20 +177,54 @@ public class HomeService {
 
     /**
      * Get latest market-cap based weights for assets
-     * Returns the most recent weightUsed from SnapshotAssetDailyReturn
+     * Priority:
+     * 1. Most recent weightUsed from SnapshotAssetDailyReturn (if exists for latest snapshot)
+     * 2. Latest PortfolioSnapshotAsset weight (after rebalancing)
+     * 3. PortfolioAsset weight (fallback in buildPositions)
      */
     private Map<UUID, Double> getLatestWeights(UUID portfolioId, Set<UUID> assetIds) {
         Map<UUID, Double> weights = new HashMap<>();
 
+        // Get the latest snapshot
+        Optional<PortfolioSnapshot> latestSnapshotOpt = portfolioSnapshotRepository
+                .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+                        portfolioId, LocalDate.now());
+
+        if (latestSnapshotOpt.isEmpty()) {
+            return weights; // No snapshot yet, will fallback to PortfolioAsset weights
+        }
+
+        PortfolioSnapshot latestSnapshot = latestSnapshotOpt.get();
+
+        // Get snapshot assets for the latest snapshot (this includes rebalanced weights)
+        List<PortfolioSnapshotAsset> snapshotAssets = portfolioSnapshotAssetRepository
+                .findBySnapshotId(latestSnapshot.getId());
+        Map<UUID, BigDecimal> snapshotWeightMap = snapshotAssets.stream()
+                .collect(Collectors.toMap(
+                        PortfolioSnapshotAsset::getAssetId,
+                        PortfolioSnapshotAsset::getWeight
+                ));
+
+        // For each asset, try to get the most recent weightUsed from daily returns
+        // If daily return exists for the latest snapshot, use it (market-adjusted weight)
+        // Otherwise, use the snapshot weight (rebalanced weight)
         for (UUID assetId : assetIds) {
-            snapshotAssetDailyReturnRepository
-                    .findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId)
-                    .ifPresent(dailyReturn -> {
-                        if (dailyReturn.getWeightUsed() != null) {
-                                weights.put(assetId, dailyReturn.getWeightUsed().doubleValue());
-                            }
-                        }
-                    );
+            Optional<SnapshotAssetDailyReturn> dailyReturnOpt = snapshotAssetDailyReturnRepository
+                    .findFirstByPortfolioIdAndAssetIdOrderByReturnDateDesc(portfolioId, assetId);
+
+            if (dailyReturnOpt.isPresent()) {
+                SnapshotAssetDailyReturn dailyReturn = dailyReturnOpt.get();
+                // Only use daily return if it's from the current snapshot (or later)
+                if (!dailyReturn.getReturnDate().isBefore(latestSnapshot.getEffectiveDate())) {
+                    weights.put(assetId, dailyReturn.getWeightUsed().doubleValue());
+                    continue;
+                }
+            }
+
+            // Fallback to snapshot weight (after rebalancing)
+            if (snapshotWeightMap.containsKey(assetId)) {
+                weights.put(assetId, snapshotWeightMap.get(assetId).doubleValue());
+            }
         }
 
         return weights;
