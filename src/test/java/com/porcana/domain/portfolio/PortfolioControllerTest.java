@@ -500,6 +500,28 @@ class PortfolioControllerTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("메인 포트폴리오 삭제 실패 - 메인 변경 필요")
+    void deletePortfolio_fail_mainPortfolio() {
+        String accessToken = createAccessToken();
+
+        // 메인 포트폴리오로 설정
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .put("/portfolios/{portfolioId}/main", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(200);
+
+        // 메인 포트폴리오 삭제 시도 - 실패해야 함
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .delete("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(400);
+    }
+
+    @Test
     @DisplayName("포트폴리오 삭제 후 목록에서 제외됨")
     void deletePortfolio_notInList() {
         String accessToken = createAccessToken();

@@ -530,10 +530,21 @@ public class PortfolioService {
 
     /**
      * Delete portfolio (soft delete)
+     * Main portfolio cannot be deleted - must change main portfolio first
      */
     @Transactional
     public void deletePortfolio(UUID portfolioId, UUID userId, UUID guestSessionId) {
         Portfolio portfolio = findPortfolioWithOwnership(portfolioId, userId, guestSessionId);
+
+        // 메인 포트폴리오는 삭제 불가 - 먼저 메인을 변경해야 함
+        if (userId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            if (portfolioId.equals(user.getMainPortfolioId())) {
+                throw new IllegalStateException("Cannot delete main portfolio. Please change main portfolio first.");
+            }
+        }
+
         portfolio.delete();
         portfolioRepository.save(portfolio);
     }
