@@ -63,6 +63,12 @@ disable-model-invocation: false
 ./gradlew bootRun --args='--spring.batch.job.names=portfolioPerformanceJob'
 ```
 
+**03:00 KST (매일) - 삭제된 포트폴리오 정리**
+```bash
+# 30일 이상 경과한 삭제 포트폴리오 하드 삭제
+./gradlew bootRun --args='--spring.batch.job.names=deletedPortfolioCleanupJob'
+```
+
 ## 특수 배치 Job
 
 **US 이미지 업데이트 (수동 실행)**
@@ -87,6 +93,44 @@ RECALCULATE_WEIGHT_USED_ENABLED=true ./gradlew bootRun
 OHLC_BACKFILL_ENABLED=true ./gradlew bootRun
 
 # 특정 날짜 이후의 AssetPrice 데이터를 삭제하고 OHLC 형식으로 재수집
+```
+
+## 삭제된 포트폴리오 정리 (Deleted Portfolio Cleanup)
+
+### 목적
+- Soft delete된 포트폴리오 중 30일 이상 경과한 것을 하드 삭제
+- 관련된 모든 데이터(자산, 스냅샷, 수익률, 아레나 세션 등) 함께 삭제
+
+### 삭제 순서 (FK 제약 조건 준수)
+```
+1. ArenaRoundChoices → ArenaRound
+2. ArenaRound → ArenaSession
+3. SnapshotAssetDailyReturn
+4. PortfolioDailyReturn (FK: snapshot_id)
+5. PortfolioSnapshotAsset → PortfolioSnapshot
+6. PortfolioAsset
+7. Portfolio (최종 삭제)
+```
+
+### 설정
+```java
+// DeletedPortfolioCleanupBatchJob.java
+private static final int RETENTION_DAYS = 30;  // 보관 기간
+
+// 30일 이상 경과한 삭제 포트폴리오 조회
+LocalDateTime cutoffDate = LocalDateTime.now().minusDays(RETENTION_DAYS);
+List<Portfolio> portfoliosToDelete = portfolioRepository.findDeletedPortfoliosOlderThan(cutoffDate);
+```
+
+### 로그 예시
+```
+Starting deleted portfolio cleanup (retention: 30 days)
+Cutoff date for cleanup: 2024-01-15T03:00:00
+Found 5 portfolios to hard-delete
+Hard-deleted portfolio: uuid-123 (deleted at: 2023-12-10T10:30:00)
+Hard-deleted portfolio: uuid-456 (deleted at: 2023-12-12T15:45:00)
+...
+Deleted portfolio cleanup completed: 5 portfolios deleted
 ```
 
 ## Batch Job 구조 패턴

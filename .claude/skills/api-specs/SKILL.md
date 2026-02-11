@@ -360,6 +360,32 @@ Error Responses
 - 400: 포트폴리오를 찾을 수 없거나 권한이 없음
 - 401: 인증 필요
 
+### DELETE /portfolios/{portfolioId}
+**Description**: 포트폴리오를 삭제합니다. Soft delete로 처리되며, 30일 후 배치 작업에 의해 완전히 삭제됩니다.
+
+**Auth**: Required (JWT 또는 Guest Session)
+
+**소유권 검증:**
+- 사용자 소유 포트폴리오: JWT 토큰의 userId와 일치해야 함
+- 게스트 소유 포트폴리오: `X-Guest-Session-Id` 헤더와 일치해야 함
+
+Response (204 No Content)
+```
+(empty body)
+```
+
+Error Responses
+- 400: 포트폴리오를 찾을 수 없음
+- 403: 포트폴리오 삭제 권한이 없음
+- 401: 인증 필요
+
+**Notes:**
+- 삭제된 포트폴리오는 목록 조회에서 제외됨
+- 삭제된 포트폴리오는 수정 불가
+- 30일 보관 기간 후 `deletedPortfolioCleanupJob` 배치에 의해 완전 삭제
+
+---
+
 ### PUT /portfolios/{portfolioId}/weights
 **Description**: 포트폴리오 내 자산들의 비중을 일괄 수정합니다. 비중의 합계는 반드시 100%가 되어야 합니다.
 
