@@ -70,4 +70,10 @@ public interface SnapshotAssetDailyReturnRepository extends JpaRepository<Snapsh
      */
     List<SnapshotAssetDailyReturn> findByPortfolioIdAndReturnDateOrderByAssetIdAsc(
             UUID portfolioId, LocalDate returnDate);
+
+    /**
+     * Delete all asset daily returns for a portfolio
+     * Returns the number of deleted records
+     */
+    int deleteByPortfolioId(UUID portfolioId);
 }

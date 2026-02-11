@@ -420,4 +420,181 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 // 재조정된 비중 70/30이 홈 화면에도 반영되어야 함
                 .body("positions.weightPct", hasItems(70.0f, 30.0f));
     }
+
+    @Test
+    @DisplayName("포트폴리오 삭제 성공 - 회원")
+    void deletePortfolio_success() {
+        String accessToken = createAccessToken();
+
+        // 삭제 전 포트폴리오 조회 성공
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(200);
+
+        // 포트폴리오 삭제
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .delete("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .log().all()
+                .statusCode(204);
+
+        // 삭제 후 포트폴리오 조회 실패 (404 또는 400)
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("포트폴리오 삭제 성공 - 게스트")
+    @Sql(scripts = "/sql/portfolio-guest-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void deletePortfolio_success_guest() {
+        UUID guestSessionId = UUID.fromString("aaa00000-0000-0000-0000-000000000001");
+        UUID guestPortfolioId = UUID.fromString("bbb00000-0000-0000-0000-000000000001");
+
+        // 삭제 전 포트폴리오 조회 성공
+        given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .get("/portfolios/{portfolioId}", guestPortfolioId)
+        .then()
+                .statusCode(200);
+
+        // 포트폴리오 삭제
+        given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .delete("/portfolios/{portfolioId}", guestPortfolioId)
+        .then()
+                .log().all()
+                .statusCode(204);
+
+        // 삭제 후 포트폴리오 조회 실패
+        given()
+                .header("X-Guest-Session-Id", guestSessionId.toString())
+        .when()
+                .get("/portfolios/{portfolioId}", guestPortfolioId)
+        .then()
+                .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("포트폴리오 삭제 실패 - 권한 없음")
+    void deletePortfolio_fail_noPermission() {
+        String accessToken = createAccessToken();
+        UUID otherPortfolioId = UUID.randomUUID();
+
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .delete("/portfolios/{portfolioId}", otherPortfolioId)
+        .then()
+                .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("메인 포트폴리오 삭제 실패 - 메인 변경 필요")
+    void deletePortfolio_fail_mainPortfolio() {
+        String accessToken = createAccessToken();
+
+        // 메인 포트폴리오로 설정
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .put("/portfolios/{portfolioId}/main", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(200);
+
+        // 메인 포트폴리오 삭제 시도 - 실패해야 함
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .delete("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("포트폴리오 삭제 후 목록에서 제외됨")
+    void deletePortfolio_notInList() {
+        String accessToken = createAccessToken();
+
+        // 삭제 전 목록 조회 - 포트폴리오가 있음
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios")
+        .then()
+                .statusCode(200)
+                .body("$", hasSize(greaterThanOrEqualTo(1)))
+                .body("find { it.portfolioId == '" + TEST_PORTFOLIO_ID + "' }", notNullValue());
+
+        // 포트폴리오 삭제
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .delete("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(204);
+
+        // 삭제 후 목록 조회 - 포트폴리오가 없음
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/portfolios")
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("find { it.portfolioId == '" + TEST_PORTFOLIO_ID + "' }", nullValue());
+    }
+
+    @Test
+    @DisplayName("삭제된 포트폴리오 수정 불가")
+    void deletePortfolio_cannotUpdate() {
+        String accessToken = createAccessToken();
+
+        // 포트폴리오 삭제
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .delete("/portfolios/{portfolioId}", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(204);
+
+        // 삭제 후 이름 수정 시도
+        UpdatePortfolioNameRequest request = new UpdatePortfolioNameRequest("새 이름");
+
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(ContentType.JSON)
+                .body(request)
+        .when()
+                .patch("/portfolios/{portfolioId}/name", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(400);
+
+        // 삭제 후 비중 수정 시도
+        UpdateAssetWeightsRequest weightRequest = new UpdateAssetWeightsRequest(
+                List.of(
+                        new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
+                        new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
+                )
+        );
+
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(ContentType.JSON)
+                .body(weightRequest)
+        .when()
+                .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+        .then()
+                .statusCode(400);
+    }
 }

@@ -49,10 +49,28 @@ public class PortfolioSnapshot {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Builder
-    public PortfolioSnapshot(UUID portfolioId, LocalDate effectiveDate, String note) {
+    @Builder(access = AccessLevel.PRIVATE)
+    private PortfolioSnapshot(UUID portfolioId, LocalDate effectiveDate, String note) {
         this.portfolioId = portfolioId;
         this.effectiveDate = effectiveDate;
         this.note = note;
+    }
+
+    /**
+     * Create a portfolio snapshot
+     */
+    public static PortfolioSnapshot create(UUID portfolioId, LocalDate effectiveDate, String note) {
+        if (portfolioId == null) {
+            throw new IllegalArgumentException("portfolioId must not be null");
+        }
+        if (effectiveDate == null) {
+            throw new IllegalArgumentException("effectiveDate must not be null");
+        }
+
+        return PortfolioSnapshot.builder()
+                .portfolioId(portfolioId)
+                .effectiveDate(effectiveDate)
+                .note(note)
+                .build();
     }
 }

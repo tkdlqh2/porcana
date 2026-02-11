@@ -38,11 +38,32 @@ public class PortfolioAsset {
     @Column(name = "added_at", nullable = false, updatable = false)
     private LocalDateTime addedAt;
 
-    @Builder
-    public PortfolioAsset(UUID portfolioId, UUID assetId, BigDecimal weightPct) {
+    @Builder(access = AccessLevel.PRIVATE)
+    private PortfolioAsset(UUID portfolioId, UUID assetId, BigDecimal weightPct) {
         this.portfolioId = portfolioId;
         this.assetId = assetId;
         this.weightPct = weightPct;
+    }
+
+    /**
+     * Create a portfolio asset
+     */
+    public static PortfolioAsset create(UUID portfolioId, UUID assetId, BigDecimal weightPct) {
+        if (portfolioId == null) {
+            throw new IllegalArgumentException("portfolioId must not be null");
+        }
+        if (assetId == null) {
+            throw new IllegalArgumentException("assetId must not be null");
+        }
+        if (weightPct == null || weightPct.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("weightPct must be positive");
+        }
+
+        return PortfolioAsset.builder()
+                .portfolioId(portfolioId)
+                .assetId(assetId)
+                .weightPct(weightPct)
+                .build();
     }
 
     public void setWeightPct(BigDecimal weightPct) {

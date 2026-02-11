@@ -23,6 +23,7 @@ public interface PortfolioAssetRepository extends JpaRepository<PortfolioAsset, 
 
     /**
      * Delete all assets in a portfolio
+     * Returns the number of deleted assets
      */
-    void deleteByPortfolioId(UUID portfolioId);
+    int deleteByPortfolioId(UUID portfolioId);
 }

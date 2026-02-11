@@ -342,13 +342,13 @@ public class ArenaService {
             assets = recommendationService.generateRoundOptions(session, currentRound);
 
             // Save the round with presented choices
-            ArenaRound newRound = ArenaRound.builder()
-                    .sessionId(session.getId())
-                    .roundNumber(currentRound)
-                    .roundType(RoundType.ASSET)
-                    .presentedAssetIds(assets.stream().map(Asset::getId).collect(Collectors.toList()))
-                    .build();
-
+            ArenaRound newRound = ArenaRound.create(
+                    session.getId(),
+                    currentRound,
+                    RoundType.ASSET,
+                    assets.stream().map(Asset::getId).collect(Collectors.toList()),
+                    null
+            );
             roundRepository.save(newRound);
         }
 
@@ -451,11 +451,11 @@ public class ArenaService {
             java.util.Map<UUID, BigDecimal> assetWeights = new java.util.HashMap<>();
 
             for (UUID assetId : selectedAssetIds) {
-                PortfolioAsset portfolioAsset = PortfolioAsset.builder()
-                        .portfolioId(session.getPortfolioId())
-                        .assetId(assetId)
-                        .weightPct(equalWeight)
-                        .build();
+                PortfolioAsset portfolioAsset = PortfolioAsset.create(
+                        session.getPortfolioId(),
+                        assetId,
+                        equalWeight
+                );
 
                 portfolioAssetRepository.save(portfolioAsset);
                 assetWeights.put(assetId, equalWeight);
@@ -470,9 +470,9 @@ public class ArenaService {
                     "Initial portfolio creation via Arena"
             );
 
-            // Auto-start the portfolio
-            Portfolio portfolio = portfolioRepository.findById(session.getPortfolioId())
-                    .orElseThrow(() -> new IllegalArgumentException("Portfolio not found"));
+            // Auto-start the portfolio (must not be deleted)
+            Portfolio portfolio = portfolioRepository.findByIdAndDeletedAtIsNull(session.getPortfolioId())
+                    .orElseThrow(() -> new IllegalStateException("Portfolio not found or has been deleted"));
             portfolio.start();
             portfolioRepository.save(portfolio);
 

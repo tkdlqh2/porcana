@@ -57,6 +57,9 @@ public class Portfolio {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Builder
     public Portfolio(UUID userId, UUID guestSessionId, String name, PortfolioStatus status, LocalDate startedAt) {
         // Validate XOR: exactly one of userId or guestSessionId must be set
@@ -148,5 +151,22 @@ public class Portfolio {
             throw new IllegalArgumentException("name must be <= 100 characters");
         }
         this.name = name;
+    }
+
+    /**
+     * Soft delete the portfolio
+     */
+    public void delete() {
+        if (this.deletedAt != null) {
+            throw new IllegalStateException("Portfolio is already deleted");
+        }
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Check if portfolio is deleted
+     */
+    public boolean isDeleted() {
+        return this.deletedAt != null;
     }
 }

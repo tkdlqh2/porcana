@@ -47,4 +47,10 @@ public interface PortfolioDailyReturnRepository extends JpaRepository<PortfolioD
      * Find all daily returns for a specific snapshot
      */
     List<PortfolioDailyReturn> findBySnapshotIdOrderByReturnDateAsc(UUID snapshotId);
+
+    /**
+     * Delete all daily returns for a portfolio
+     * Returns the number of deleted records
+     */
+    int deleteByPortfolioId(UUID portfolioId);
 }

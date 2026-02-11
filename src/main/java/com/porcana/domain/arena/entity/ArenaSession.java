@@ -80,8 +80,8 @@ public class ArenaSession {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-    @Builder
-    public ArenaSession(UUID portfolioId, UUID userId, UUID guestSessionId, SessionStatus status,
+    @Builder(access = AccessLevel.PRIVATE)
+    private ArenaSession(UUID portfolioId, UUID userId, UUID guestSessionId, SessionStatus status,
                         Integer currentRound, Integer totalRounds, RiskProfile riskProfile,
                         List<Sector> selectedSectors) {
         // Validate XOR: exactly one of userId or guestSessionId must be set
@@ -116,6 +116,20 @@ public class ArenaSession {
         return ArenaSession.builder()
                 .portfolioId(portfolioId)
                 .guestSessionId(guestSessionId)
+                .build();
+    }
+
+    /**
+     * Create a completed arena session for testing purposes
+     */
+    public static ArenaSession createCompleted(UUID portfolioId, UUID userId, SessionStatus status,
+                                               Integer currentRound, Integer totalRounds) {
+        return ArenaSession.builder()
+                .portfolioId(portfolioId)
+                .userId(userId)
+                .status(status)
+                .currentRound(currentRound)
+                .totalRounds(totalRounds)
                 .build();
     }
 
