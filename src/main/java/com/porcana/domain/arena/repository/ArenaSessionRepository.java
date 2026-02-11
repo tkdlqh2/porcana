@@ -54,4 +54,18 @@ public interface ArenaSessionRepository extends JpaRepository<ArenaSession, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM ArenaSession a WHERE a.guestSessionId = :guestSessionId")
     List<ArenaSession> findByGuestSessionIdForUpdate(@Param("guestSessionId") UUID guestSessionId);
+
+    // ===== Portfolio Cleanup Support =====
+
+    /**
+     * Find all sessions for a portfolio
+     * Used for hard-deleting portfolios
+     */
+    List<ArenaSession> findByPortfolioId(UUID portfolioId);
+
+    /**
+     * Delete all sessions for a portfolio
+     * Returns the number of deleted sessions
+     */
+    int deleteByPortfolioId(UUID portfolioId);
 }

@@ -23,8 +23,9 @@ public interface PortfolioSnapshotAssetRepository extends JpaRepository<Portfoli
 
     /**
      * Delete all assets in a snapshot
+     * Returns the number of deleted assets
      */
-    void deleteBySnapshotId(UUID snapshotId);
+    int deleteBySnapshotId(UUID snapshotId);
 
     /**
      * Check if asset exists in snapshot

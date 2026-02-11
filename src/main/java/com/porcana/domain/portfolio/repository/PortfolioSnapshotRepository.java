@@ -37,4 +37,16 @@ public interface PortfolioSnapshotRepository extends JpaRepository<PortfolioSnap
      * Check if snapshot exists for portfolio and effective date
      */
     boolean existsByPortfolioIdAndEffectiveDate(UUID portfolioId, LocalDate effectiveDate);
+
+    /**
+     * Find all snapshots for a portfolio
+     * Used for hard-deleting portfolios
+     */
+    List<PortfolioSnapshot> findByPortfolioId(UUID portfolioId);
+
+    /**
+     * Delete all snapshots for a portfolio
+     * Returns the number of deleted snapshots
+     */
+    int deleteByPortfolioId(UUID portfolioId);
 }

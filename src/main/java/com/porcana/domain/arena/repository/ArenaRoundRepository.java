@@ -29,4 +29,10 @@ public interface ArenaRoundRepository extends JpaRepository<ArenaRound, UUID> {
      * Used to get all ASSET rounds for portfolio completion
      */
     List<ArenaRound> findBySessionIdAndRoundType(UUID sessionId, RoundType roundType);
+
+    /**
+     * Delete all rounds for a session
+     * Returns the number of deleted rounds
+     */
+    int deleteBySessionId(UUID sessionId);
 }
