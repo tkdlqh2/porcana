@@ -13,9 +13,13 @@ import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +48,14 @@ public class DeletedPortfolioCleanupBatchJob {
 
     private static final int RETENTION_DAYS = 30;
 
+    // Self-injection for @Transactional to work on self-calls
+    private DeletedPortfolioCleanupBatchJob self;
+
+    @Autowired
+    public void setSelf(@Lazy DeletedPortfolioCleanupBatchJob self) {
+        this.self = self;
+    }
+
     @Bean
     public Job deletedPortfolioCleanupJob() {
         return new JobBuilder("deletedPortfolioCleanupJob", jobRepository)
@@ -65,15 +77,23 @@ public class DeletedPortfolioCleanupBatchJob {
                     log.info("Found {} portfolios to hard-delete", portfoliosToDelete.size());
 
                     int deletedCount = 0;
+                    int failedCount = 0;
                     for (Portfolio portfolio : portfoliosToDelete) {
                         try {
-                            hardDeletePortfolio(portfolio.getId());
+                            self.hardDeletePortfolio(portfolio.getId());
                             deletedCount++;
                             log.info("Hard-deleted portfolio: {} (deleted at: {})",
                                     portfolio.getId(), portfolio.getDeletedAt());
                         } catch (Exception e) {
-                            log.error("Failed to hard-delete portfolio: {}", portfolio.getId(), e);
+                            failedCount++;
+                            log.error("Failed to hard-delete portfolio: {} - transaction rolled back",
+                                    portfolio.getId(), e);
                         }
+                    }
+
+                    if (failedCount > 0) {
+                        log.warn("Portfolio cleanup completed with errors: {} deleted, {} failed",
+                                deletedCount, failedCount);
                     }
 
                     log.info("Deleted portfolio cleanup completed: {} portfolios deleted", deletedCount);
@@ -84,10 +104,12 @@ public class DeletedPortfolioCleanupBatchJob {
     }
 
     /**
-     * Hard-delete portfolio and all related data
-     * Deletion order is critical to avoid foreign key constraint violations
+     * Hard-delete portfolio and all related data in a separate transaction.
+     * If any deletion fails, the entire portfolio deletion is rolled back.
+     * Deletion order is critical to avoid foreign key constraint violations.
      */
-    private void hardDeletePortfolio(UUID portfolioId) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void hardDeletePortfolio(UUID portfolioId) {
         log.debug("Hard-deleting portfolio: {}", portfolioId);
 
         // 1. Delete ArenaRound records (must be before ArenaSession)
