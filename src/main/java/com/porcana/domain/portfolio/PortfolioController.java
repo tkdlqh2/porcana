@@ -156,6 +156,25 @@ public class PortfolioController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "포트폴리오 삭제",
+            description = "포트폴리오를 삭제합니다 (soft delete). 삭제된 포트폴리오는 30일 후 자동으로 완전 삭제됩니다. 비회원도 삭제 가능합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "삭제 성공"),
+                    @ApiResponse(responseCode = "400", description = "포트폴리오를 찾을 수 없거나 권한이 없음", content = @Content)
+            }
+    )
+    @DeleteMapping("/{portfolioId}")
+    public ResponseEntity<Void> deletePortfolio(
+            @Parameter(description = "포트폴리오 ID", required = true) @PathVariable UUID portfolioId,
+            HttpServletRequest request) {
+        UUID userId = extractUserId();
+        UUID guestSessionId = guestSessionExtractor.extractGuestSessionId(request);
+
+        portfolioService.deletePortfolio(portfolioId, userId, guestSessionId);
+        return ResponseEntity.noContent().build();
+    }
+
     /**
      * Extract user ID from Security Context
      * Returns null if not authenticated

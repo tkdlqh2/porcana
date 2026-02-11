@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,57 +20,65 @@ import java.util.UUID;
 public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
 
     /**
-     * Find all portfolios for a user
+     * Find all portfolios for a user (excluding deleted)
      */
-    List<Portfolio> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    List<Portfolio> findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID userId);
 
     /**
-     * Find active and finished portfolios for a user (exclude DRAFT)
+     * Find active and finished portfolios for a user (exclude DRAFT and deleted)
      */
-    List<Portfolio> findByUserIdAndStatusNotOrderByCreatedAtDesc(UUID userId, PortfolioStatus status);
+    List<Portfolio> findByUserIdAndStatusNotAndDeletedAtIsNullOrderByCreatedAtDesc(UUID userId, PortfolioStatus status);
 
     /**
-     * Find portfolio by ID and user ID (ownership validation)
+     * Find portfolio by ID and user ID (ownership validation, excluding deleted)
      */
-    Optional<Portfolio> findByIdAndUserId(UUID id, UUID userId);
+    Optional<Portfolio> findByIdAndUserIdAndDeletedAtIsNull(UUID id, UUID userId);
 
     /**
-     * Find portfolios by user and status
+     * Find portfolios by user and status (excluding deleted)
      */
-    List<Portfolio> findByUserIdAndStatus(UUID userId, PortfolioStatus status);
+    List<Portfolio> findByUserIdAndStatusAndDeletedAtIsNull(UUID userId, PortfolioStatus status);
 
     /**
-     * Find portfolios by status (for batch processing)
+     * Find portfolios by status (for batch processing, excluding deleted)
      */
-    List<Portfolio> findByStatus(PortfolioStatus status);
+    List<Portfolio> findByStatusAndDeletedAtIsNull(PortfolioStatus status);
 
     /**
-     * Find portfolios by status with pagination (for chunk-based batch processing)
+     * Find portfolios by status with pagination (for chunk-based batch processing, excluding deleted)
      */
-    Page<Portfolio> findByStatus(PortfolioStatus status, Pageable pageable);
+    Page<Portfolio> findByStatusAndDeletedAtIsNull(PortfolioStatus status, Pageable pageable);
 
     // ===== Guest Session Support =====
 
     /**
-     * Find all portfolios for a guest session
+     * Find all portfolios for a guest session (excluding deleted)
      */
-    List<Portfolio> findByGuestSessionIdOrderByCreatedAtDesc(UUID guestSessionId);
+    List<Portfolio> findByGuestSessionIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID guestSessionId);
 
     /**
-     * Find portfolio by ID and guest session ID (ownership validation)
+     * Find portfolio by ID and guest session ID (ownership validation, excluding deleted)
      */
-    Optional<Portfolio> findByIdAndGuestSessionId(UUID id, UUID guestSessionId);
+    Optional<Portfolio> findByIdAndGuestSessionIdAndDeletedAtIsNull(UUID id, UUID guestSessionId);
 
     /**
-     * Find portfolios by guest session ID with pessimistic lock (for claim operation)
+     * Find portfolios by guest session ID with pessimistic lock (for claim operation, excluding deleted)
      * Used to prevent concurrent claim of the same guest portfolios
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM Portfolio p WHERE p.guestSessionId = :guestSessionId")
+    @Query("SELECT p FROM Portfolio p WHERE p.guestSessionId = :guestSessionId AND p.deletedAt IS NULL")
     List<Portfolio> findByGuestSessionIdForUpdate(@Param("guestSessionId") UUID guestSessionId);
 
     /**
-     * Count portfolios owned by a guest session
+     * Count portfolios owned by a guest session (excluding deleted)
      */
-    long countByGuestSessionId(UUID guestSessionId);
+    long countByGuestSessionIdAndDeletedAtIsNull(UUID guestSessionId);
+
+    // ===== Soft Delete Support =====
+
+    /**
+     * Find deleted portfolios older than the specified date (for hard delete batch job)
+     */
+    @Query("SELECT p FROM Portfolio p WHERE p.deletedAt IS NOT NULL AND p.deletedAt < :cutoffDate")
+    List<Portfolio> findDeletedPortfoliosOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate);
 }

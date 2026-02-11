@@ -48,11 +48,11 @@ public class PortfolioService {
             // Authenticated user
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            portfolios = portfolioRepository.findByUserIdOrderByCreatedAtDesc(userId);
+            portfolios = portfolioRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
             mainPortfolioId = user.getMainPortfolioId();
         } else if (guestSessionId != null) {
             // Guest session
-            portfolios = portfolioRepository.findByGuestSessionIdOrderByCreatedAtDesc(guestSessionId);
+            portfolios = portfolioRepository.findByGuestSessionIdAndDeletedAtIsNullOrderByCreatedAtDesc(guestSessionId);
         } else {
             throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
         }
@@ -80,8 +80,8 @@ public class PortfolioService {
             // Authenticated user
             portfolio = Portfolio.createForUser(userId, command.getName());
         } else if (guestSessionId != null) {
-            // Guest session - check limit
-            long guestPortfolioCount = portfolioRepository.countByGuestSessionId(guestSessionId);
+            // Guest session - check limit (excluding deleted portfolios)
+            long guestPortfolioCount = portfolioRepository.countByGuestSessionIdAndDeletedAtIsNull(guestSessionId);
             if (guestPortfolioCount >= MAX_GUEST_PORTFOLIOS) {
                 throw new IllegalStateException(
                     String.format("Guest users can create up to %d portfolios. Please sign up to create more.", MAX_GUEST_PORTFOLIOS)
@@ -520,7 +520,7 @@ public class PortfolioService {
 
     @Transactional
     public UpdatePortfolioNameResponse updatePortfolioName(UpdatePortfolioNameCommand command) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.getPortfolioId(), command.getUserId())
+        Portfolio portfolio = portfolioRepository.findByIdAndUserIdAndDeletedAtIsNull(command.getPortfolioId(), command.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
 
         portfolio.updateName(command.getName());
@@ -528,9 +528,19 @@ public class PortfolioService {
         return UpdatePortfolioNameResponse.from(saved);
     }
 
+    /**
+     * Delete portfolio (soft delete)
+     */
+    @Transactional
+    public void deletePortfolio(UUID portfolioId, UUID userId, UUID guestSessionId) {
+        Portfolio portfolio = findPortfolioWithOwnership(portfolioId, userId, guestSessionId);
+        portfolio.delete();
+        portfolioRepository.save(portfolio);
+    }
+
     @Transactional
     public UpdateAssetWeightsResponse updateAssetWeights(UpdateAssetWeightsCommand command) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.getPortfolioId(), command.getUserId())
+        Portfolio portfolio = portfolioRepository.findByIdAndUserIdAndDeletedAtIsNull(command.getPortfolioId(), command.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
 
         // 비중 합계 검증 (100%가 되어야 함)
@@ -594,7 +604,7 @@ public class PortfolioService {
     }
 
     /**
-     * Find portfolio with ownership validation (supports both user and guest)
+     * Find portfolio with ownership validation (supports both user and guest, excludes deleted)
      * @param portfolioId Portfolio ID
      * @param userId User ID (nullable)
      * @param guestSessionId Guest session ID (nullable)
@@ -604,11 +614,11 @@ public class PortfolioService {
     private Portfolio findPortfolioWithOwnership(UUID portfolioId, UUID userId, UUID guestSessionId) {
         if (userId != null) {
             // Authenticated user
-            return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+            return portfolioRepository.findByIdAndUserIdAndDeletedAtIsNull(portfolioId, userId)
                     .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
         } else if (guestSessionId != null) {
             // Guest session
-            return portfolioRepository.findByIdAndGuestSessionId(portfolioId, guestSessionId)
+            return portfolioRepository.findByIdAndGuestSessionIdAndDeletedAtIsNull(portfolioId, guestSessionId)
                     .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
         } else {
             throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
