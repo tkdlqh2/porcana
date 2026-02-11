@@ -67,21 +67,16 @@ public class PortfolioSnapshotService {
         }
 
         // 스냅샷 생성
-        PortfolioSnapshot snapshot = PortfolioSnapshot.builder()
-                .portfolioId(portfolioId)
-                .effectiveDate(effectiveDate)
-                .note(note)
-                .build();
-
+        PortfolioSnapshot snapshot = PortfolioSnapshot.create(portfolioId, effectiveDate, note);
         PortfolioSnapshot savedSnapshot = snapshotRepository.save(snapshot);
 
         // 스냅샷 자산 구성 저장
         for (PortfolioAsset asset : currentAssets) {
-            PortfolioSnapshotAsset snapshotAsset = PortfolioSnapshotAsset.builder()
-                    .snapshotId(savedSnapshot.getId())
-                    .assetId(asset.getAssetId())
-                    .weight(asset.getWeightPct())
-                    .build();
+            PortfolioSnapshotAsset snapshotAsset = PortfolioSnapshotAsset.create(
+                    savedSnapshot.getId(),
+                    asset.getAssetId(),
+                    asset.getWeightPct()
+            );
 
             snapshotAssetRepository.save(snapshotAsset);
         }
@@ -144,12 +139,7 @@ public class PortfolioSnapshotService {
             }
         } else {
             // 새 스냅샷 생성
-            PortfolioSnapshot snapshot = PortfolioSnapshot.builder()
-                    .portfolioId(portfolioId)
-                    .effectiveDate(effectiveDate)
-                    .note(note)
-                    .build();
-
+            PortfolioSnapshot snapshot = PortfolioSnapshot.create(portfolioId, effectiveDate, note);
             savedSnapshot = snapshotRepository.save(snapshot);
             log.info("Created new snapshot {} for portfolio {} on {}",
                     savedSnapshot.getId(), portfolioId, effectiveDate);
@@ -157,12 +147,11 @@ public class PortfolioSnapshotService {
 
         // 스냅샷 자산 구성 저장 (새 비중으로)
         for (Map.Entry<UUID, BigDecimal> entry : assetWeights.entrySet()) {
-            PortfolioSnapshotAsset snapshotAsset = PortfolioSnapshotAsset.builder()
-                    .snapshotId(savedSnapshot.getId())
-                    .assetId(entry.getKey())
-                    .weight(entry.getValue())
-                    .build();
-
+            PortfolioSnapshotAsset snapshotAsset = PortfolioSnapshotAsset.create(
+                    savedSnapshot.getId(),
+                    entry.getKey(),
+                    entry.getValue()
+            );
             snapshotAssetRepository.save(snapshotAsset);
         }
 

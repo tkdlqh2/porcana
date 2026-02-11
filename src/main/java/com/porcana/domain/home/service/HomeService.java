@@ -80,7 +80,7 @@ public class HomeService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
+        Portfolio portfolio = portfolioRepository.findByIdAndUserIdAndDeletedAtIsNull(portfolioId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
 
         user.setMainPortfolioId(portfolio.getId());

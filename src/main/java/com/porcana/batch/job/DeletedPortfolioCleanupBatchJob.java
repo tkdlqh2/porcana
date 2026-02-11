@@ -104,26 +104,26 @@ public class DeletedPortfolioCleanupBatchJob {
         int snapshotAssetDailyReturnsDeleted = snapshotAssetDailyReturnRepository.deleteByPortfolioId(portfolioId);
         log.debug("Deleted {} snapshot asset daily returns for portfolio: {}", snapshotAssetDailyReturnsDeleted, portfolioId);
 
-        // 4. Delete PortfolioSnapshotAsset records (must be before PortfolioSnapshot)
+        // 4. Delete PortfolioDailyReturn records (must be before PortfolioSnapshot due to FK)
+        int dailyReturnsDeleted = portfolioDailyReturnRepository.deleteByPortfolioId(portfolioId);
+        log.debug("Deleted {} daily returns for portfolio: {}", dailyReturnsDeleted, portfolioId);
+
+        // 5. Delete PortfolioSnapshotAsset records (must be before PortfolioSnapshot)
         portfolioSnapshotRepository.findByPortfolioId(portfolioId).forEach(snapshot -> {
             int snapshotAssetsDeleted = portfolioSnapshotAssetRepository.deleteBySnapshotId(snapshot.getId());
             log.debug("Deleted {} snapshot assets for snapshot: {}", snapshotAssetsDeleted, snapshot.getId());
         });
 
-        // 5. Delete PortfolioSnapshot records
+        // 6. Delete PortfolioSnapshot records
         int snapshotsDeleted = portfolioSnapshotRepository.deleteByPortfolioId(portfolioId);
         log.debug("Deleted {} snapshots for portfolio: {}", snapshotsDeleted, portfolioId);
-
-        // 6. Delete PortfolioDailyReturn records
-        int dailyReturnsDeleted = portfolioDailyReturnRepository.deleteByPortfolioId(portfolioId);
-        log.debug("Deleted {} daily returns for portfolio: {}", dailyReturnsDeleted, portfolioId);
 
         // 7. Delete PortfolioAsset records
         int portfolioAssetsDeleted = portfolioAssetRepository.deleteByPortfolioId(portfolioId);
         log.debug("Deleted {} portfolio assets for portfolio: {}", portfolioAssetsDeleted, portfolioId);
 
-        // 8. Finally, delete Portfolio
+        // 8. Finally, delete Portfolio itself
         portfolioRepository.deleteById(portfolioId);
-        log.debug("Deleted portfolio: {}", portfolioId);
+        log.debug("Hard-deleted portfolio: {}", portfolioId);
     }
 }

@@ -52,14 +52,38 @@ public class ArenaRound {
     @Column(name = "picked_at")
     private LocalDateTime pickedAt;
 
-    @Builder
-    public ArenaRound(UUID sessionId, Integer roundNumber, RoundType roundType,
+    @Builder(access = AccessLevel.PRIVATE)
+    private ArenaRound(UUID sessionId, Integer roundNumber, RoundType roundType,
                       List<UUID> presentedAssetIds, UUID selectedAssetId) {
         this.sessionId = sessionId;
         this.roundNumber = roundNumber;
         this.roundType = roundType;
         this.presentedAssetIds = presentedAssetIds != null ? presentedAssetIds : new ArrayList<>();
         this.selectedAssetId = selectedAssetId;
+    }
+
+    /**
+     * Create an arena round
+     */
+    public static ArenaRound create(UUID sessionId, Integer roundNumber, RoundType roundType,
+                                   List<UUID> presentedAssetIds, UUID selectedAssetId) {
+        if (sessionId == null) {
+            throw new IllegalArgumentException("sessionId must not be null");
+        }
+        if (roundNumber == null) {
+            throw new IllegalArgumentException("roundNumber must not be null");
+        }
+        if (roundType == null) {
+            throw new IllegalArgumentException("roundType must not be null");
+        }
+
+        return ArenaRound.builder()
+                .sessionId(sessionId)
+                .roundNumber(roundNumber)
+                .roundType(roundType)
+                .presentedAssetIds(presentedAssetIds)
+                .selectedAssetId(selectedAssetId)
+                .build();
     }
 
     public void setSelectedAssetId(UUID selectedAssetId) {

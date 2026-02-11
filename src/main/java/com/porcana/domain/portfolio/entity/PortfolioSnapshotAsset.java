@@ -40,10 +40,31 @@ public class PortfolioSnapshotAsset {
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal weight;
 
-    @Builder
-    public PortfolioSnapshotAsset(UUID snapshotId, UUID assetId, BigDecimal weight) {
+    @Builder(access = AccessLevel.PRIVATE)
+    private PortfolioSnapshotAsset(UUID snapshotId, UUID assetId, BigDecimal weight) {
         this.snapshotId = snapshotId;
         this.assetId = assetId;
         this.weight = weight;
+    }
+
+    /**
+     * Create a portfolio snapshot asset
+     */
+    public static PortfolioSnapshotAsset create(UUID snapshotId, UUID assetId, BigDecimal weight) {
+        if (snapshotId == null) {
+            throw new IllegalArgumentException("snapshotId must not be null");
+        }
+        if (assetId == null) {
+            throw new IllegalArgumentException("assetId must not be null");
+        }
+        if (weight == null || weight.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("weight must be positive");
+        }
+
+        return PortfolioSnapshotAsset.builder()
+                .snapshotId(snapshotId)
+                .assetId(assetId)
+                .weight(weight)
+                .build();
     }
 }

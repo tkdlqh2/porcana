@@ -342,13 +342,13 @@ public class ArenaService {
             assets = recommendationService.generateRoundOptions(session, currentRound);
 
             // Save the round with presented choices
-            ArenaRound newRound = ArenaRound.builder()
-                    .sessionId(session.getId())
-                    .roundNumber(currentRound)
-                    .roundType(RoundType.ASSET)
-                    .presentedAssetIds(assets.stream().map(Asset::getId).collect(Collectors.toList()))
-                    .build();
-
+            ArenaRound newRound = ArenaRound.create(
+                    session.getId(),
+                    currentRound,
+                    RoundType.ASSET,
+                    assets.stream().map(Asset::getId).collect(Collectors.toList()),
+                    null
+            );
             roundRepository.save(newRound);
         }
 
@@ -451,11 +451,11 @@ public class ArenaService {
             java.util.Map<UUID, BigDecimal> assetWeights = new java.util.HashMap<>();
 
             for (UUID assetId : selectedAssetIds) {
-                PortfolioAsset portfolioAsset = PortfolioAsset.builder()
-                        .portfolioId(session.getPortfolioId())
-                        .assetId(assetId)
-                        .weightPct(equalWeight)
-                        .build();
+                PortfolioAsset portfolioAsset = PortfolioAsset.create(
+                        session.getPortfolioId(),
+                        assetId,
+                        equalWeight
+                );
 
                 portfolioAssetRepository.save(portfolioAsset);
                 assetWeights.put(assetId, equalWeight);
