@@ -77,6 +77,11 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
     // ===== Soft Delete Support =====
 
     /**
+     * Find portfolio by ID (excluding deleted)
+     */
+    Optional<Portfolio> findByIdAndDeletedAtIsNull(UUID id);
+
+    /**
      * Find deleted portfolios older than the specified date (for hard delete batch job)
      */
     @Query("SELECT p FROM Portfolio p WHERE p.deletedAt IS NOT NULL AND p.deletedAt < :cutoffDate")

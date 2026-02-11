@@ -375,11 +375,12 @@ Response (204 No Content)
 ```
 
 Error Responses
-- 400: 포트폴리오를 찾을 수 없음
+- 400: 포트폴리오를 찾을 수 없음, 메인 포트폴리오 삭제 시도
 - 403: 포트폴리오 삭제 권한이 없음
 - 401: 인증 필요
 
 **Notes:**
+- **메인 포트폴리오는 삭제 불가** - 먼저 `PUT /portfolios/{portfolioId}/main`으로 다른 포트폴리오를 메인으로 설정해야 함
 - 삭제된 포트폴리오는 목록 조회에서 제외됨
 - 삭제된 포트폴리오는 수정 불가
 - 30일 보관 기간 후 `deletedPortfolioCleanupJob` 배치에 의해 완전 삭제

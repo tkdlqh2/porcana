@@ -470,9 +470,9 @@ public class ArenaService {
                     "Initial portfolio creation via Arena"
             );
 
-            // Auto-start the portfolio
-            Portfolio portfolio = portfolioRepository.findById(session.getPortfolioId())
-                    .orElseThrow(() -> new IllegalArgumentException("Portfolio not found"));
+            // Auto-start the portfolio (must not be deleted)
+            Portfolio portfolio = portfolioRepository.findByIdAndDeletedAtIsNull(session.getPortfolioId())
+                    .orElseThrow(() -> new IllegalStateException("Portfolio not found or has been deleted"));
             portfolio.start();
             portfolioRepository.save(portfolio);
 
