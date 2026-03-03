@@ -44,6 +44,9 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Builder
     public User(String email, String password, String nickname, AuthProvider provider) {
         this.email = email;
@@ -63,6 +66,18 @@ public class User {
 
     public void updateNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public void delete() {
+        if (this.deletedAt != null) {
+            throw new IllegalStateException("User is already deleted");
+        }
+
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
     }
 
     public enum AuthProvider {
