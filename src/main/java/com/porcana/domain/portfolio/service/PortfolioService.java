@@ -46,7 +46,7 @@ public class PortfolioService {
 
         if (userId != null) {
             // Authenticated user
-            User user = userRepository.findById(userId)
+            User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
             portfolios = portfolioRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
             mainPortfolioId = user.getMainPortfolioId();
@@ -104,7 +104,7 @@ public class PortfolioService {
 
         boolean isMain = false;
         if (userId != null) {
-            User user = userRepository.findById(userId)
+            User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
             isMain = portfolio.getId().equals(user.getMainPortfolioId());
         }
@@ -538,7 +538,7 @@ public class PortfolioService {
 
         // 메인 포트폴리오는 삭제 불가 - 먼저 메인을 변경해야 함
         if (userId != null) {
-            User user = userRepository.findById(userId)
+            User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
             if (portfolioId.equals(user.getMainPortfolioId())) {
                 throw new IllegalStateException("Cannot delete main portfolio. Please change main portfolio first.");

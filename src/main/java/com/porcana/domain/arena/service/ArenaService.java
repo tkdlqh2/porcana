@@ -478,7 +478,7 @@ public class ArenaService {
 
             // Set as main portfolio only for authenticated users
             if (session.getUserId() != null) {
-                User user = userRepository.findById(session.getUserId())
+                User user = userRepository.findByIdAndDeletedAtIsNull(session.getUserId())
                         .orElseThrow(() -> new IllegalArgumentException("User not found"));
                 if (user.getMainPortfolioId() == null) {
                     user.setMainPortfolioId(session.getPortfolioId());

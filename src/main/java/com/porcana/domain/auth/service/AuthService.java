@@ -79,7 +79,7 @@ public class AuthService {
      * Login with EMAIL provider
      */
     private User loginWithEmail(LoginCommand command) {
-        User user = userRepository.findByEmail(command.getEmail())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(command.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
         if (user.getProvider() != User.AuthProvider.EMAIL || user.getPassword() == null) {
@@ -106,7 +106,7 @@ public class AuthService {
                 email.substring(0, Math.min(3, email.indexOf('@'))));
 
                 // Find existing user or create new one
-        Optional<User> existingUser = userRepository.findByEmail(email);
+        Optional<User> existingUser = userRepository.findByEmailAndDeletedAtIsNull(email);
 
         if (existingUser.isPresent()) {
             User user = existingUser.get();
@@ -142,7 +142,7 @@ public class AuthService {
         String baseNickname = email.split("@")[0];
 
         // Check if nickname exists
-        if (!userRepository.existsByNickname(baseNickname)) {
+        if (!userRepository.existsByNicknameAndDeletedAtIsNull(baseNickname)) {
             return baseNickname;
         }
 
@@ -152,7 +152,7 @@ public class AuthService {
         do {
             nickname = baseNickname + suffix;
             suffix++;
-        } while (userRepository.existsByNickname(nickname));
+        } while (userRepository.existsByNicknameAndDeletedAtIsNull(nickname));
 
         return nickname;
     }
@@ -170,7 +170,7 @@ public class AuthService {
 
         UUID userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId());
@@ -210,7 +210,7 @@ public class AuthService {
             }
 
             // Set main portfolio if user doesn't have one
-            User user = userRepository.findById(userId)
+            User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
             if (user.getMainPortfolioId() == null && !guestPortfolios.isEmpty()) {
