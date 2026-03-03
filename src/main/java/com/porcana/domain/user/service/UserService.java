@@ -15,10 +15,9 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-
     @Transactional(readOnly = true)
     public UserResponse getMe(UUID userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         return UserResponse.from(user);
@@ -26,11 +25,19 @@ public class UserService {
 
     @Transactional
     public UserResponse updateMe(UUID userId, UpdateUserCommand command) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         user.updateNickname(command.getNickname());
 
         return UserResponse.from(user);
+    }
+
+    @Transactional
+    public void deleteMe(UUID userId) {
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        user.delete();
     }
 }
