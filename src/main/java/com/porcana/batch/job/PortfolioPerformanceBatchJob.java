@@ -86,7 +86,7 @@ public class PortfolioPerformanceBatchJob {
     }
 
     /**
-     * Reader: ACTIVE 포트폴리오를 페이징 방식으로 읽기
+     * Reader: ACTIVE 포트폴리오를 페이징 방식으로 읽기 (삭제된 포트폴리오 제외)
      */
     @Bean
     @StepScope
@@ -94,7 +94,7 @@ public class PortfolioPerformanceBatchJob {
         return new RepositoryItemReaderBuilder<Portfolio>()
                 .name("portfolioReader")
                 .repository(portfolioRepository)
-                .methodName("findByStatus")
+                .methodName("findByStatusAndDeletedAtIsNull")
                 .arguments(Collections.singletonList(PortfolioStatus.ACTIVE))
                 .pageSize(CHUNK_SIZE)
                 .sorts(Map.of("createdAt", Sort.Direction.ASC))

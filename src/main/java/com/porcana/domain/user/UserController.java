@@ -56,4 +56,18 @@ public class UserController {
         UserResponse response = userService.updateMe(userId, command);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(
+            summary = "회원 탈퇴",
+            description = "현재 로그인한 사용자의 계정과 사용자 소유 데이터를 삭제합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "탈퇴 성공"),
+                    @ApiResponse(responseCode = "401", description = "인증 실패")
+            }
+    )
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteMe(@CurrentUser UUID userId) {
+        userService.deleteMe(userId);
+        return ResponseEntity.noContent().build();
+    }
 }

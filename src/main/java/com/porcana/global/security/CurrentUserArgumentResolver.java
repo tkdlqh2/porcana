@@ -1,5 +1,7 @@
 package com.porcana.global.security;
 
+import com.porcana.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -14,7 +16,10 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.util.UUID;
 
 @Component
+@RequiredArgsConstructor
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
+
+    private final UserRepository userRepository;
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
@@ -40,6 +45,10 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
             );
         }
 
-        return (UUID) principal;
+        UUID userId = (UUID) principal;
+        userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is not active"));
+
+        return userId;
     }
 }

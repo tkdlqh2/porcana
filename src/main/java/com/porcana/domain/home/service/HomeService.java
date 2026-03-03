@@ -34,7 +34,7 @@ public class HomeService {
     private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
 
     public HomeResponse getHome(UUID userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UUID mainPortfolioId = user.getMainPortfolioId();
@@ -77,7 +77,7 @@ public class HomeService {
 
     @Transactional
     public MainPortfolioIdResponse setMainPortfolio(UUID userId, UUID portfolioId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         Portfolio portfolio = portfolioRepository.findByIdAndUserIdAndDeletedAtIsNull(portfolioId, userId)

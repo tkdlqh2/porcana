@@ -68,4 +68,18 @@ public interface ArenaSessionRepository extends JpaRepository<ArenaSession, UUID
      * Returns the number of deleted sessions
      */
     int deleteByPortfolioId(UUID portfolioId);
+
+    // ===== User Cleanup Support =====
+
+    /**
+     * Find all sessions for a user
+     * Used for hard-deleting user's arena sessions on withdrawal
+     */
+    List<ArenaSession> findByUserId(UUID userId);
+
+    /**
+     * Delete all sessions for a user
+     * Returns the number of deleted sessions
+     */
+    int deleteByUserId(UUID userId);
 }

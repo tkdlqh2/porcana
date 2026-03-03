@@ -101,7 +101,7 @@ public class AssetService {
     }
 
     public AssetInMainPortfolioResponse isAssetInMainPortfolio(UUID assetId, UUID userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UUID mainPortfolioId = user.getMainPortfolioId();

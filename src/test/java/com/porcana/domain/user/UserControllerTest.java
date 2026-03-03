@@ -2,6 +2,8 @@ package com.porcana.domain.user;
 
 import com.porcana.BaseIntegrationTest;
 import com.porcana.domain.user.dto.UpdateUserRequest;
+import com.porcana.domain.user.entity.User;
+import com.porcana.domain.user.repository.UserRepository;
 import com.porcana.global.security.JwtTokenProvider;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
@@ -12,23 +14,27 @@ import org.springframework.test.context.jdbc.Sql;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Sql(scripts = "/sql/user-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class UserControllerTest extends BaseIntegrationTest {
 
+    private static final UUID TEST_USER_ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    // Test user ID from SQL file
-    private static final UUID TEST_USER_ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+    @Autowired
+    private UserRepository userRepository;
 
     private String createAccessToken() {
         return jwtTokenProvider.createAccessToken(TEST_USER_ID);
     }
 
     @Test
-    @DisplayName("내 정보 조회 성공")
+    @DisplayName("get me success")
     void getMe_success() {
         String accessToken = createAccessToken();
 
@@ -37,15 +43,14 @@ class UserControllerTest extends BaseIntegrationTest {
         .when()
                 .get("/me")
         .then()
-                .log().all()
                 .statusCode(200)
                 .body("userId", equalTo(TEST_USER_ID.toString()))
-                .body("nickname", equalTo("테스터"))
+                .body("nickname", equalTo("tester"))
                 .body("mainPortfolioId", nullValue());
     }
 
     @Test
-    @DisplayName("내 정보 조회 실패 - 인증 없음")
+    @DisplayName("get me fails without auth")
     void getMe_fail_noAuth() {
         given()
         .when()
@@ -55,7 +60,7 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("내 정보 조회 실패 - 유효하지 않은 토큰")
+    @DisplayName("get me fails with invalid token")
     void getMe_fail_invalidToken() {
         given()
                 .header("Authorization", "Bearer invalid-token")
@@ -66,11 +71,11 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("내 정보 수정 성공")
+    @DisplayName("update me success")
     void updateMe_success() {
         String accessToken = createAccessToken();
 
-        UpdateUserRequest updateRequest = new UpdateUserRequest("새닉네임");
+        UpdateUserRequest updateRequest = new UpdateUserRequest("updated-user");
 
         given()
                 .header("Authorization", "Bearer " + accessToken)
@@ -79,14 +84,13 @@ class UserControllerTest extends BaseIntegrationTest {
         .when()
                 .patch("/me")
         .then()
-                .log().all()
                 .statusCode(200)
                 .body("userId", equalTo(TEST_USER_ID.toString()))
-                .body("nickname", equalTo("새닉네임"));
+                .body("nickname", equalTo("updated-user"));
     }
 
     @Test
-    @DisplayName("내 정보 수정 실패 - validation 오류 (빈 닉네임)")
+    @DisplayName("update me fails on blank nickname")
     void updateMe_fail_blankNickname() {
         String accessToken = createAccessToken();
 
@@ -103,9 +107,9 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("내 정보 수정 실패 - 인증 없음")
+    @DisplayName("update me fails without auth")
     void updateMe_fail_noAuth() {
-        UpdateUserRequest updateRequest = new UpdateUserRequest("새닉네임");
+        UpdateUserRequest updateRequest = new UpdateUserRequest("updated-user");
 
         given()
                 .contentType(ContentType.JSON)
@@ -117,12 +121,11 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("내 정보 수정 후 조회하면 변경된 닉네임 확인")
+    @DisplayName("update me persists")
     void updateMe_then_getMe() {
         String accessToken = createAccessToken();
 
-        // 닉네임 수정
-        UpdateUserRequest updateRequest = new UpdateUserRequest("변경된닉네임");
+        UpdateUserRequest updateRequest = new UpdateUserRequest("persisted-user");
 
         given()
                 .header("Authorization", "Bearer " + accessToken)
@@ -133,13 +136,39 @@ class UserControllerTest extends BaseIntegrationTest {
         .then()
                 .statusCode(200);
 
-        // 조회해서 확인
         given()
                 .header("Authorization", "Bearer " + accessToken)
         .when()
                 .get("/me")
         .then()
                 .statusCode(200)
-                .body("nickname", equalTo("변경된닉네임"));
+                .body("nickname", equalTo("persisted-user"));
+    }
+
+    @Test
+    @DisplayName("delete me success")
+    void deleteMe_success() {
+        String accessToken = createAccessToken();
+
+        assertTrue(userRepository.existsById(TEST_USER_ID));
+        assertTrue(userRepository.findByIdAndDeletedAtIsNull(TEST_USER_ID).isPresent());
+
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .delete("/me")
+        .then()
+                .statusCode(204);
+
+        User deletedUser = userRepository.findById(TEST_USER_ID).orElseThrow();
+        assertTrue(deletedUser.isDeleted());
+        assertTrue(userRepository.findByIdAndDeletedAtIsNull(TEST_USER_ID).isEmpty());
+
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/me")
+        .then()
+                .statusCode(401);
     }
 }
