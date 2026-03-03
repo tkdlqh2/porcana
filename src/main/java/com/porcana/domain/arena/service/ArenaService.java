@@ -524,4 +524,19 @@ public class ArenaService {
                 .currentRound(session.getCurrentRound())
                 .build();
     }
+
+    /**
+     * Delete all arena sessions for a user (hard delete)
+     * Called when user withdraws from the service
+     */
+    @Transactional
+    public void deleteAllSessionsForUser(UUID userId) {
+        List<ArenaSession> sessions = sessionRepository.findByUserId(userId);
+        for (ArenaSession session : sessions) {
+            // Delete rounds first (foreign key constraint)
+            roundRepository.deleteBySessionId(session.getId());
+        }
+        // Delete sessions (arena_session_sectors will be cascade deleted via @ElementCollection)
+        sessionRepository.deleteByUserId(userId);
+    }
 }

@@ -549,6 +549,19 @@ public class PortfolioService {
         portfolioRepository.save(portfolio);
     }
 
+    /**
+     * Delete all portfolios for a user (soft delete)
+     * Called when user withdraws from the service
+     */
+    @Transactional
+    public void deleteAllPortfoliosForUser(UUID userId) {
+        List<Portfolio> portfolios = portfolioRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
+        for (Portfolio portfolio : portfolios) {
+            portfolio.delete();
+        }
+        portfolioRepository.saveAll(portfolios);
+    }
+
     @Transactional
     public UpdateAssetWeightsResponse updateAssetWeights(UpdateAssetWeightsCommand command) {
         Portfolio portfolio = portfolioRepository.findByIdAndUserIdAndDeletedAtIsNull(command.getPortfolioId(), command.getUserId())
