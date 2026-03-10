@@ -90,4 +90,16 @@ public class AssetPrice {
     public BigDecimal getPrice() {
         return closePrice;
     }
+
+    /**
+     * Update price data (for upsert operations)
+     */
+    public void updatePrice(BigDecimal openPrice, BigDecimal highPrice,
+                            BigDecimal lowPrice, BigDecimal closePrice, Long volume) {
+        this.openPrice = openPrice;
+        this.highPrice = highPrice;
+        this.lowPrice = lowPrice;
+        this.closePrice = closePrice;
+        this.volume = volume;
+    }
 }

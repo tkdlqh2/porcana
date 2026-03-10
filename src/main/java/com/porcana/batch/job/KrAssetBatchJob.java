@@ -21,9 +21,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -174,8 +176,23 @@ public class KrAssetBatchJob {
                 .tasklet((contribution, chunkContext) -> {
                     log.info("Starting historical price fetch for Korean assets");
 
-                    // Find assets created in the last 24 hours
-                    LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+                    // Get timestamp from JobParameters
+                    Map<String, Object> jobParameters = chunkContext.getStepContext().getJobParameters();
+                    Long timestamp = (Long) jobParameters.get("timestamp");
+                    if (timestamp == null) {
+                        timestamp = System.currentTimeMillis();
+                        log.info("timestamp parameter is null, using current time: {}", timestamp);
+                    }
+
+                    // Convert timestamp to LocalDateTime (KST timezone)
+                    LocalDateTime baseDateTime = Instant.ofEpochMilli(timestamp)
+                            .atZone(ZoneId.of("Asia/Seoul"))
+                            .toLocalDateTime();
+
+                    // Find assets created in the last 24 hours from base time
+                    LocalDateTime oneDayAgo = baseDateTime.minusDays(1);
+                    log.info("Using base time: {}, searching for assets created after: {}", baseDateTime, oneDayAgo);
+
                     List<Asset> recentAssets = assetRepository.findByMarketAndCreatedAtAfter(
                             Asset.Market.KR, oneDayAgo);
 
