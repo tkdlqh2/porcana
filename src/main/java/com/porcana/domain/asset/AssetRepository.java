@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AssetRepository extends JpaRepository<Asset, UUID> {
+public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetRepositoryCustom {
 
     /**
      * Find asset by symbol and market (natural key)

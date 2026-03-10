@@ -5,6 +5,8 @@ import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.dto.AssetChartResponse;
 import com.porcana.domain.asset.dto.AssetDetailResponse;
 import com.porcana.domain.asset.dto.AssetInMainPortfolioResponse;
+import com.porcana.domain.asset.dto.AssetLibraryResponse;
+import com.porcana.domain.asset.dto.AssetLibrarySearchCondition;
 import com.porcana.domain.asset.dto.AssetSearchResponse;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
@@ -15,7 +17,9 @@ import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,5 +152,13 @@ public class AssetService {
             case "1Y" -> endDate.minusYears(1);
             default -> endDate.minusMonths(1);
         };
+    }
+
+    /**
+     * 종목 라이브러리 조회 (동적 필터링 + 페이지네이션)
+     */
+    public AssetLibraryResponse getLibrary(AssetLibrarySearchCondition condition, Pageable pageable) {
+        Page<Asset> page = assetRepository.searchLibrary(condition, pageable);
+        return AssetLibraryResponse.from(page);
     }
 }
