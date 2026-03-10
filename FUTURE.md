@@ -157,6 +157,351 @@ API:
 
 ---
 
+### Phase 0.5: 포트폴리오 관리 도구 (2주)
+**목표: 실제 투자금 기반 포트폴리오 관리 기능 제공**
+
+#### 개요
+
+현재 포트폴리오는 "비중(%)" 기반이지만, 실제 투자자에게는:
+- 얼마를 투자할지 (시드)
+- 몇 주를 사야 하는지 (수량)
+- 추가 자금은 어디에 넣어야 하는지 (리밸런싱)
+- 비중이 얼마나 틀어졌는지 (괴리 알림)
+
+이런 정보가 필요합니다.
+
+---
+
+#### 기능 1: 시드 설정 + 수량 계산
+**우선순위: HIGH**
+
+```
+기능: 총 투자금액을 설정하면 각 종목별 매수 수량을 계산
+
+플로우:
+1. 포트폴리오 상세 → "투자금 설정"
+2. 총 투자금액 입력 (예: 10,000,000원)
+3. 각 종목별 매수 수량 + 금액 표시
+4. 단수 차이로 남는 금액 표시
+
+계산 로직:
+- targetAmount = totalSeed × (weight / 100)
+- quantity = floor(targetAmount / currentPrice)
+- actualAmount = quantity × currentPrice
+- remainingCash = totalSeed - sum(actualAmount)
+
+API:
+- PUT /portfolios/{portfolioId}/seed
+  Request: {
+    investmentKrw: 10000000
+  }
+  Response: {
+    portfolioId: "uuid",
+    investmentKrw: 10000000,
+    allocations: [
+      {
+        assetId: "uuid",
+        symbol: "AAPL",
+        name: "Apple Inc.",
+        market: "US",
+        weight: 20.0,
+        targetAmountKrw: 2000000,
+        currentPrice: 250000,  // KRW 환산가
+        quantity: 8,
+        actualAmountKrw: 2000000,
+        priceDate: "2025-03-07"
+      },
+      {
+        assetId: "uuid",
+        symbol: "005930",
+        name: "삼성전자",
+        market: "KR",
+        weight: 30.0,
+        targetAmountKrw: 3000000,
+        currentPrice: 71000,
+        quantity: 42,
+        actualAmountKrw: 2982000,
+        priceDate: "2025-03-07"
+      },
+      ...
+    ],
+    totalAllocatedKrw: 9850000,
+    remainingCashKrw: 150000,
+    exchangeRate: {
+      usdKrw: 1350.50,
+      rateDate: "2025-03-07"
+    }
+  }
+
+- GET /portfolios/{portfolioId}/seed
+  Response: (위와 동일, 마지막 설정 조회)
+```
+
+**Entity 변경:**
+```java
+// Portfolio 엔티티에 추가
+@Column(name = "investment_krw")
+private BigDecimal investmentKrw;  // 설정된 총 투자금액
+
+@Column(name = "investment_set_at")
+private LocalDate investmentSetAt;  // 투자금 설정일
+```
+
+**기술 작업:**
+1. Portfolio 엔티티에 `investmentKrw`, `investmentSetAt` 필드 추가
+2. Flyway 마이그레이션 작성
+3. `PortfolioAllocationService` 생성 (수량 계산 로직)
+4. 환율 적용 로직 (US 종목은 USD→KRW 환산)
+5. API 엔드포인트 구현
+6. 테스트 작성
+
+**사용자 가치:**
+- "1000만원으로 이 포트폴리오 구성하려면 AAPL 8주, 삼성전자 42주"
+- 실제 매수 계획 수립 가능
+- 단수 차이로 남는 현금 파악
+
+---
+
+#### 기능 2: 추가 매수 가이드
+**우선순위: HIGH**
+
+```
+기능: 추가 자금 투입 시 어떤 종목을 얼마나 사야 원래 비중에 가까워지는지 안내
+
+시나리오:
+- 초기 투자: 1000만원 (목표 비중대로 매수)
+- 시간 경과: 시장 변동으로 비중 변화
+  - AAPL: 20% → 25% (상승)
+  - 삼성전자: 30% → 27% (하락)
+- 추가 투자: 100만원
+- 가이드: "삼성전자 14주 매수하면 목표 비중에 가까워집니다"
+
+계산 로직:
+1. 현재 포트폴리오 시가총액 계산
+2. 추가 금액 포함한 총 금액 계산
+3. 목표 비중 대비 현재 비중 차이 계산
+4. 비중이 가장 낮은 종목부터 매수 권장
+5. 매수 후 예상 비중 계산
+
+API:
+- POST /portfolios/{portfolioId}/rebalance-guide
+  Request: {
+    additionalKrw: 1000000
+  }
+  Response: {
+    portfolioId: "uuid",
+    currentValueKrw: 10500000,
+    additionalKrw: 1000000,
+    totalValueAfter: 11500000,
+    recommendations: [
+      {
+        assetId: "uuid",
+        symbol: "005930",
+        name: "삼성전자",
+        action: "BUY",
+        quantity: 14,
+        amountKrw: 994000,
+        reason: "목표 30% vs 현재 27%, 매수 후 29.5%",
+        currentWeight: 27.0,
+        targetWeight: 30.0,
+        weightAfter: 29.5
+      },
+      {
+        assetId: "uuid",
+        symbol: "AAPL",
+        name: "Apple Inc.",
+        action: "HOLD",
+        quantity: 0,
+        amountKrw: 0,
+        reason: "목표 20% vs 현재 25%, 추가 매수 불필요",
+        currentWeight: 25.0,
+        targetWeight: 20.0,
+        weightAfter: 21.7
+      },
+      ...
+    ],
+    remainingCashKrw: 6000
+  }
+```
+
+**기술 작업:**
+1. `RebalanceGuideService` 생성
+2. 현재 시가총액 계산 로직 (각 자산 × 현재가)
+3. 비중 괴리 계산 및 정렬
+4. 매수 수량 최적화 알고리즘 (Greedy)
+5. API 엔드포인트 구현
+6. 테스트 작성
+
+**사용자 가치:**
+- "100만원 생겼는데 뭘 사지?" → 명확한 답변
+- 포트폴리오 비중 유지 자동화
+- 감정적 매수 방지
+
+---
+
+#### 기능 3: 비중 괴리 알림
+**우선순위: MEDIUM**
+
+```
+기능: 목표 비중 대비 현재 비중이 임계값 이상 벗어나면 알림
+
+설정:
+- 괴리 임계값: 5% (기본값, 사용자 설정 가능)
+- 알림 방식: 푸시 알림 / 이메일 / 앱 내 알림
+
+체크 시점:
+- 일일 배치 (portfolioPerformanceJob 이후)
+- 포트폴리오 상세 조회 시
+
+API:
+- GET /portfolios/{portfolioId}/drift
+  Response: {
+    portfolioId: "uuid",
+    driftDetected: true,
+    driftThreshold: 5.0,
+    checkDate: "2025-03-07",
+    assets: [
+      {
+        assetId: "uuid",
+        symbol: "AAPL",
+        name: "Apple Inc.",
+        targetWeight: 20.0,
+        currentWeight: 28.5,
+        drift: 8.5,
+        driftExceeded: true
+      },
+      {
+        assetId: "uuid",
+        symbol: "005930",
+        name: "삼성전자",
+        targetWeight: 30.0,
+        currentWeight: 25.0,
+        drift: -5.0,
+        driftExceeded: true
+      },
+      {
+        assetId: "uuid",
+        symbol: "VOO",
+        name: "Vanguard S&P 500 ETF",
+        targetWeight: 50.0,
+        currentWeight: 46.5,
+        drift: -3.5,
+        driftExceeded: false
+      }
+    ],
+    summary: {
+      maxDrift: 8.5,
+      assetsExceeded: 2,
+      totalAssets: 3,
+      rebalancingRecommended: true
+    }
+  }
+
+- PUT /portfolios/{portfolioId}/drift-settings
+  Request: {
+    driftThreshold: 5.0,
+    notificationEnabled: true,
+    notificationChannels: ["PUSH", "EMAIL"]
+  }
+```
+
+**Entity 변경:**
+```java
+// Portfolio 엔티티에 추가
+@Column(name = "drift_threshold")
+private BigDecimal driftThreshold = new BigDecimal("5.0");  // 기본 5%
+
+@Column(name = "drift_notification_enabled")
+private Boolean driftNotificationEnabled = true;
+```
+
+**배치 작업:**
+```java
+// PortfolioDriftCheckJob (신규)
+// portfolioPerformanceJob 이후 실행
+
+@Scheduled(cron = "0 30 18 * * MON-FRI")  // 평일 18:30
+public void checkPortfolioDrift() {
+    // 1. 모든 ACTIVE 포트폴리오 조회
+    // 2. 각 포트폴리오의 현재 비중 계산
+    // 3. 목표 비중 대비 괴리 체크
+    // 4. 임계값 초과 시 알림 발송
+}
+```
+
+**기술 작업:**
+1. Portfolio 엔티티에 `driftThreshold`, `driftNotificationEnabled` 추가
+2. `PortfolioDriftService` 생성
+3. `PortfolioDriftCheckJob` 배치 작업 생성
+4. 알림 서비스 연동 (Discord → 개인 푸시로 확장)
+5. API 엔드포인트 구현
+6. 테스트 작성
+
+**사용자 가치:**
+- 포트폴리오 방치 방지
+- 리밸런싱 타이밍 알림
+- 위험 관리 자동화
+
+---
+
+#### 데이터 모델 변경 요약
+
+```sql
+-- Flyway Migration: V20250310__add_portfolio_management_fields.sql
+
+ALTER TABLE portfolios ADD COLUMN investment_krw DECIMAL(18,2);
+ALTER TABLE portfolios ADD COLUMN investment_set_at DATE;
+ALTER TABLE portfolios ADD COLUMN drift_threshold DECIMAL(5,2) DEFAULT 5.0;
+ALTER TABLE portfolios ADD COLUMN drift_notification_enabled BOOLEAN DEFAULT true;
+
+COMMENT ON COLUMN portfolios.investment_krw IS '설정된 총 투자금액 (원화)';
+COMMENT ON COLUMN portfolios.investment_set_at IS '투자금 설정일';
+COMMENT ON COLUMN portfolios.drift_threshold IS '비중 괴리 알림 임계값 (%)';
+COMMENT ON COLUMN portfolios.drift_notification_enabled IS '비중 괴리 알림 활성화 여부';
+```
+
+---
+
+#### 구현 우선순위
+
+| 순서 | 기능 | 예상 작업량 | 의존성 |
+|------|------|------------|--------|
+| 1 | 시드 설정 + 수량 계산 | 3일 | 없음 |
+| 2 | 추가 매수 가이드 | 2일 | 시드 설정 |
+| 3 | 비중 괴리 알림 | 3일 | 없음 (독립적) |
+
+---
+
+#### 사용자 시나리오
+
+```
+[시나리오: 신규 투자자 김투자]
+
+1. 포트폴리오 생성 (Arena 또는 직접 구성)
+   - AAPL 20%, 삼성전자 30%, VOO 50%
+
+2. 시드 설정
+   - "1000만원으로 시작할래"
+   → AAPL 8주, 삼성전자 42주, VOO 12주
+   → 잔여 현금 15만원
+
+3. 실제 매수
+   - 증권앱에서 위 수량대로 매수
+
+4. 2개월 후
+   - AAPL 급등 → 비중 28%로 증가
+   - 앱에서 알림: "AAPL 비중이 8% 초과했습니다"
+
+5. 추가 투자
+   - "100만원 더 투자할래"
+   → "삼성전자 14주 매수 권장 (현재 비중 25% → 목표 30%)"
+
+6. 리밸런싱 완료
+   - 비중 정상화
+```
+
+---
+
 ### Phase 1: 학습 플랫폼 기반 구축 (2개월)
 **목표: 핵심 교육 가치 확립**
 
@@ -1077,6 +1422,6 @@ public DividendCalendarResponse getDividendCalendar(
 
 ---
 
-**마지막 업데이트:** 2025-01-21
+**마지막 업데이트:** 2025-03-10
 **문서 소유자:** 제품 팀
 **검토 주기:** 월간
