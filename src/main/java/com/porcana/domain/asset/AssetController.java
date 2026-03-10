@@ -3,7 +3,12 @@ package com.porcana.domain.asset;
 import com.porcana.domain.asset.dto.AssetChartResponse;
 import com.porcana.domain.asset.dto.AssetDetailResponse;
 import com.porcana.domain.asset.dto.AssetInMainPortfolioResponse;
+import com.porcana.domain.asset.dto.AssetLibraryResponse;
+import com.porcana.domain.asset.dto.AssetLibrarySearchCondition;
 import com.porcana.domain.asset.dto.AssetSearchResponse;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import com.porcana.domain.asset.service.AssetService;
 import com.porcana.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +32,22 @@ import java.util.UUID;
 public class AssetController {
 
     private final AssetService assetService;
+
+    @Operation(
+            summary = "종목 라이브러리 조회",
+            description = "모든 종목을 필터링하여 조회합니다. 시장, 타입, 섹터, 위험도 등으로 필터링 가능합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "조회 성공"),
+                    @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+            }
+    )
+    @GetMapping("/library")
+    public ResponseEntity<AssetLibraryResponse> getLibrary(
+            @ParameterObject AssetLibrarySearchCondition condition,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        AssetLibraryResponse response = assetService.getLibrary(condition, pageable);
+        return ResponseEntity.ok(response);
+    }
 
     @Operation(
             summary = "자산 검색",
