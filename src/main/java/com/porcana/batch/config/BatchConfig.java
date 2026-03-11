@@ -133,9 +133,9 @@ public class BatchConfig {
 
     /**
      * Scheduled daily price update job for Korean market (stocks and ETFs)
-     * Runs every weekday at 18:00 KST (after market close at 15:30)
+     * Runs every weekday at 22:00 KST (after data.go.kr updates today's EOD data)
      */
-    @Scheduled(cron = "0 0 18 * * MON-FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 22 * * MON-FRI", zone = "Asia/Seoul")
     public void runKrDailyPriceUpdate() {
         log.info("Starting scheduled Korean daily price update");
 
