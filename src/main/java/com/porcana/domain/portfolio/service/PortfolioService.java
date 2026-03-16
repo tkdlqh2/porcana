@@ -21,6 +21,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.EnumSet;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +41,13 @@ public class PortfolioService {
     private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
 
     private static final int MAX_GUEST_PORTFOLIOS = 3;
+
+    // 비중 수정 제한 시간대 (배치 실행 시간)
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+    private static final LocalTime WEIGHT_UPDATE_BLOCK_START = LocalTime.of(7, 0);
+    private static final LocalTime WEIGHT_UPDATE_BLOCK_END = LocalTime.of(7, 45);
+    private static final EnumSet<DayOfWeek> WEIGHT_UPDATE_BLOCK_DAYS =
+            EnumSet.range(DayOfWeek.TUESDAY, DayOfWeek.SATURDAY);
 
     /**
      * Get portfolios for user or guest session
@@ -639,16 +647,15 @@ public class PortfolioService {
      * 수익률 계산 배치가 07:00~07:30에 실행되므로 데이터 정합성을 위해 제한
      */
     private void validateNotInBatchWindow() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
+        ZonedDateTime now = ZonedDateTime.now(SEOUL);
         LocalTime currentTime = now.toLocalTime();
         DayOfWeek dayOfWeek = now.getDayOfWeek();
 
-        LocalTime batchStart = LocalTime.of(7, 0);
-        LocalTime batchEnd = LocalTime.of(7, 45);
-        boolean isBatchDay = dayOfWeek.getValue() >= DayOfWeek.TUESDAY.getValue()
-                && dayOfWeek.getValue() <= DayOfWeek.SATURDAY.getValue();
+        boolean isBatchDay = WEIGHT_UPDATE_BLOCK_DAYS.contains(dayOfWeek);
+        boolean isInBlockTime = !currentTime.isBefore(WEIGHT_UPDATE_BLOCK_START)
+                && currentTime.isBefore(WEIGHT_UPDATE_BLOCK_END);
 
-        if (isBatchDay && !currentTime.isBefore(batchStart) && currentTime.isBefore(batchEnd)) {
+        if (isBatchDay && isInBlockTime) {
             throw new IllegalStateException(
                     "비중 수정은 오전 7:00~7:45 사이에 불가능합니다. 수익률 업데이트 중입니다."
             );
