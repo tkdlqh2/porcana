@@ -1,15 +1,18 @@
 package com.porcana.domain.portfolio;
 
 import com.porcana.BaseIntegrationTest;
+import com.porcana.domain.portfolio.dto.DirectCreatePortfolioRequest;
 import com.porcana.domain.portfolio.dto.UpdateAssetWeightsRequest;
 import com.porcana.domain.portfolio.dto.UpdatePortfolioNameRequest;
 import com.porcana.global.security.JwtTokenProvider;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -596,5 +599,270 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
         .then()
                 .statusCode(400);
+    }
+
+    @Nested
+    @DisplayName("POST /portfolios/direct - 포트폴리오 직접 생성")
+    @Sql(scripts = "/sql/portfolio-direct-create-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    class DirectCreatePortfolioTest {
+
+        private static final UUID DIRECT_TEST_USER_ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
+        private static final UUID GUEST_SESSION_ID = UUID.fromString("ccc00000-0000-0000-0000-000000000001");
+
+        private static final UUID ASSET_1 = UUID.fromString("d1111111-1111-1111-1111-111111111111");
+        private static final UUID ASSET_2 = UUID.fromString("d2222222-2222-2222-2222-222222222222");
+        private static final UUID ASSET_3 = UUID.fromString("d3333333-3333-3333-3333-333333333333");
+        private static final UUID ASSET_4 = UUID.fromString("d4444444-4444-4444-4444-444444444444");
+        private static final UUID ASSET_5 = UUID.fromString("d5555555-5555-5555-5555-555555555555");
+        private static final UUID ASSET_6 = UUID.fromString("d6666666-6666-6666-6666-666666666666");
+        private static final UUID ASSET_7 = UUID.fromString("d7777777-7777-7777-7777-777777777777");
+
+        private String createAccessToken() {
+            return jwtTokenProvider.createAccessToken(DIRECT_TEST_USER_ID);
+        }
+
+        @Test
+        @DisplayName("성공 - 비중 직접 입력 (5종목)")
+        void createPortfolioDirect_success_withWeights() {
+            String accessToken = createAccessToken();
+
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "직접 생성 포트폴리오",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, BigDecimal.valueOf(30)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, BigDecimal.valueOf(25)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, BigDecimal.valueOf(15)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_5, BigDecimal.valueOf(10))
+                    )
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("portfolioId", notNullValue())
+                    .body("name", equalTo("직접 생성 포트폴리오"))
+                    .body("status", equalTo("ACTIVE"));
+        }
+
+        @Test
+        @DisplayName("성공 - 균등 배분 (비중 생략)")
+        void createPortfolioDirect_success_equalWeight() {
+            String accessToken = createAccessToken();
+
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "균등 배분 포트폴리오",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_5, null)
+                    )
+            );
+
+            String portfolioId = given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("portfolioId", notNullValue())
+                    .body("status", equalTo("ACTIVE"))
+                    .extract().path("portfolioId");
+
+            // 포트폴리오 상세 조회해서 균등 배분 확인 (각 20%)
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}", portfolioId)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("positions", hasSize(5))
+                    .body("positions.weightPct", everyItem(equalTo(20.0f)));
+        }
+
+        @Test
+        @DisplayName("성공 - 게스트 사용자")
+        void createPortfolioDirect_success_guest() {
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "게스트 포트폴리오",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_5, BigDecimal.valueOf(20))
+                    )
+            );
+
+            given()
+                    .header("X-Guest-Session-Id", GUEST_SESSION_ID.toString())
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("portfolioId", notNullValue())
+                    .body("status", equalTo("ACTIVE"));
+        }
+
+        @Test
+        @DisplayName("실패 - 종목 개수 부족 (4개)")
+        void createPortfolioDirect_fail_tooFewAssets() {
+            String accessToken = createAccessToken();
+
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "종목 부족",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, BigDecimal.valueOf(25)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, BigDecimal.valueOf(25)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, BigDecimal.valueOf(25)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, BigDecimal.valueOf(25))
+                    )
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .log().all()
+                    .statusCode(400);
+        }
+
+        @Test
+        @DisplayName("실패 - 비중 합계가 100%가 아님")
+        void createPortfolioDirect_fail_weightNot100() {
+            String accessToken = createAccessToken();
+
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "비중 오류",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, BigDecimal.valueOf(30)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, BigDecimal.valueOf(30)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, BigDecimal.valueOf(10)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_5, BigDecimal.valueOf(5))
+                    )
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .log().all()
+                    .statusCode(400);
+        }
+
+        @Test
+        @DisplayName("실패 - 비중 일부만 입력")
+        void createPortfolioDirect_fail_partialWeights() {
+            String accessToken = createAccessToken();
+
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "일부 비중만",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, BigDecimal.valueOf(50)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, BigDecimal.valueOf(30)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_5, BigDecimal.valueOf(20))
+                    )
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .log().all()
+                    .statusCode(400);
+        }
+
+        @Test
+        @DisplayName("실패 - 존재하지 않는 종목")
+        void createPortfolioDirect_fail_assetNotFound() {
+            String accessToken = createAccessToken();
+            UUID nonExistentAsset = UUID.randomUUID();
+
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "존재하지 않는 종목",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, BigDecimal.valueOf(20)),
+                            new DirectCreatePortfolioRequest.AssetInput(nonExistentAsset, BigDecimal.valueOf(20))
+                    )
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .log().all()
+                    .statusCode(400);
+        }
+
+        @Test
+        @DisplayName("성공 - 생성 후 포트폴리오 목록에서 조회됨")
+        void createPortfolioDirect_appearsInList() {
+            String accessToken = createAccessToken();
+
+            DirectCreatePortfolioRequest request = new DirectCreatePortfolioRequest(
+                    "목록 확인용",
+                    List.of(
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_1, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_2, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_3, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_4, null),
+                            new DirectCreatePortfolioRequest.AssetInput(ASSET_5, null)
+                    )
+            );
+
+            String portfolioId = given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/direct")
+            .then()
+                    .statusCode(200)
+                    .extract().path("portfolioId");
+
+            // 목록에서 조회
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios")
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("find { it.portfolioId == '" + portfolioId + "' }", notNullValue())
+                    .body("find { it.portfolioId == '" + portfolioId + "' }.status", equalTo("ACTIVE"));
+        }
     }
 }
