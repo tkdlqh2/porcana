@@ -16,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -564,6 +567,9 @@ public class PortfolioService {
 
     @Transactional
     public UpdateAssetWeightsResponse updateAssetWeights(UpdateAssetWeightsCommand command) {
+        // 배치 실행 시간대(07:00~07:45 KST)에는 비중 수정 불가
+        validateNotInBatchWindow();
+
         Portfolio portfolio = portfolioRepository.findByIdAndUserIdAndDeletedAtIsNull(command.getPortfolioId(), command.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found or access denied"));
 
@@ -625,6 +631,24 @@ public class PortfolioService {
             case "1Y" -> endDate.minusYears(1);
             default -> endDate.minusMonths(1);
         };
+    }
+
+    /**
+     * 배치 실행 시간대(07:00~07:45 KST)에는 비중 수정을 막음
+     * 수익률 계산 배치가 07:00~07:30에 실행되므로 데이터 정합성을 위해 제한
+     */
+    private void validateNotInBatchWindow() {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
+        LocalTime currentTime = now.toLocalTime();
+
+        LocalTime batchStart = LocalTime.of(7, 0);
+        LocalTime batchEnd = LocalTime.of(7, 45);
+
+        if (!currentTime.isBefore(batchStart) && currentTime.isBefore(batchEnd)) {
+            throw new IllegalStateException(
+                    "비중 수정은 오전 7:00~7:45 사이에 불가능합니다. 수익률 업데이트 중입니다."
+            );
+        }
     }
 
     /**
