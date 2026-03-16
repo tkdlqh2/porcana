@@ -1,6 +1,7 @@
 package com.porcana.domain.portfolio;
 
 import com.porcana.BaseIntegrationTest;
+import com.porcana.domain.portfolio.dto.baseline.RebalancingPlanRequest;
 import com.porcana.domain.portfolio.dto.baseline.SetSeedRequest;
 import com.porcana.domain.portfolio.dto.baseline.TopUpPlanRequest;
 import com.porcana.global.security.JwtTokenProvider;
@@ -218,6 +219,163 @@ class HoldingBaselineControllerTest extends BaseIntegrationTest {
                     .post("/portfolios/{portfolioId}/top-up-plan", TEST_PORTFOLIO_ID)
             .then()
                     .statusCode(400);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /portfolios/{portfolioId}/rebalance-status - 리밸런싱 상태 조회")
+    class RebalanceStatusTest {
+
+        @Test
+        @DisplayName("성공 - Baseline 없는 경우")
+        void rebalanceStatus_noBaseline() {
+            String accessToken = createAccessToken();
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/rebalance-status", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
+                    .body("hasBaseline", equalTo(false))
+                    .body("needsRebalancing", equalTo(false));
+        }
+
+        @Test
+        @DisplayName("성공 - Baseline 있는 경우 (시드 설정 후)")
+        void rebalanceStatus_withBaseline() {
+            String accessToken = createAccessToken();
+
+            // 먼저 시드 설정
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID);
+
+            // 리밸런싱 상태 조회
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/rebalance-status", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
+                    .body("hasBaseline", equalTo(true))
+                    .body("thresholdPct", equalTo(5.0f))
+                    .body("summary.totalValueKrw", notNullValue())
+                    .body("items", hasSize(2));
+        }
+
+        @Test
+        @DisplayName("성공 - 커스텀 임계값으로 조회")
+        void rebalanceStatus_customThreshold() {
+            String accessToken = createAccessToken();
+
+            // 먼저 시드 설정
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID);
+
+            // 커스텀 임계값으로 리밸런싱 상태 조회
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .queryParam("thresholdPct", "10.0")
+            .when()
+                    .get("/portfolios/{portfolioId}/rebalance-status", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("thresholdPct", equalTo(10.0f));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /portfolios/{portfolioId}/rebalancing-plan - 리밸런싱 플랜")
+    class RebalancingPlanTest {
+
+        @Test
+        @DisplayName("성공 - Baseline 없는 경우")
+        void rebalancingPlan_noBaseline() {
+            String accessToken = createAccessToken();
+
+            RebalancingPlanRequest request = new RebalancingPlanRequest(new BigDecimal("5.0"));
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/{portfolioId}/rebalancing-plan", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
+                    .body("needsRebalancing", equalTo(false));
+        }
+
+        @Test
+        @DisplayName("성공 - Baseline 있는 경우 (시드 설정 후)")
+        void rebalancingPlan_withBaseline() {
+            String accessToken = createAccessToken();
+
+            // 먼저 시드 설정
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID);
+
+            // 리밸런싱 플랜 요청
+            RebalancingPlanRequest request = new RebalancingPlanRequest(new BigDecimal("5.0"));
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .post("/portfolios/{portfolioId}/rebalancing-plan", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
+                    .body("thresholdPct", equalTo(5.0f));
+        }
+
+        @Test
+        @DisplayName("성공 - 기본 임계값 사용")
+        void rebalancingPlan_defaultThreshold() {
+            String accessToken = createAccessToken();
+
+            // 먼저 시드 설정
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID);
+
+            // 빈 request body로 리밸런싱 플랜 요청 (기본 임계값 5.0 사용)
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body("{}")
+            .when()
+                    .post("/portfolios/{portfolioId}/rebalancing-plan", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("thresholdPct", equalTo(5.0f));
         }
     }
 }
