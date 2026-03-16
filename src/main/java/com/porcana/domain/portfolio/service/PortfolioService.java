@@ -3,6 +3,7 @@ package com.porcana.domain.portfolio.service;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.portfolio.command.CreatePortfolioCommand;
+import com.porcana.domain.portfolio.command.DirectCreatePortfolioCommand;
 import com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand;
 import com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand;
 import com.porcana.domain.portfolio.dto.*;
@@ -105,6 +106,112 @@ public class PortfolioService {
         }
 
         Portfolio saved = portfolioRepository.save(portfolio);
+        return CreatePortfolioResponse.from(saved);
+    }
+
+    /**
+     * 직접 종목/비중을 입력하여 포트폴리오 생성 (아레나 방식이 아닌 직접 생성)
+     * - 비중이 null이면 1/n 균등 배분
+     * - 비중이 있으면 합계 100% 검증 후 적용
+     * - 즉시 ACTIVE 상태로 생성
+     */
+    @Transactional
+    public CreatePortfolioResponse createPortfolioDirect(DirectCreatePortfolioCommand command, UUID userId, UUID guestSessionId) {
+        Portfolio portfolio;
+
+        if (userId != null) {
+            portfolio = Portfolio.createForUser(userId, command.getName());
+        } else if (guestSessionId != null) {
+            long guestPortfolioCount = portfolioRepository.countByGuestSessionIdAndDeletedAtIsNull(guestSessionId);
+            if (guestPortfolioCount >= MAX_GUEST_PORTFOLIOS) {
+                throw new IllegalStateException(
+                        String.format("Guest users can create up to %d portfolios. Please sign up to create more.", MAX_GUEST_PORTFOLIOS)
+                );
+            }
+            portfolio = Portfolio.createForGuest(guestSessionId, command.getName());
+        } else {
+            throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
+        }
+
+        // 비중 계산: null이면 1/n 균등 배분
+        List<DirectCreatePortfolioCommand.AssetWeight> assets = command.getAssets();
+
+        // 중복 자산 ID 검증
+        Set<UUID> uniqueAssetIds = assets.stream()
+                .map(DirectCreatePortfolioCommand.AssetWeight::getAssetId)
+                .collect(Collectors.toSet());
+        if (uniqueAssetIds.size() != assets.size()) {
+            throw new IllegalArgumentException("중복된 자산 ID가 존재합니다.");
+        }
+
+        boolean hasAnyWeight = assets.stream().anyMatch(a -> a.getWeightPct() != null);
+
+        Map<UUID, BigDecimal> weightMap = new HashMap<>();
+
+        if (hasAnyWeight) {
+            // 비중이 하나라도 있으면 모두 입력되어야 하고 합계 100% 검증
+            BigDecimal totalWeight = BigDecimal.ZERO;
+            for (DirectCreatePortfolioCommand.AssetWeight asset : assets) {
+                if (asset.getWeightPct() == null) {
+                    throw new IllegalArgumentException("비중을 입력한 경우 모든 종목의 비중을 입력해야 합니다.");
+                }
+                weightMap.put(asset.getAssetId(), asset.getWeightPct());
+                totalWeight = totalWeight.add(asset.getWeightPct());
+            }
+            if (totalWeight.compareTo(BigDecimal.valueOf(100)) != 0) {
+                throw new IllegalArgumentException("비중의 합계는 100%여야 합니다. 현재: " + totalWeight + "%");
+            }
+        } else {
+            // 모두 null이면 1/n 균등 배분
+            BigDecimal equalWeight = BigDecimal.valueOf(100).divide(
+                    BigDecimal.valueOf(assets.size()), 2, java.math.RoundingMode.HALF_UP
+            );
+            BigDecimal totalAssigned = BigDecimal.ZERO;
+            for (int i = 0; i < assets.size(); i++) {
+                DirectCreatePortfolioCommand.AssetWeight asset = assets.get(i);
+                if (i == assets.size() - 1) {
+                    // 마지막 자산은 나머지 비중으로 할당하여 100% 보장
+                    weightMap.put(asset.getAssetId(), BigDecimal.valueOf(100).subtract(totalAssigned));
+                } else {
+                    weightMap.put(asset.getAssetId(), equalWeight);
+                    totalAssigned = totalAssigned.add(equalWeight);
+                }
+            }
+        }
+
+        // 자산 존재 여부 일괄 검증
+        List<UUID> assetIds = assets.stream()
+                .map(DirectCreatePortfolioCommand.AssetWeight::getAssetId)
+                .toList();
+        long existingCount = assetRepository.countByIdIn(assetIds);
+        if (existingCount != assetIds.size()) {
+            throw new IllegalArgumentException("일부 종목을 찾을 수 없습니다.");
+        }
+
+        // 포트폴리오 저장
+        Portfolio saved = portfolioRepository.save(portfolio);
+
+        // 자산 추가 (DDD: Portfolio가 PortfolioAsset 생성)
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        for (DirectCreatePortfolioCommand.AssetWeight asset : assets) {
+            PortfolioAsset portfolioAsset = saved.addAsset(asset.getAssetId(), weightMap.get(asset.getAssetId()));
+            portfolioAssetRepository.save(portfolioAsset);
+        }
+
+        // 스냅샷 생성 (DDD: Portfolio가 PortfolioSnapshot 생성)
+        PortfolioSnapshot snapshot = saved.createSnapshot(today);
+        portfolioSnapshotRepository.save(snapshot);
+
+        // 스냅샷 자산 추가 (DDD: PortfolioSnapshot이 PortfolioSnapshotAsset 생성)
+        for (DirectCreatePortfolioCommand.AssetWeight asset : assets) {
+            PortfolioSnapshotAsset snapshotAsset = snapshot.addAsset(asset.getAssetId(), weightMap.get(asset.getAssetId()));
+            portfolioSnapshotAssetRepository.save(snapshotAsset);
+        }
+
+        // ACTIVE 상태로 변경
+        saved.activate();
+        portfolioRepository.save(saved);
+
         return CreatePortfolioResponse.from(saved);
     }
 

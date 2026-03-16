@@ -288,6 +288,65 @@ Response (201 Created)
 }
 ```
 
+### POST /portfolios/direct
+**Description**: 종목과 비중을 직접 입력하여 포트폴리오를 생성합니다. 아레나 드래프트 방식이 아닌 직접 생성 방식입니다.
+
+**Auth**: Optional (JWT 또는 Guest Session)
+
+**소유권 결정:**
+- `Authorization` 헤더가 있으면 → 사용자 소유 (`user_id` 설정)
+- 없으면 → 게스트 소유 (`guest_session_id` 설정)
+
+**게스트 제한:**
+- 게스트당 최대 3개 포트폴리오
+
+**비중 처리:**
+- `weightPct`가 모두 null이면 → 1/n 균등 배분
+- `weightPct`가 하나라도 있으면 → 모든 종목에 비중 필수, 합계 100% 검증
+
+Request (비중 직접 입력)
+```json
+{
+  "name": "내 포트폴리오",
+  "assets": [
+    { "assetId": "uuid", "weightPct": 30.0 },
+    { "assetId": "uuid", "weightPct": 40.0 },
+    { "assetId": "uuid", "weightPct": 30.0 }
+  ]
+}
+```
+
+Request (균등 배분 - 비중 생략)
+```json
+{
+  "name": "내 포트폴리오",
+  "assets": [
+    { "assetId": "uuid" },
+    { "assetId": "uuid" },
+    { "assetId": "uuid" }
+  ]
+}
+```
+
+Response (201 Created)
+```json
+{
+  "portfolioId": "uuid",
+  "name": "string",
+  "status": "ACTIVE",
+  "createdAt": "YYYY-MM-DD"
+}
+```
+
+**Notes:**
+- 아레나 방식과 달리 즉시 ACTIVE 상태로 생성됨
+- **종목 개수: 5~20개** (최소 5개, 최대 20개)
+- 비중 입력 시 합계 100% 필수
+
+Error Responses
+- 400: 종목 개수가 5~20개 범위 밖, 비중 합계가 100%가 아님, 존재하지 않는 종목
+- 403: 게스트 포트폴리오 개수 초과
+
 ### GET /portfolios/{portfolioId}
 Response
 ```json
