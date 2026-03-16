@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -640,11 +641,14 @@ public class PortfolioService {
     private void validateNotInBatchWindow() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
         LocalTime currentTime = now.toLocalTime();
+        DayOfWeek dayOfWeek = now.getDayOfWeek();
 
         LocalTime batchStart = LocalTime.of(7, 0);
         LocalTime batchEnd = LocalTime.of(7, 45);
+        boolean isBatchDay = dayOfWeek.getValue() >= DayOfWeek.TUESDAY.getValue()
+                && dayOfWeek.getValue() <= DayOfWeek.SATURDAY.getValue();
 
-        if (!currentTime.isBefore(batchStart) && currentTime.isBefore(batchEnd)) {
+        if (isBatchDay && !currentTime.isBefore(batchStart) && currentTime.isBefore(batchEnd)) {
             throw new IllegalStateException(
                     "비중 수정은 오전 7:00~7:45 사이에 불가능합니다. 수익률 업데이트 중입니다."
             );
