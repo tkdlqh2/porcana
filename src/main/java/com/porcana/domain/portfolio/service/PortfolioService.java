@@ -157,8 +157,16 @@ public class PortfolioService {
             BigDecimal equalWeight = BigDecimal.valueOf(100).divide(
                     BigDecimal.valueOf(assets.size()), 2, java.math.RoundingMode.HALF_UP
             );
-            for (DirectCreatePortfolioCommand.AssetWeight asset : assets) {
-                weightMap.put(asset.getAssetId(), equalWeight);
+            BigDecimal totalAssigned = BigDecimal.ZERO;
+            for (int i = 0; i < assets.size(); i++) {
+                DirectCreatePortfolioCommand.AssetWeight asset = assets.get(i);
+                if (i == assets.size() - 1) {
+                    // 마지막 자산은 나머지 비중으로 할당하여 100% 보장
+                    weightMap.put(asset.getAssetId(), BigDecimal.valueOf(100).subtract(totalAssigned));
+                } else {
+                    weightMap.put(asset.getAssetId(), equalWeight);
+                    totalAssigned = totalAssigned.add(equalWeight);
+                }
             }
         }
 
