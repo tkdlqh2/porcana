@@ -312,7 +312,9 @@ w = riskWeight × sectorWeight × typeWeight × diversityPenalty
 - `GET /portfolios/{portfolioId}/performance` - 수익률 차트
 - `PUT /portfolios/{portfolioId}/seed` - 시드 금액 설정 (수량 자동 계산)
 - `GET /portfolios/{portfolioId}/holding-baseline` - Baseline 조회
-- `POST /portfolios/{portfolioId}/top-up-plan` - 추가 입금 추천
+- `POST /portfolios/{portfolioId}/top-up-plan` - 추가 입금 추천 (BUY only)
+- `GET /portfolios/{portfolioId}/rebalance-status` - 리밸런싱 상태 조회
+- `POST /portfolios/{portfolioId}/rebalancing-plan` - 전체 리밸런싱 플랜 (BUY + SELL)
 
 **4) Arena**
 - `POST /arena/sessions` - 아레나 세션 시작
