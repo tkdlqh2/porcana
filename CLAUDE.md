@@ -188,16 +188,15 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 **03:00 KST - 위험도 계산**
 - assetRiskJob (전 종목 위험도 계산)
 
-### 일일 스케줄 (평일)
+### 일일 스케줄 (화-토, 07:00~07:30 KST)
 
-**07:00 KST (화-토) - 미국 시장**
-- usDailyPriceJob, usEtfDailyPriceJob
+> **사용자 안내**: "수익률은 매일 오전 7시 30분에 업데이트됩니다"
 
-**12:00 KST (월-금) - 환율**
-- exchangeRateJob
-
-**18:00 KST (월-금) - 한국 시장**
-- krDailyPriceJob, krEtfDailyPriceJob
+| 시간 | 작업 | Job |
+|------|------|-----|
+| 07:00 | 한국/미국 가격 | krDailyPriceJob, usDailyPriceJob, krEtfDailyPriceJob, usEtfDailyPriceJob |
+| 07:15 | 환율 (전일) | exchangeRateJob |
+| 07:30 | 포트폴리오 수익률 | portfolioPerformanceJob |
 
 ### 배치 모니터링
 

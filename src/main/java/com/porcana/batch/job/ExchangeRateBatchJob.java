@@ -25,6 +25,9 @@ import java.util.Map;
 /**
  * Daily exchange rate update batch job
  * Fetches and updates exchange rates from Korea Exim Bank API
+ *
+ * 매일 07:15 KST에 실행되며, 전일 환율을 가져옴
+ * (한국수출입은행은 당일 환율을 오전 11시경에 제공하므로 전일 환율 사용)
  */
 @Slf4j
 @Configuration
@@ -65,12 +68,13 @@ public class ExchangeRateBatchJob {
                         log.info("timestamp parameter is null, using current time: {}", timestamp);
                     }
 
-                    // Convert timestamp to LocalDate (KST timezone)
-                    LocalDate targetDate = Instant.ofEpochMilli(timestamp)
+                    // Convert timestamp to LocalDate (KST timezone) and get previous day
+                    LocalDate today = Instant.ofEpochMilli(timestamp)
                             .atZone(ZoneId.of("Asia/Seoul"))
                             .toLocalDate();
+                    LocalDate targetDate = today.minusDays(1);
 
-                    log.info("Using target date from JobParameters: {}", targetDate);
+                    log.info("Fetching exchange rate for previous day: {} (today: {})", targetDate, today);
 
                     try {
                         List<ExchangeRate> exchangeRates = koreaEximProvider.fetchExchangeRates(targetDate);

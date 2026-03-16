@@ -31,33 +31,28 @@ disable-model-invocation: false
 ./gradlew bootRun --args='--spring.batch.job.names=assetRiskJob'
 ```
 
-### 일일 스케줄 (평일)
+### 일일 스케줄 (화-토, 07:00~07:30 KST)
 
-**07:00 KST (화-토) - 미국 시장 가격 업데이트**
+> **사용자 안내**: "수익률은 매일 오전 7시 30분에 업데이트됩니다"
+
+**07:00 KST - 한국/미국 가격 업데이트**
 ```bash
-# 미국 주식 가격
-./gradlew bootRun --args='--spring.batch.job.names=usDailyPriceJob'
+# 한국 주식/ETF 가격
+./gradlew bootRun --args='--spring.batch.job.names=krDailyPriceJob'
+./gradlew bootRun --args='--spring.batch.job.names=krEtfDailyPriceJob'
 
-# 미국 ETF 가격
+# 미국 주식/ETF 가격
+./gradlew bootRun --args='--spring.batch.job.names=usDailyPriceJob'
 ./gradlew bootRun --args='--spring.batch.job.names=usEtfDailyPriceJob'
 ```
 
-**12:00 KST (월-금) - 환율 업데이트**
+**07:15 KST - 환율 업데이트 (전일 환율)**
 ```bash
-# 환율 데이터
+# 환율 데이터 (전일 환율 조회)
 ./gradlew bootRun --args='--spring.batch.job.names=exchangeRateJob'
 ```
 
-**18:00 KST (월-금) - 한국 시장 가격 업데이트**
-```bash
-# 한국 주식 가격
-./gradlew bootRun --args='--spring.batch.job.names=krDailyPriceJob'
-
-# 한국 ETF 가격
-./gradlew bootRun --args='--spring.batch.job.names=krEtfDailyPriceJob'
-```
-
-**19:00 KST (매일) - 포트폴리오 수익률 계산**
+**07:30 KST - 포트폴리오 수익률 계산**
 ```bash
 # 포트폴리오 일별 수익률 계산
 ./gradlew bootRun --args='--spring.batch.job.names=portfolioPerformanceJob'
@@ -181,13 +176,23 @@ riskScore = 100 × (0.45 × volPct + 0.45 × mddPct + 0.10 × worstPct)
 ## Batch 스케줄링 설정
 
 ```java
-// 한국 시장: 평일 18:00 KST
-@Scheduled(cron = "0 0 18 * * MON-FRI", zone = "Asia/Seoul")
+// 일일 스케줄 (화-토, 07:00~07:30 KST)
+// → 사용자 안내: "수익률은 매일 오전 7시 30분에 업데이트됩니다"
+
+// 07:00 - 한국/미국 가격
+@Scheduled(cron = "0 0 7 * * TUE-SAT", zone = "Asia/Seoul")
 public void runKrDailyPriceUpdate()
 
-// 미국 시장: 평일 07:00 KST (화-토, 시차 고려)
 @Scheduled(cron = "0 0 7 * * TUE-SAT", zone = "Asia/Seoul")
 public void runUsDailyPriceUpdate()
+
+// 07:15 - 환율 (전일 환율)
+@Scheduled(cron = "0 15 7 * * TUE-SAT", zone = "Asia/Seoul")
+public void runExchangeRateUpdate()
+
+// 07:30 - 포트폴리오 수익률
+@Scheduled(cron = "0 30 7 * * TUE-SAT", zone = "Asia/Seoul")
+public void runPortfolioPerformanceCalculation()
 ```
 
 ## 포트폴리오 수익률 계산 (Portfolio Performance Batch)
