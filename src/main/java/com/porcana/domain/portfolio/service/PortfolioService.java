@@ -135,6 +135,15 @@ public class PortfolioService {
 
         // 비중 계산: null이면 1/n 균등 배분
         List<DirectCreatePortfolioCommand.AssetWeight> assets = command.getAssets();
+
+        // 중복 자산 ID 검증
+        Set<UUID> uniqueAssetIds = assets.stream()
+                .map(DirectCreatePortfolioCommand.AssetWeight::getAssetId)
+                .collect(Collectors.toSet());
+        if (uniqueAssetIds.size() != assets.size()) {
+            throw new IllegalArgumentException("중복된 자산 ID가 존재합니다.");
+        }
+
         boolean hasAnyWeight = assets.stream().anyMatch(a -> a.getWeightPct() != null);
 
         Map<UUID, BigDecimal> weightMap = new HashMap<>();
@@ -170,15 +179,17 @@ public class PortfolioService {
             }
         }
 
+        // 자산 존재 여부 일괄 검증
+        List<UUID> assetIds = assets.stream()
+                .map(DirectCreatePortfolioCommand.AssetWeight::getAssetId)
+                .toList();
+        long existingCount = assetRepository.countByIdIn(assetIds);
+        if (existingCount != assetIds.size()) {
+            throw new IllegalArgumentException("일부 종목을 찾을 수 없습니다.");
+        }
+
         // 포트폴리오 저장
         Portfolio saved = portfolioRepository.save(portfolio);
-
-        // 자산 존재 여부 검증
-        for (DirectCreatePortfolioCommand.AssetWeight asset : assets) {
-            if (!assetRepository.existsById(asset.getAssetId())) {
-                throw new IllegalArgumentException("Asset not found: " + asset.getAssetId());
-            }
-        }
 
         // 자산 추가 (DDD: Portfolio가 PortfolioAsset 생성)
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));

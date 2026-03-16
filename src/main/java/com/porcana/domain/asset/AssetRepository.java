@@ -27,6 +27,11 @@ public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetReposi
     boolean existsBySymbolAndMarket(String symbol, Asset.Market market);
 
     /**
+     * Count assets by IDs (for bulk existence check)
+     */
+    long countByIdIn(List<UUID> ids);
+
+    /**
      * Find assets by market that were created after a specific timestamp
      * Used to fetch recently created assets for historical price backfilling
      */
