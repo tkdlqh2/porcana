@@ -1,9 +1,6 @@
 package com.porcana.domain.portfolio.controller;
 
-import com.porcana.domain.portfolio.dto.baseline.BaselineResponse;
-import com.porcana.domain.portfolio.dto.baseline.SetSeedRequest;
-import com.porcana.domain.portfolio.dto.baseline.TopUpPlanRequest;
-import com.porcana.domain.portfolio.dto.baseline.TopUpPlanResponse;
+import com.porcana.domain.portfolio.dto.baseline.*;
 import com.porcana.domain.portfolio.service.HoldingBaselineService;
 import com.porcana.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Tag(name = "Holding Baseline", description = "포트폴리오 시드 설정 및 리밸런싱 가이드 API")
@@ -54,6 +52,28 @@ public class HoldingBaselineController {
             @CurrentUser UUID userId) {
 
         TopUpPlanResponse response = holdingBaselineService.getTopUpPlan(portfolioId, userId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "리밸런싱 상태 조회", description = "현재 보유 상태와 목표 비중의 괴리를 확인합니다.")
+    @GetMapping("/rebalance-status")
+    public ResponseEntity<RebalanceStatusResponse> getRebalanceStatus(
+            @PathVariable UUID portfolioId,
+            @RequestParam(required = false, defaultValue = "5.0") BigDecimal thresholdPct,
+            @CurrentUser UUID userId) {
+
+        RebalanceStatusResponse response = holdingBaselineService.getRebalanceStatus(portfolioId, userId, thresholdPct);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "리밸런싱 플랜", description = "전체 리밸런싱 플랜을 계산합니다. (BUY + SELL)")
+    @PostMapping("/rebalancing-plan")
+    public ResponseEntity<RebalancingPlanResponse> getRebalancingPlan(
+            @PathVariable UUID portfolioId,
+            @Valid @RequestBody RebalancingPlanRequest request,
+            @CurrentUser UUID userId) {
+
+        RebalancingPlanResponse response = holdingBaselineService.getRebalancingPlan(portfolioId, userId, request);
         return ResponseEntity.ok(response);
     }
 }

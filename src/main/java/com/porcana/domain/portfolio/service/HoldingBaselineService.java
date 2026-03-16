@@ -7,10 +7,7 @@ import com.porcana.domain.asset.entity.AssetPrice;
 import com.porcana.domain.exchangerate.ExchangeRateRepository;
 import com.porcana.domain.exchangerate.entity.CurrencyCode;
 import com.porcana.domain.exchangerate.entity.ExchangeRate;
-import com.porcana.domain.portfolio.dto.baseline.BaselineResponse;
-import com.porcana.domain.portfolio.dto.baseline.SetSeedRequest;
-import com.porcana.domain.portfolio.dto.baseline.TopUpPlanRequest;
-import com.porcana.domain.portfolio.dto.baseline.TopUpPlanResponse;
+import com.porcana.domain.portfolio.dto.baseline.*;
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioAsset;
 import com.porcana.domain.portfolio.entity.PortfolioHoldingBaseline;
@@ -326,7 +323,260 @@ public class HoldingBaselineService {
                 .build();
     }
 
+    /**
+     * 리밸런싱 상태 조회
+     * 현재 보유 상태와 목표 비중의 괴리 확인
+     */
+    @Transactional(readOnly = true)
+    public RebalanceStatusResponse getRebalanceStatus(UUID portfolioId, UUID userId, BigDecimal thresholdPct) {
+        Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new IllegalArgumentException("포트폴리오를 찾을 수 없습니다: " + portfolioId));
+
+        validateOwnership(portfolio, userId);
+
+        Optional<PortfolioHoldingBaseline> baselineOpt = baselineRepository.findByPortfolioIdWithItems(portfolioId);
+        if (baselineOpt.isEmpty()) {
+            return RebalanceStatusResponse.noBaseline(portfolioId);
+        }
+
+        PortfolioHoldingBaseline baseline = baselineOpt.get();
+        BigDecimal usdKrw = getLatestExchangeRate();
+        BigDecimal threshold = thresholdPct != null ? thresholdPct : new BigDecimal("5.0");
+
+        // 자산 정보 조회
+        List<UUID> assetIds = baseline.getItems().stream()
+                .map(PortfolioHoldingBaselineItem::getAssetId)
+                .toList();
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+                .collect(Collectors.toMap(Asset::getId, a -> a));
+
+        // 현재 총 가치 및 개별 자산 가치 계산
+        BigDecimal totalValueKrw = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        Map<UUID, AssetValueInfo> assetValues = new HashMap<>();
+
+        for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
+            Asset asset = assetMap.get(item.getAssetId());
+            if (asset == null) continue;
+
+            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
+                    ? currentPrice.multiply(usdKrw)
+                    : currentPrice;
+            BigDecimal valueKrw = priceInKrw.multiply(item.getQuantity());
+            totalValueKrw = totalValueKrw.add(valueKrw);
+
+            assetValues.put(item.getAssetId(), new AssetValueInfo(
+                    asset, item, currentPrice, priceInKrw, valueKrw
+            ));
+        }
+
+        // 괴리도 계산
+        List<RebalanceStatusResponse.ItemStatus> itemStatuses = new ArrayList<>();
+        BigDecimal maxDeviation = BigDecimal.ZERO;
+        boolean needsRebalancing = false;
+
+        final BigDecimal finalTotalValueKrw = totalValueKrw;
+        for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
+            AssetValueInfo valueInfo = assetValues.get(item.getAssetId());
+            if (valueInfo == null) continue;
+
+            BigDecimal targetWeight = item.getTargetWeightPct();
+            BigDecimal currentWeight = finalTotalValueKrw.compareTo(BigDecimal.ZERO) > 0
+                    ? valueInfo.valueKrw.divide(finalTotalValueKrw, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+                    : BigDecimal.ZERO;
+            BigDecimal deviation = currentWeight.subtract(targetWeight);
+            BigDecimal absDeviation = deviation.abs();
+
+            if (absDeviation.compareTo(maxDeviation) > 0) {
+                maxDeviation = absDeviation;
+            }
+            if (absDeviation.compareTo(threshold) > 0) {
+                needsRebalancing = true;
+            }
+
+            String action = deviation.compareTo(threshold) > 0 ? "SELL"
+                    : deviation.compareTo(threshold.negate()) < 0 ? "BUY"
+                    : "HOLD";
+
+            itemStatuses.add(RebalanceStatusResponse.ItemStatus.builder()
+                    .assetId(valueInfo.asset.getId())
+                    .symbol(valueInfo.asset.getSymbol())
+                    .name(valueInfo.asset.getName())
+                    .market(valueInfo.asset.getMarket().name())
+                    .targetWeightPct(targetWeight.setScale(2, RoundingMode.HALF_UP))
+                    .currentWeightPct(currentWeight.setScale(2, RoundingMode.HALF_UP))
+                    .deviationPct(deviation.setScale(2, RoundingMode.HALF_UP))
+                    .action(action)
+                    .currentQuantity(valueInfo.item.getQuantity().intValue())
+                    .currentPrice(valueInfo.currentPrice)
+                    .currentValueKrw(valueInfo.valueKrw.setScale(0, RoundingMode.HALF_UP))
+                    .build());
+        }
+
+        return RebalanceStatusResponse.builder()
+                .portfolioId(portfolioId)
+                .hasBaseline(true)
+                .needsRebalancing(needsRebalancing)
+                .checkedAt(java.time.LocalDateTime.now())
+                .thresholdPct(threshold)
+                .summary(RebalanceStatusResponse.Summary.builder()
+                        .totalValueKrw(totalValueKrw.setScale(0, RoundingMode.HALF_UP))
+                        .cashAmount(baseline.getCashAmount())
+                        .maxDeviationPct(maxDeviation.setScale(2, RoundingMode.HALF_UP))
+                        .build())
+                .items(itemStatuses)
+                .build();
+    }
+
+    /**
+     * 전체 리밸런싱 플랜
+     * BUY + SELL 모두 포함
+     */
+    @Transactional(readOnly = true)
+    public RebalancingPlanResponse getRebalancingPlan(UUID portfolioId, UUID userId, RebalancingPlanRequest request) {
+        Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new IllegalArgumentException("포트폴리오를 찾을 수 없습니다: " + portfolioId));
+
+        validateOwnership(portfolio, userId);
+
+        Optional<PortfolioHoldingBaseline> baselineOpt = baselineRepository.findByPortfolioIdWithItems(portfolioId);
+        if (baselineOpt.isEmpty()) {
+            return RebalancingPlanResponse.noBaseline(portfolioId);
+        }
+
+        PortfolioHoldingBaseline baseline = baselineOpt.get();
+        BigDecimal usdKrw = getLatestExchangeRate();
+        BigDecimal threshold = request.thresholdPct() != null ? request.thresholdPct() : new BigDecimal("5.0");
+
+        // 자산 정보 조회
+        List<UUID> assetIds = baseline.getItems().stream()
+                .map(PortfolioHoldingBaselineItem::getAssetId)
+                .toList();
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+                .collect(Collectors.toMap(Asset::getId, a -> a));
+
+        // 현재 총 가치 및 개별 자산 가치 계산
+        BigDecimal totalValueKrw = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        Map<UUID, AssetValueInfo> assetValues = new HashMap<>();
+
+        for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
+            Asset asset = assetMap.get(item.getAssetId());
+            if (asset == null) continue;
+
+            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
+                    ? currentPrice.multiply(usdKrw)
+                    : currentPrice;
+            BigDecimal valueKrw = priceInKrw.multiply(item.getQuantity());
+            totalValueKrw = totalValueKrw.add(valueKrw);
+
+            assetValues.put(item.getAssetId(), new AssetValueInfo(
+                    asset, item, currentPrice, priceInKrw, valueKrw
+            ));
+        }
+
+        // 리밸런싱 액션 계산
+        List<RebalancingPlanResponse.ActionItem> actions = new ArrayList<>();
+        BigDecimal totalBuyAmount = BigDecimal.ZERO;
+        BigDecimal totalSellAmount = BigDecimal.ZERO;
+        boolean needsRebalancing = false;
+
+        final BigDecimal finalTotalValueKrw = totalValueKrw;
+        for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
+            AssetValueInfo valueInfo = assetValues.get(item.getAssetId());
+            if (valueInfo == null) continue;
+
+            BigDecimal targetWeight = item.getTargetWeightPct();
+            BigDecimal currentWeight = finalTotalValueKrw.compareTo(BigDecimal.ZERO) > 0
+                    ? valueInfo.valueKrw.divide(finalTotalValueKrw, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+                    : BigDecimal.ZERO;
+            BigDecimal deviation = currentWeight.subtract(targetWeight);
+            BigDecimal absDeviation = deviation.abs();
+
+            // 임계값 이하면 스킵
+            if (absDeviation.compareTo(threshold) <= 0) continue;
+
+            needsRebalancing = true;
+
+            // 목표 금액 계산
+            BigDecimal targetValueKrw = finalTotalValueKrw.multiply(targetWeight).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            BigDecimal diffKrw = targetValueKrw.subtract(valueInfo.valueKrw);
+
+            String action;
+            int actionQuantity;
+            BigDecimal actionAmountKrw;
+
+            if (diffKrw.compareTo(BigDecimal.ZERO) > 0) {
+                // BUY
+                action = "BUY";
+                actionQuantity = diffKrw.divide(valueInfo.priceInKrw, 0, RoundingMode.DOWN).intValue();
+                actionAmountKrw = valueInfo.priceInKrw.multiply(BigDecimal.valueOf(actionQuantity));
+                totalBuyAmount = totalBuyAmount.add(actionAmountKrw);
+            } else {
+                // SELL
+                action = "SELL";
+                actionQuantity = diffKrw.abs().divide(valueInfo.priceInKrw, 0, RoundingMode.DOWN).intValue();
+                actionAmountKrw = valueInfo.priceInKrw.multiply(BigDecimal.valueOf(actionQuantity));
+                totalSellAmount = totalSellAmount.add(actionAmountKrw);
+            }
+
+            if (actionQuantity == 0) continue;
+
+            int currentQuantity = valueInfo.item.getQuantity().intValue();
+            int afterQuantity = action.equals("BUY")
+                    ? currentQuantity + actionQuantity
+                    : currentQuantity - actionQuantity;
+
+            actions.add(RebalancingPlanResponse.ActionItem.builder()
+                    .assetId(valueInfo.asset.getId())
+                    .symbol(valueInfo.asset.getSymbol())
+                    .name(valueInfo.asset.getName())
+                    .market(valueInfo.asset.getMarket().name())
+                    .action(action)
+                    .targetWeightPct(targetWeight.setScale(2, RoundingMode.HALF_UP))
+                    .currentWeightPct(currentWeight.setScale(2, RoundingMode.HALF_UP))
+                    .deviationPct(deviation.setScale(2, RoundingMode.HALF_UP))
+                    .currentQuantity(currentQuantity)
+                    .actionQuantity(actionQuantity)
+                    .afterQuantity(afterQuantity)
+                    .currentPrice(valueInfo.currentPrice)
+                    .actionAmountKrw(actionAmountKrw.setScale(0, RoundingMode.HALF_UP))
+                    .build());
+        }
+
+        if (!needsRebalancing) {
+            return RebalancingPlanResponse.noRebalancingNeeded(portfolioId, baseline.getId(), threshold, totalValueKrw);
+        }
+
+        BigDecimal netCashFlow = totalSellAmount.subtract(totalBuyAmount);
+        BigDecimal cashAfterRebalance = (baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO)
+                .add(netCashFlow);
+
+        return RebalancingPlanResponse.builder()
+                .portfolioId(portfolioId)
+                .baselineId(baseline.getId())
+                .needsRebalancing(true)
+                .thresholdPct(threshold)
+                .summary(RebalancingPlanResponse.Summary.builder()
+                        .totalValueKrw(totalValueKrw.setScale(0, RoundingMode.HALF_UP))
+                        .totalBuyAmount(totalBuyAmount.setScale(0, RoundingMode.HALF_UP))
+                        .totalSellAmount(totalSellAmount.setScale(0, RoundingMode.HALF_UP))
+                        .netCashFlow(netCashFlow.setScale(0, RoundingMode.HALF_UP))
+                        .cashAfterRebalance(cashAfterRebalance.setScale(0, RoundingMode.HALF_UP))
+                        .build())
+                .actions(actions)
+                .build();
+    }
+
     // === Private Helper Methods ===
+
+    private record AssetValueInfo(
+            Asset asset,
+            PortfolioHoldingBaselineItem item,
+            BigDecimal currentPrice,
+            BigDecimal priceInKrw,
+            BigDecimal valueKrw
+    ) {}
 
     private void validateOwnership(Portfolio portfolio, UUID userId) {
         if (userId != null && !userId.equals(portfolio.getUserId())) {
