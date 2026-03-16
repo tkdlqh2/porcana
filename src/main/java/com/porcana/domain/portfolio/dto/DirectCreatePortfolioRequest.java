@@ -1,0 +1,30 @@
+package com.porcana.domain.portfolio.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * 직접 종목/비중을 입력하여 포트폴리오 생성하는 요청
+ * 아레나 방식이 아닌 직접 생성 방식
+ */
+public record DirectCreatePortfolioRequest(
+        @NotBlank(message = "포트폴리오 이름은 필수입니다")
+        String name,
+
+        @NotEmpty(message = "최소 1개 이상의 종목이 필요합니다")
+        List<AssetInput> assets
+) {
+    public record AssetInput(
+            UUID assetId,
+            /**
+             * 비중 (optional)
+             * - null이면 1/n 균등 배분
+             * - 값이 있으면 해당 비중 적용 (전체 합 100% 필수)
+             */
+            BigDecimal weightPct
+    ) {}
+}
