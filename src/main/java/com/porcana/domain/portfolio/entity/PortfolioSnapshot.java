@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -72,5 +73,17 @@ public class PortfolioSnapshot {
                 .effectiveDate(effectiveDate)
                 .note(note)
                 .build();
+    }
+
+    // ========== Aggregate: 하위 엔티티 생성 ==========
+
+    /**
+     * 스냅샷에 자산 추가 (PortfolioSnapshotAsset 생성)
+     */
+    public PortfolioSnapshotAsset addAsset(UUID assetId, BigDecimal weight) {
+        if (this.id == null) {
+            throw new IllegalStateException("Snapshot must be persisted before adding assets");
+        }
+        return PortfolioSnapshotAsset.create(this.id, assetId, weight);
     }
 }

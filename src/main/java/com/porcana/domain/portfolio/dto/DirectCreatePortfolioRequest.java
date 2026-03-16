@@ -1,7 +1,7 @@
 package com.porcana.domain.portfolio.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,7 +15,7 @@ public record DirectCreatePortfolioRequest(
         @NotBlank(message = "포트폴리오 이름은 필수입니다")
         String name,
 
-        @NotEmpty(message = "최소 1개 이상의 종목이 필요합니다")
+        @Size(min = 5, max = 20, message = "종목 개수는 5~20개 사이여야 합니다")
         List<AssetInput> assets
 ) {
     public record AssetInput(
