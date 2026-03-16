@@ -1,12 +1,12 @@
 # Porcana 미래 로드맵
 
-## 현재 진행: Holding Baseline (Portfolio Management)
+## 완료된 기능
+
+### Holding Baseline (Portfolio Management) ✅
 
 > 상세 설계: `docs/HOLDING_BASELINE_PLAN.md` 참조
 
-### 개요
-
-사용자가 "실제로 이만큼 보유하고 있다"고 확정한 스냅샷을 기반으로 리밸런싱 가이드를 제공합니다.
+사용자가 시드 금액을 설정하면 각 종목별 매수 수량을 자동 계산하고, 추가 입금 시 어떤 종목을 매수해야 비중이 맞춰지는지 안내합니다.
 
 | 구분 | 역할 | 설명 |
 |------|------|------|
@@ -15,26 +15,13 @@
 | **수익률 계산** | 비중 기반 유지 | 기존 로직 변경 없음 |
 | **리밸런싱 가이드** | Baseline 기반 | "비중 맞추려면 3주 더 사세요" |
 
-### API 엔드포인트
+#### 구현된 API
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| PUT | `/portfolios/{id}/holding-baseline` | Baseline 생성/수정 |
+| PUT | `/portfolios/{id}/seed` | 시드 금액 설정 (자동 수량 계산) |
 | GET | `/portfolios/{id}/holding-baseline` | Baseline 조회 |
-| POST | `/portfolios/{id}/holding-baseline/draft-from-seed` | 시드 기반 초안 |
-| POST | `/portfolios/{id}/holding-baseline/confirm-seeded` | 시드 초안 확정 |
-| GET | `/portfolios/{id}/rebalance-status` | 리밸런싱 상태 조회 |
 | POST | `/portfolios/{id}/top-up-plan` | 추가 입금 추천 (BUY only) |
-| POST | `/portfolios/{id}/rebalancing-plan` | 전체 리밸런싱 플랜 |
-
-### 구현 순서
-
-- [x] Phase 0: 직접 포트폴리오 생성 (완료)
-- [ ] Phase 1: Entity + Repository
-- [ ] Phase 2: Baseline CRUD
-- [ ] Phase 3: 시드 기반 계산
-- [ ] Phase 4: 리밸런싱 서비스
-- [ ] Phase 5: 테스트 + 문서화
 
 ---
 

@@ -2,11 +2,11 @@
 
 > **Note**: 상세 내용은 `.claude/skills/` 디렉토리의 각 skill을 참조하세요.
 > - `api-conventions`: API 설계 패턴
-> - `api-specs`: API 엔드포인트 상세 스펙
-> - `entity-reference`: Entity 구조 및 관계
 > - `batch-jobs`: Spring Batch 작업 레퍼런스
 > - `arena-specs`: Arena 알고리즘 상세
 > - `test-patterns`: 테스트 작성 패턴
+>
+> **코드에서 직접 확인**: Entity 구조는 `src/main/java/.../entity/`, API 스펙은 Controller/DTO 클래스 참조
 
 ---
 
@@ -173,8 +173,6 @@ public ResponseEntity<UserResponse> getMe(@CurrentUser UUID userId) {
 - 회원가입/로그인 시 소유권 이전 (claim)
 - 30일 만료 정책
 
-> 📖 **상세 스키마**: `.claude/skills/entity-reference/SKILL.md` 참조
-
 ---
 
 ## Batch Strategy Overview
@@ -309,8 +307,12 @@ w = riskWeight × sectorWeight × typeWeight × diversityPenalty
 **3) Portfolio**
 - `GET /portfolios` - 포트폴리오 목록 (ACTIVE, FINISHED만)
 - `POST /portfolios` - 포트폴리오 생성 (비회원 가능)
+- `POST /portfolios/direct` - 직접 종목/비중 입력하여 생성
 - `GET /portfolios/{portfolioId}` - 포트폴리오 상세
 - `GET /portfolios/{portfolioId}/performance` - 수익률 차트
+- `PUT /portfolios/{portfolioId}/seed` - 시드 금액 설정 (수량 자동 계산)
+- `GET /portfolios/{portfolioId}/holding-baseline` - Baseline 조회
+- `POST /portfolios/{portfolioId}/top-up-plan` - 추가 입금 추천
 
 **4) Arena**
 - `POST /arena/sessions` - 아레나 세션 시작
@@ -324,8 +326,6 @@ w = riskWeight × sectorWeight × typeWeight × diversityPenalty
 - `GET /assets/{assetId}` - 종목 상세
 - `GET /assets/{assetId}/chart` - 가격 차트
 - `GET /assets/{assetId}/in-my-main-portfolio` - 메인 포트폴리오 포함 여부
-
-> 📖 **API 상세 스펙**: `.claude/skills/api-specs/SKILL.md` 참조
 
 ---
 
@@ -365,10 +365,8 @@ OHLC_BACKFILL_ENABLED=true ./gradlew bootRun
 
 **API & Conventions:**
 - `api-conventions` - API 설계 패턴 및 컨벤션
-- `api-specs` - API 엔드포인트 상세 스펙
 
 **Domain Models:**
-- `entity-reference` - Core Entity 구조 및 관계
 - `portfolio-domain` - 포트폴리오 수익률 추적 (Snapshot, DailyReturn, weightUsed)
 
 **Business Logic:**
@@ -377,6 +375,10 @@ OHLC_BACKFILL_ENABLED=true ./gradlew bootRun
 
 **Testing:**
 - `test-patterns` - 테스트 작성 패턴
+
+**코드에서 직접 확인:**
+- Entity 구조 → `src/main/java/.../entity/` + Flyway 마이그레이션
+- API 스펙 → Controller + DTO 클래스
 
 ### Subagents (특수 작업용 AI 어시스턴트)
 - `arena-analyzer` - Arena 로직 분석 및 검증
