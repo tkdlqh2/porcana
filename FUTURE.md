@@ -4,8 +4,6 @@
 
 ### Holding Baseline (Portfolio Management) ✅
 
-> 상세 설계: `docs/HOLDING_BASELINE_PLAN.md` 참조
-
 사용자가 시드 금액을 설정하면 각 종목별 매수 수량을 자동 계산하고, 추가 입금 시 어떤 종목을 매수해야 비중이 맞춰지는지 안내합니다.
 
 | 구분 | 역할 | 설명 |
@@ -22,6 +20,8 @@
 | PUT | `/portfolios/{id}/seed` | 시드 금액 설정 (자동 수량 계산) |
 | GET | `/portfolios/{id}/holding-baseline` | Baseline 조회 |
 | POST | `/portfolios/{id}/top-up-plan` | 추가 입금 추천 (BUY only) |
+| GET | `/portfolios/{id}/rebalance-status` | 리밸런싱 상태 (괴리도) 조회 |
+| POST | `/portfolios/{id}/rebalancing-plan` | 전체 리밸런싱 플랜 (BUY + SELL) |
 
 ---
 
