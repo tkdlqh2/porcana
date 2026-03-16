@@ -17,6 +17,14 @@ import java.time.ZonedDateTime;
 /**
  * Scheduler for batch jobs
  * Executes batch jobs at scheduled intervals
+ *
+ * 일일 업데이트 스케줄 (KST):
+ * - 07:00 미국 가격 (화-토, 미국 장 마감 후)
+ * - 07:15 환율 (월-금)
+ * - 07:30 포트폴리오 수익률 (매일)
+ * - 22:00 한국 가격 (월-금, 한국 장 마감 후)
+ *
+ * → 사용자 안내: "수익률은 매일 오전 7시 30분에 업데이트됩니다"
  */
 @Slf4j
 @Component
@@ -220,13 +228,13 @@ public class BatchScheduler {
      * Execute exchange rate update batch job every 24 hours
      * Uncomment @Scheduled annotation to enable
      */
-//    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
+    @Scheduled(fixedDelay = 86400000) // 24 hours = 86,400,000 ms
     public void runExchangeRateBatch() {
         try {
             log.info("Starting scheduled exchange rate update batch job");
 
             // Use specific date/time: 2026-01-22 08:00 KST
-            ZonedDateTime targetDateTime = ZonedDateTime.of(2026, 1, 21, 12, 0, 1, 0, ZoneId.of("Asia/Seoul"));
+            ZonedDateTime targetDateTime = ZonedDateTime.of(2026, 3, 13, 12, 0, 1, 0, ZoneId.of("Asia/Seoul"));
             JobParameters jobParameters = new JobParametersBuilder()
                     .addLong("timestamp", targetDateTime.toInstant().toEpochMilli())
                     .toJobParameters();

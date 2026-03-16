@@ -15,10 +15,17 @@ import org.springframework.scheduling.annotation.Scheduled;
  * Spring Batch configuration
  * <p>
  * Enables batch processing infrastructure and provides common batch settings
- * Includes scheduled jobs for:
- * - Weekly asset updates (stocks and ETFs)
- * - Daily price updates (stocks and ETFs)
- * - Daily exchange rate updates
+ *
+ * 일일 업데이트 스케줄 (KST, 화-토):
+ * - 07:00 한국/미국 가격
+ * - 07:15 환율 (전일 환율)
+ * - 07:30 포트폴리오 수익률
+ *
+ * 주간 스케줄 (일요일):
+ * - 02:00 종목 데이터 업데이트
+ * - 03:00 위험도 계산
+ *
+ * → 사용자 안내: "수익률은 매일 오전 7시 30분에 업데이트됩니다"
  */
 @Slf4j
 @Configuration
@@ -212,10 +219,9 @@ public class BatchConfig {
 
     /**
      * Scheduled exchange rate update job
-     * Runs every weekday at 12:00 KST
-     * Korea Exim Bank updates exchange rates around 10:00 KST
+     * Runs every TUE-SAT at 07:15 KST (fetches previous day's rate)
      */
-    @Scheduled(cron = "0 0 12 * * MON-FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 15 7 * * TUE-SAT", zone = "Asia/Seoul")
     public void runExchangeRateUpdate() {
         log.info("Starting scheduled exchange rate update");
 
@@ -257,10 +263,12 @@ public class BatchConfig {
 
     /**
      * Scheduled portfolio performance calculation job
-     * Runs every day at 08:00 KST (after US market price update at 07:00)
+     * Runs every TUE-SAT at 07:30 KST (after price updates at 07:00 and exchange rate at 07:15)
      * Calculates daily returns for all ACTIVE portfolios
+     *
+     * 사용자 안내: "수익률은 매일 오전 7시 30분에 업데이트됩니다"
      */
-    @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 30 7 * * TUE-SAT", zone = "Asia/Seoul")
     public void runPortfolioPerformanceCalculation() {
         log.info("Starting scheduled portfolio performance calculation");
 
