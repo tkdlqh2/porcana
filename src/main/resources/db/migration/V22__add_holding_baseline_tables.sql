@@ -24,7 +24,7 @@ CREATE TABLE portfolio_holding_baseline_items (
     asset_id UUID NOT NULL,
     quantity DECIMAL(18,6) NOT NULL,
     avg_price DECIMAL(18,4),
-    target_weight_pct DECIMAL(5,2),
+    target_weight_pct DECIMAL(5,2) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
 

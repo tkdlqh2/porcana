@@ -47,7 +47,7 @@ public class PortfolioHoldingBaselineItem {
     /**
      * baseline 생성 당시 목표 비중 (참고용)
      */
-    @Column(name = "target_weight_pct", precision = 5, scale = 2)
+    @Column(name = "target_weight_pct", precision = 5, scale = 2, nullable = false)
     private BigDecimal targetWeightPct;
 
     @CreationTimestamp
@@ -82,8 +82,11 @@ public class PortfolioHoldingBaselineItem {
         if (avgPrice != null && avgPrice.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("avgPrice must be non-negative");
         }
-        if (targetWeightPct != null &&
-                (targetWeightPct.compareTo(BigDecimal.ZERO) < 0 || targetWeightPct.compareTo(new BigDecimal("100")) > 0)) {
+        if (targetWeightPct == null) {
+            throw new IllegalArgumentException("targetWeightPct must not be null");
+        }
+
+        if (targetWeightPct.compareTo(BigDecimal.ZERO) < 0 || targetWeightPct.compareTo(new BigDecimal("100")) > 0) {
             throw new IllegalArgumentException("targetWeightPct must be between 0 and 100");
         }
 
