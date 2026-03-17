@@ -16,7 +16,8 @@ public record BaselineResponse(
         UUID portfolioId,
         String sourceType,
         String baseCurrency,
-        BigDecimal seedMoney,      // 설정한 시드 금액 (cashAmount와 투자금액 합)
+        BigDecimal seedMoney,      // 원본 시드 금액 (설정 시점의 투자 원금)
+        BigDecimal totalValue,     // 현재 시가평가 총액 (현재가 기준)
         BigDecimal cashAmount,     // 잔여 현금
         LocalDateTime confirmedAt,
         List<ItemResponse> items
@@ -34,11 +35,11 @@ public record BaselineResponse(
     ) {}
 
     public static BaselineResponse notExists() {
-        return new BaselineResponse(false, null, null, null, null, null, null, null, null);
+        return new BaselineResponse(false, null, null, null, null, null, null, null, null, null);
     }
 
     public static BaselineResponse from(PortfolioHoldingBaseline baseline, List<ItemResponse> items,
-                                         BigDecimal seedMoney) {
+                                         BigDecimal seedMoney, BigDecimal totalValue) {
         return new BaselineResponse(
                 true,
                 baseline.getId(),
@@ -46,6 +47,7 @@ public record BaselineResponse(
                 baseline.getSourceType().name(),
                 baseline.getBaseCurrency().name(),
                 seedMoney,
+                totalValue,
                 baseline.getCashAmount(),
                 baseline.getConfirmedAt(),
                 items

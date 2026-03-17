@@ -178,7 +178,9 @@ public class HoldingBaselineService {
 
         // 응답 생성 (기준 통화 기준)
         List<BaselineResponse.ItemResponse> itemResponses = new ArrayList<>();
-        BigDecimal totalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        BigDecimal cashAmount = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        BigDecimal totalValue = cashAmount;
+        BigDecimal seedMoney = cashAmount;  // 원본 시드 = avgPrice * quantity 합계 + cashAmount
 
         for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
             Asset asset = assetMap.get(item.getAssetId());
@@ -188,6 +190,10 @@ public class HoldingBaselineService {
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             BigDecimal currentValue = priceInBaseCurrency.multiply(item.getQuantity());
             totalValue = totalValue.add(currentValue);
+
+            // 원본 시드 복원: avgPrice를 기준 통화로 변환 후 quantity 곱함
+            BigDecimal avgPriceInBaseCurrency = convertPriceToBaseCurrency(asset, item.getAvgPrice(), baseCurrency, usdKrw);
+            seedMoney = seedMoney.add(avgPriceInBaseCurrency.multiply(item.getQuantity()));
 
             itemResponses.add(new BaselineResponse.ItemResponse(
                     asset.getId(),
@@ -202,7 +208,7 @@ public class HoldingBaselineService {
             ));
         }
 
-        return BaselineResponse.from(baseline, itemResponses, totalValue);
+        return BaselineResponse.from(baseline, itemResponses, seedMoney, totalValue);
     }
 
     /**
@@ -638,6 +644,8 @@ public class HoldingBaselineService {
     private BaselineResponse buildBaselineResponse(PortfolioHoldingBaseline baseline,
                                                     List<CalculatedItem> items,
                                                     BigDecimal seedMoney) {
+        BigDecimal totalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+
         List<BaselineResponse.ItemResponse> itemResponses = items.stream()
                 .map(item -> new BaselineResponse.ItemResponse(
                         item.asset.getId(),
@@ -652,7 +660,12 @@ public class HoldingBaselineService {
                 ))
                 .toList();
 
-        return BaselineResponse.from(baseline, itemResponses, seedMoney);
+        // totalValue = 모든 아이템의 현재 평가금액 합계 + 현금
+        for (BaselineResponse.ItemResponse item : itemResponses) {
+            totalValue = totalValue.add(item.currentValue());
+        }
+
+        return BaselineResponse.from(baseline, itemResponses, seedMoney, totalValue);
     }
 
     private record CalculatedItem(
