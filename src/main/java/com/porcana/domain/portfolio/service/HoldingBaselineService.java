@@ -67,6 +67,10 @@ public class HoldingBaselineService {
         PortfolioHoldingBaseline.Currency baseCurrency = parseCurrency(request.baseCurrency());
         BigDecimal seedMoney = request.seedMoney();
 
+        // 입력 통화를 기준 통화로 정규화 (내부 계산은 기준 통화 기준)
+        // baseCurrency가 USD면 자산 가격을 USD로, KRW면 KRW로 계산
+        boolean isUsdBase = baseCurrency == PortfolioHoldingBaseline.Currency.USD;
+
         // 각 종목별 수량 계산
         List<CalculatedItem> calculatedItems = new ArrayList<>();
         BigDecimal totalInvested = BigDecimal.ZERO;
@@ -81,19 +85,28 @@ public class HoldingBaselineService {
                 continue;
             }
 
-            // KRW 기준 현재가 (US 자산은 환율 적용)
-            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
-                    ? currentPrice.multiply(usdKrw)
-                    : currentPrice;
+            // 기준 통화에 맞게 가격 변환
+            BigDecimal priceInBaseCurrency;
+            if (isUsdBase) {
+                // USD 기준: KR 자산은 USD로 변환, US 자산은 그대로
+                priceInBaseCurrency = asset.getMarket() == Asset.Market.KR
+                        ? currentPrice.divide(usdKrw, 4, RoundingMode.HALF_UP)
+                        : currentPrice;
+            } else {
+                // KRW 기준: US 자산은 KRW로 변환, KR 자산은 그대로
+                priceInBaseCurrency = asset.getMarket() == Asset.Market.US
+                        ? currentPrice.multiply(usdKrw)
+                        : currentPrice;
+            }
 
-            // 목표 금액 = 시드 × 비중
+            // 목표 금액 = 시드 × 비중 (기준 통화)
             BigDecimal targetAmount = seedMoney.multiply(pa.getWeightPct()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
             // 수량 = 목표금액 / 현재가 (정수로 버림)
-            int quantity = targetAmount.divide(priceInKrw, 0, RoundingMode.DOWN).intValue();
+            int quantity = targetAmount.divide(priceInBaseCurrency, 0, RoundingMode.DOWN).intValue();
 
-            // 실제 투자 금액
-            BigDecimal actualAmount = priceInKrw.multiply(BigDecimal.valueOf(quantity));
+            // 실제 투자 금액 (기준 통화)
+            BigDecimal actualAmount = priceInBaseCurrency.multiply(BigDecimal.valueOf(quantity));
             totalInvested = totalInvested.add(actualAmount);
 
             calculatedItems.add(new CalculatedItem(
@@ -101,7 +114,7 @@ public class HoldingBaselineService {
                     pa.getWeightPct(),
                     BigDecimal.valueOf(quantity),
                     currentPrice,
-                    priceInKrw
+                    priceInBaseCurrency
             ));
         }
 
@@ -133,7 +146,7 @@ public class HoldingBaselineService {
 
         PortfolioHoldingBaseline saved = baselineRepository.save(baseline);
 
-        return buildBaselineResponse(saved, calculatedItems, seedMoney, usdKrw);
+        return buildBaselineResponse(saved, calculatedItems, seedMoney);
     }
 
     /**
@@ -154,6 +167,7 @@ public class HoldingBaselineService {
 
         PortfolioHoldingBaseline baseline = baselineOpt.get();
         BigDecimal usdKrw = getLatestExchangeRate();
+        PortfolioHoldingBaseline.Currency baseCurrency = baseline.getBaseCurrency();
 
         // 자산 정보 조회
         List<UUID> assetIds = baseline.getItems().stream()
@@ -162,7 +176,7 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
-        // 응답 생성
+        // 응답 생성 (기준 통화 기준)
         List<BaselineResponse.ItemResponse> itemResponses = new ArrayList<>();
         BigDecimal totalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
 
@@ -171,10 +185,8 @@ public class HoldingBaselineService {
             if (asset == null) continue;
 
             BigDecimal currentPrice = getLatestPrice(asset);
-            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
-                    ? currentPrice.multiply(usdKrw)
-                    : currentPrice;
-            BigDecimal currentValue = priceInKrw.multiply(item.getQuantity());
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            BigDecimal currentValue = priceInBaseCurrency.multiply(item.getQuantity());
             totalValue = totalValue.add(currentValue);
 
             itemResponses.add(new BaselineResponse.ItemResponse(
@@ -209,6 +221,7 @@ public class HoldingBaselineService {
 
         BigDecimal usdKrw = getLatestExchangeRate();
         BigDecimal additionalCash = request.additionalCash();
+        PortfolioHoldingBaseline.Currency baseCurrency = baseline.getBaseCurrency();
 
         // 현재 보유 자산 정보
         List<UUID> assetIds = baseline.getItems().stream()
@@ -217,7 +230,7 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
-        // 현재 총 가치 계산
+        // 현재 총 가치 계산 (기준 통화 기준)
         BigDecimal currentTotalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
         Map<UUID, BigDecimal> currentValues = new HashMap<>();
 
@@ -226,10 +239,8 @@ public class HoldingBaselineService {
             if (asset == null) continue;
 
             BigDecimal currentPrice = getLatestPrice(asset);
-            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
-                    ? currentPrice.multiply(usdKrw)
-                    : currentPrice;
-            BigDecimal value = priceInKrw.multiply(item.getQuantity());
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            BigDecimal value = priceInBaseCurrency.multiply(item.getQuantity());
             currentValues.put(item.getAssetId(), value);
             currentTotalValue = currentTotalValue.add(value);
         }
@@ -265,9 +276,7 @@ public class HoldingBaselineService {
             if (asset == null) continue;
 
             BigDecimal currentPrice = getLatestPrice(asset);
-            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
-                    ? currentPrice.multiply(usdKrw)
-                    : currentPrice;
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
 
             BigDecimal currentValue = currentValues.getOrDefault(item.getAssetId(), BigDecimal.ZERO);
             BigDecimal currentWeight = currentTotalValue.compareTo(BigDecimal.ZERO) > 0
@@ -286,11 +295,11 @@ public class HoldingBaselineService {
 
             // 사용 가능한 금액 내에서 매수
             BigDecimal buyAmount = neededAmount.min(remainingCash);
-            int quantity = buyAmount.divide(priceInKrw, 0, RoundingMode.DOWN).intValue();
+            int quantity = buyAmount.divide(priceInBaseCurrency, 0, RoundingMode.DOWN).intValue();
 
             if (quantity <= 0) continue;
 
-            BigDecimal actualBuyAmount = priceInKrw.multiply(BigDecimal.valueOf(quantity));
+            BigDecimal actualBuyAmount = priceInBaseCurrency.multiply(BigDecimal.valueOf(quantity));
             remainingCash = remainingCash.subtract(actualBuyAmount);
 
             BigDecimal newValue = currentValue.add(actualBuyAmount);
@@ -342,6 +351,7 @@ public class HoldingBaselineService {
         PortfolioHoldingBaseline baseline = baselineOpt.get();
         BigDecimal usdKrw = getLatestExchangeRate();
         BigDecimal threshold = thresholdPct != null ? thresholdPct : new BigDecimal("5.0");
+        PortfolioHoldingBaseline.Currency baseCurrency = baseline.getBaseCurrency();
 
         // 자산 정보 조회
         List<UUID> assetIds = baseline.getItems().stream()
@@ -350,8 +360,8 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
-        // 현재 총 가치 및 개별 자산 가치 계산
-        BigDecimal totalValueKrw = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        // 현재 총 가치 및 개별 자산 가치 계산 (기준 통화 기준)
+        BigDecimal totalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
         Map<UUID, AssetValueInfo> assetValues = new HashMap<>();
 
         for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
@@ -359,14 +369,12 @@ public class HoldingBaselineService {
             if (asset == null) continue;
 
             BigDecimal currentPrice = getLatestPrice(asset);
-            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
-                    ? currentPrice.multiply(usdKrw)
-                    : currentPrice;
-            BigDecimal valueKrw = priceInKrw.multiply(item.getQuantity());
-            totalValueKrw = totalValueKrw.add(valueKrw);
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            BigDecimal valueInBaseCurrency = priceInBaseCurrency.multiply(item.getQuantity());
+            totalValue = totalValue.add(valueInBaseCurrency);
 
             assetValues.put(item.getAssetId(), new AssetValueInfo(
-                    asset, item, currentPrice, priceInKrw, valueKrw
+                    asset, item, currentPrice, priceInBaseCurrency, valueInBaseCurrency
             ));
         }
 
@@ -375,14 +383,14 @@ public class HoldingBaselineService {
         BigDecimal maxDeviation = BigDecimal.ZERO;
         boolean needsRebalancing = false;
 
-        final BigDecimal finalTotalValueKrw = totalValueKrw;
+        final BigDecimal finalTotalValue = totalValue;
         for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
             AssetValueInfo valueInfo = assetValues.get(item.getAssetId());
             if (valueInfo == null) continue;
 
             BigDecimal targetWeight = item.getTargetWeightPct();
-            BigDecimal currentWeight = finalTotalValueKrw.compareTo(BigDecimal.ZERO) > 0
-                    ? valueInfo.valueKrw.divide(finalTotalValueKrw, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+            BigDecimal currentWeight = finalTotalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? valueInfo.valueInBaseCurrency.divide(finalTotalValue, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                     : BigDecimal.ZERO;
             BigDecimal deviation = currentWeight.subtract(targetWeight);
             BigDecimal absDeviation = deviation.abs();
@@ -409,7 +417,7 @@ public class HoldingBaselineService {
                     action,
                     valueInfo.item.getQuantity().intValue(),
                     valueInfo.currentPrice,
-                    valueInfo.valueKrw.setScale(0, RoundingMode.HALF_UP)
+                    valueInfo.valueInBaseCurrency.setScale(0, RoundingMode.HALF_UP)
             ));
         }
 
@@ -420,7 +428,7 @@ public class HoldingBaselineService {
                 java.time.LocalDateTime.now(),
                 threshold,
                 new RebalanceStatusResponse.Summary(
-                        totalValueKrw.setScale(0, RoundingMode.HALF_UP),
+                        totalValue.setScale(0, RoundingMode.HALF_UP),
                         baseline.getCashAmount(),
                         maxDeviation.setScale(2, RoundingMode.HALF_UP)
                 ),
@@ -447,6 +455,7 @@ public class HoldingBaselineService {
         PortfolioHoldingBaseline baseline = baselineOpt.get();
         BigDecimal usdKrw = getLatestExchangeRate();
         BigDecimal threshold = request.thresholdPct() != null ? request.thresholdPct() : new BigDecimal("5.0");
+        PortfolioHoldingBaseline.Currency baseCurrency = baseline.getBaseCurrency();
 
         // 자산 정보 조회
         List<UUID> assetIds = baseline.getItems().stream()
@@ -455,8 +464,8 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
-        // 현재 총 가치 및 개별 자산 가치 계산
-        BigDecimal totalValueKrw = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        // 현재 총 가치 및 개별 자산 가치 계산 (기준 통화 기준)
+        BigDecimal totalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
         Map<UUID, AssetValueInfo> assetValues = new HashMap<>();
 
         for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
@@ -464,14 +473,12 @@ public class HoldingBaselineService {
             if (asset == null) continue;
 
             BigDecimal currentPrice = getLatestPrice(asset);
-            BigDecimal priceInKrw = asset.getMarket() == Asset.Market.US
-                    ? currentPrice.multiply(usdKrw)
-                    : currentPrice;
-            BigDecimal valueKrw = priceInKrw.multiply(item.getQuantity());
-            totalValueKrw = totalValueKrw.add(valueKrw);
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            BigDecimal valueInBaseCurrency = priceInBaseCurrency.multiply(item.getQuantity());
+            totalValue = totalValue.add(valueInBaseCurrency);
 
             assetValues.put(item.getAssetId(), new AssetValueInfo(
-                    asset, item, currentPrice, priceInKrw, valueKrw
+                    asset, item, currentPrice, priceInBaseCurrency, valueInBaseCurrency
             ));
         }
 
@@ -481,14 +488,14 @@ public class HoldingBaselineService {
         BigDecimal totalSellAmount = BigDecimal.ZERO;
         boolean needsRebalancing = false;
 
-        final BigDecimal finalTotalValueKrw = totalValueKrw;
+        final BigDecimal finalTotalValue = totalValue;
         for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
             AssetValueInfo valueInfo = assetValues.get(item.getAssetId());
             if (valueInfo == null) continue;
 
             BigDecimal targetWeight = item.getTargetWeightPct();
-            BigDecimal currentWeight = finalTotalValueKrw.compareTo(BigDecimal.ZERO) > 0
-                    ? valueInfo.valueKrw.divide(finalTotalValueKrw, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+            BigDecimal currentWeight = finalTotalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? valueInfo.valueInBaseCurrency.divide(finalTotalValue, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                     : BigDecimal.ZERO;
             BigDecimal deviation = currentWeight.subtract(targetWeight);
             BigDecimal absDeviation = deviation.abs();
@@ -498,26 +505,26 @@ public class HoldingBaselineService {
 
             needsRebalancing = true;
 
-            // 목표 금액 계산
-            BigDecimal targetValueKrw = finalTotalValueKrw.multiply(targetWeight).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            BigDecimal diffKrw = targetValueKrw.subtract(valueInfo.valueKrw);
+            // 목표 금액 계산 (기준 통화)
+            BigDecimal targetValue = finalTotalValue.multiply(targetWeight).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            BigDecimal diff = targetValue.subtract(valueInfo.valueInBaseCurrency);
 
             String action;
             int actionQuantity;
-            BigDecimal actionAmountKrw;
+            BigDecimal actionAmount;
 
-            if (diffKrw.compareTo(BigDecimal.ZERO) > 0) {
+            if (diff.compareTo(BigDecimal.ZERO) > 0) {
                 // BUY
                 action = "BUY";
-                actionQuantity = diffKrw.divide(valueInfo.priceInKrw, 0, RoundingMode.DOWN).intValue();
-                actionAmountKrw = valueInfo.priceInKrw.multiply(BigDecimal.valueOf(actionQuantity));
-                totalBuyAmount = totalBuyAmount.add(actionAmountKrw);
+                actionQuantity = diff.divide(valueInfo.priceInBaseCurrency, 0, RoundingMode.DOWN).intValue();
+                actionAmount = valueInfo.priceInBaseCurrency.multiply(BigDecimal.valueOf(actionQuantity));
+                totalBuyAmount = totalBuyAmount.add(actionAmount);
             } else {
                 // SELL
                 action = "SELL";
-                actionQuantity = diffKrw.abs().divide(valueInfo.priceInKrw, 0, RoundingMode.DOWN).intValue();
-                actionAmountKrw = valueInfo.priceInKrw.multiply(BigDecimal.valueOf(actionQuantity));
-                totalSellAmount = totalSellAmount.add(actionAmountKrw);
+                actionQuantity = diff.abs().divide(valueInfo.priceInBaseCurrency, 0, RoundingMode.DOWN).intValue();
+                actionAmount = valueInfo.priceInBaseCurrency.multiply(BigDecimal.valueOf(actionQuantity));
+                totalSellAmount = totalSellAmount.add(actionAmount);
             }
 
             if (actionQuantity == 0) continue;
@@ -540,12 +547,12 @@ public class HoldingBaselineService {
                     actionQuantity,
                     afterQuantity,
                     valueInfo.currentPrice,
-                    actionAmountKrw.setScale(0, RoundingMode.HALF_UP)
+                    actionAmount.setScale(0, RoundingMode.HALF_UP)
             ));
         }
 
         if (!needsRebalancing) {
-            return RebalancingPlanResponse.noRebalancingNeeded(portfolioId, baseline.getId(), threshold, totalValueKrw);
+            return RebalancingPlanResponse.noRebalancingNeeded(portfolioId, baseline.getId(), threshold, totalValue);
         }
 
         BigDecimal netCashFlow = totalSellAmount.subtract(totalBuyAmount);
@@ -558,7 +565,7 @@ public class HoldingBaselineService {
                 true,
                 threshold,
                 new RebalancingPlanResponse.Summary(
-                        totalValueKrw.setScale(0, RoundingMode.HALF_UP),
+                        totalValue.setScale(0, RoundingMode.HALF_UP),
                         totalBuyAmount.setScale(0, RoundingMode.HALF_UP),
                         totalSellAmount.setScale(0, RoundingMode.HALF_UP),
                         netCashFlow.setScale(0, RoundingMode.HALF_UP),
@@ -574,9 +581,30 @@ public class HoldingBaselineService {
             Asset asset,
             PortfolioHoldingBaselineItem item,
             BigDecimal currentPrice,
-            BigDecimal priceInKrw,
-            BigDecimal valueKrw
+            BigDecimal priceInBaseCurrency,
+            BigDecimal valueInBaseCurrency
     ) {}
+
+    /**
+     * 자산 가격을 기준 통화로 변환
+     */
+    private BigDecimal convertPriceToBaseCurrency(Asset asset, BigDecimal currentPrice,
+                                                   PortfolioHoldingBaseline.Currency baseCurrency,
+                                                   BigDecimal usdKrw) {
+        boolean isUsdBase = baseCurrency == PortfolioHoldingBaseline.Currency.USD;
+
+        if (isUsdBase) {
+            // USD 기준: KR 자산은 USD로 변환, US 자산은 그대로
+            return asset.getMarket() == Asset.Market.KR
+                    ? currentPrice.divide(usdKrw, 4, RoundingMode.HALF_UP)
+                    : currentPrice;
+        } else {
+            // KRW 기준: US 자산은 KRW로 변환, KR 자산은 그대로
+            return asset.getMarket() == Asset.Market.US
+                    ? currentPrice.multiply(usdKrw)
+                    : currentPrice;
+        }
+    }
 
     private void validateOwnership(Portfolio portfolio, UUID userId) {
         if (userId != null && !userId.equals(portfolio.getUserId())) {
@@ -609,8 +637,7 @@ public class HoldingBaselineService {
 
     private BaselineResponse buildBaselineResponse(PortfolioHoldingBaseline baseline,
                                                     List<CalculatedItem> items,
-                                                    BigDecimal seedMoney,
-                                                    BigDecimal usdKrw) {
+                                                    BigDecimal seedMoney) {
         List<BaselineResponse.ItemResponse> itemResponses = items.stream()
                 .map(item -> new BaselineResponse.ItemResponse(
                         item.asset.getId(),
@@ -621,7 +648,7 @@ public class HoldingBaselineService {
                         item.currentPrice,
                         item.targetWeightPct,
                         item.currentPrice,
-                        item.priceInKrw.multiply(item.quantity)
+                        item.priceInBaseCurrency.multiply(item.quantity)
                 ))
                 .toList();
 
@@ -633,6 +660,6 @@ public class HoldingBaselineService {
             BigDecimal targetWeightPct,
             BigDecimal quantity,
             BigDecimal currentPrice,
-            BigDecimal priceInKrw
+            BigDecimal priceInBaseCurrency
     ) {}
 }
