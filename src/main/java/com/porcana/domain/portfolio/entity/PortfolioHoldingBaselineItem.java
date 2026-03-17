@@ -79,6 +79,13 @@ public class PortfolioHoldingBaselineItem {
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("quantity must be non-negative");
         }
+        if (avgPrice != null && avgPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("avgPrice must be non-negative");
+        }
+        if (targetWeightPct != null &&
+                (targetWeightPct.compareTo(BigDecimal.ZERO) < 0 || targetWeightPct.compareTo(new BigDecimal("100")) > 0)) {
+            throw new IllegalArgumentException("targetWeightPct must be between 0 and 100");
+        }
 
         return PortfolioHoldingBaselineItem.builder()
                 .baseline(baseline)

@@ -129,7 +129,9 @@ public class PortfolioHoldingBaseline {
      */
     public void replaceItems(List<PortfolioHoldingBaselineItem> newItems) {
         this.items.clear();
-        this.items.addAll(newItems);
+        newItems.forEach(item -> this.addItem(
+                item.getAssetId(), item.getQuantity(), item.getAvgPrice(), item.getTargetWeightPct()
+        ));
     }
 
     /**
