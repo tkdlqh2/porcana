@@ -177,17 +177,17 @@ public class HoldingBaselineService {
             BigDecimal currentValue = priceInKrw.multiply(item.getQuantity());
             totalValue = totalValue.add(currentValue);
 
-            itemResponses.add(BaselineResponse.ItemResponse.builder()
-                    .assetId(asset.getId())
-                    .symbol(asset.getSymbol())
-                    .name(asset.getName())
-                    .market(asset.getMarket().name())
-                    .quantity(item.getQuantity())
-                    .avgPrice(item.getAvgPrice())
-                    .targetWeightPct(item.getTargetWeightPct())
-                    .currentPrice(currentPrice)
-                    .currentValue(currentValue)
-                    .build());
+            itemResponses.add(new BaselineResponse.ItemResponse(
+                    asset.getId(),
+                    asset.getSymbol(),
+                    asset.getName(),
+                    asset.getMarket().name(),
+                    item.getQuantity(),
+                    item.getAvgPrice(),
+                    item.getTargetWeightPct(),
+                    currentPrice,
+                    currentValue
+            ));
         }
 
         return BaselineResponse.from(baseline, itemResponses, totalValue);
@@ -296,31 +296,31 @@ public class HoldingBaselineService {
             BigDecimal newValue = currentValue.add(actualBuyAmount);
             BigDecimal weightAfterBuy = newValue.divide(newTotalValue, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
-            recommendations.add(TopUpPlanResponse.RecommendationItem.builder()
-                    .assetId(asset.getId())
-                    .symbol(asset.getSymbol())
-                    .name(asset.getName())
-                    .market(asset.getMarket().name())
-                    .targetWeightPct(targetWeight)
-                    .currentWeightPct(currentWeight.setScale(2, RoundingMode.HALF_UP))
-                    .weightAfterBuy(weightAfterBuy.setScale(2, RoundingMode.HALF_UP))
-                    .currentPrice(currentPrice)
-                    .recommendedQuantity(quantity)
-                    .recommendedAmount(actualBuyAmount)
-                    .reason(String.format("목표 %.1f%% vs 현재 %.1f%%, 매수 후 %.1f%%",
-                            targetWeight, currentWeight, weightAfterBuy))
-                    .build());
+            recommendations.add(new TopUpPlanResponse.RecommendationItem(
+                    asset.getId(),
+                    asset.getSymbol(),
+                    asset.getName(),
+                    asset.getMarket().name(),
+                    targetWeight,
+                    currentWeight.setScale(2, RoundingMode.HALF_UP),
+                    weightAfterBuy.setScale(2, RoundingMode.HALF_UP),
+                    currentPrice,
+                    quantity,
+                    actualBuyAmount,
+                    String.format("목표 %.1f%% vs 현재 %.1f%%, 매수 후 %.1f%%",
+                            targetWeight, currentWeight, weightAfterBuy)
+            ));
         }
 
-        return TopUpPlanResponse.builder()
-                .portfolioId(portfolioId)
-                .additionalCash(additionalCash)
-                .baseCurrency(baseline.getBaseCurrency().name())
-                .currentTotalValue(currentTotalValue)
-                .newTotalValue(newTotalValue)
-                .recommendations(recommendations)
-                .remainingCash(remainingCash)
-                .build();
+        return new TopUpPlanResponse(
+                portfolioId,
+                additionalCash,
+                baseline.getBaseCurrency().name(),
+                currentTotalValue,
+                newTotalValue,
+                recommendations,
+                remainingCash
+        );
     }
 
     /**
@@ -398,34 +398,34 @@ public class HoldingBaselineService {
                     : deviation.compareTo(threshold.negate()) < 0 ? "BUY"
                     : "HOLD";
 
-            itemStatuses.add(RebalanceStatusResponse.ItemStatus.builder()
-                    .assetId(valueInfo.asset.getId())
-                    .symbol(valueInfo.asset.getSymbol())
-                    .name(valueInfo.asset.getName())
-                    .market(valueInfo.asset.getMarket().name())
-                    .targetWeightPct(targetWeight.setScale(2, RoundingMode.HALF_UP))
-                    .currentWeightPct(currentWeight.setScale(2, RoundingMode.HALF_UP))
-                    .deviationPct(deviation.setScale(2, RoundingMode.HALF_UP))
-                    .action(action)
-                    .currentQuantity(valueInfo.item.getQuantity().intValue())
-                    .currentPrice(valueInfo.currentPrice)
-                    .currentValueKrw(valueInfo.valueKrw.setScale(0, RoundingMode.HALF_UP))
-                    .build());
+            itemStatuses.add(new RebalanceStatusResponse.ItemStatus(
+                    valueInfo.asset.getId(),
+                    valueInfo.asset.getSymbol(),
+                    valueInfo.asset.getName(),
+                    valueInfo.asset.getMarket().name(),
+                    targetWeight.setScale(2, RoundingMode.HALF_UP),
+                    currentWeight.setScale(2, RoundingMode.HALF_UP),
+                    deviation.setScale(2, RoundingMode.HALF_UP),
+                    action,
+                    valueInfo.item.getQuantity().intValue(),
+                    valueInfo.currentPrice,
+                    valueInfo.valueKrw.setScale(0, RoundingMode.HALF_UP)
+            ));
         }
 
-        return RebalanceStatusResponse.builder()
-                .portfolioId(portfolioId)
-                .hasBaseline(true)
-                .needsRebalancing(needsRebalancing)
-                .checkedAt(java.time.LocalDateTime.now())
-                .thresholdPct(threshold)
-                .summary(RebalanceStatusResponse.Summary.builder()
-                        .totalValueKrw(totalValueKrw.setScale(0, RoundingMode.HALF_UP))
-                        .cashAmount(baseline.getCashAmount())
-                        .maxDeviationPct(maxDeviation.setScale(2, RoundingMode.HALF_UP))
-                        .build())
-                .items(itemStatuses)
-                .build();
+        return new RebalanceStatusResponse(
+                portfolioId,
+                true,
+                needsRebalancing,
+                java.time.LocalDateTime.now(),
+                threshold,
+                new RebalanceStatusResponse.Summary(
+                        totalValueKrw.setScale(0, RoundingMode.HALF_UP),
+                        baseline.getCashAmount(),
+                        maxDeviation.setScale(2, RoundingMode.HALF_UP)
+                ),
+                itemStatuses
+        );
     }
 
     /**
@@ -527,21 +527,21 @@ public class HoldingBaselineService {
                     ? currentQuantity + actionQuantity
                     : currentQuantity - actionQuantity;
 
-            actions.add(RebalancingPlanResponse.ActionItem.builder()
-                    .assetId(valueInfo.asset.getId())
-                    .symbol(valueInfo.asset.getSymbol())
-                    .name(valueInfo.asset.getName())
-                    .market(valueInfo.asset.getMarket().name())
-                    .action(action)
-                    .targetWeightPct(targetWeight.setScale(2, RoundingMode.HALF_UP))
-                    .currentWeightPct(currentWeight.setScale(2, RoundingMode.HALF_UP))
-                    .deviationPct(deviation.setScale(2, RoundingMode.HALF_UP))
-                    .currentQuantity(currentQuantity)
-                    .actionQuantity(actionQuantity)
-                    .afterQuantity(afterQuantity)
-                    .currentPrice(valueInfo.currentPrice)
-                    .actionAmountKrw(actionAmountKrw.setScale(0, RoundingMode.HALF_UP))
-                    .build());
+            actions.add(new RebalancingPlanResponse.ActionItem(
+                    valueInfo.asset.getId(),
+                    valueInfo.asset.getSymbol(),
+                    valueInfo.asset.getName(),
+                    valueInfo.asset.getMarket().name(),
+                    action,
+                    targetWeight.setScale(2, RoundingMode.HALF_UP),
+                    currentWeight.setScale(2, RoundingMode.HALF_UP),
+                    deviation.setScale(2, RoundingMode.HALF_UP),
+                    currentQuantity,
+                    actionQuantity,
+                    afterQuantity,
+                    valueInfo.currentPrice,
+                    actionAmountKrw.setScale(0, RoundingMode.HALF_UP)
+            ));
         }
 
         if (!needsRebalancing) {
@@ -552,20 +552,20 @@ public class HoldingBaselineService {
         BigDecimal cashAfterRebalance = (baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO)
                 .add(netCashFlow);
 
-        return RebalancingPlanResponse.builder()
-                .portfolioId(portfolioId)
-                .baselineId(baseline.getId())
-                .needsRebalancing(true)
-                .thresholdPct(threshold)
-                .summary(RebalancingPlanResponse.Summary.builder()
-                        .totalValueKrw(totalValueKrw.setScale(0, RoundingMode.HALF_UP))
-                        .totalBuyAmount(totalBuyAmount.setScale(0, RoundingMode.HALF_UP))
-                        .totalSellAmount(totalSellAmount.setScale(0, RoundingMode.HALF_UP))
-                        .netCashFlow(netCashFlow.setScale(0, RoundingMode.HALF_UP))
-                        .cashAfterRebalance(cashAfterRebalance.setScale(0, RoundingMode.HALF_UP))
-                        .build())
-                .actions(actions)
-                .build();
+        return new RebalancingPlanResponse(
+                portfolioId,
+                baseline.getId(),
+                true,
+                threshold,
+                new RebalancingPlanResponse.Summary(
+                        totalValueKrw.setScale(0, RoundingMode.HALF_UP),
+                        totalBuyAmount.setScale(0, RoundingMode.HALF_UP),
+                        totalSellAmount.setScale(0, RoundingMode.HALF_UP),
+                        netCashFlow.setScale(0, RoundingMode.HALF_UP),
+                        cashAfterRebalance.setScale(0, RoundingMode.HALF_UP)
+                ),
+                actions
+        );
     }
 
     // === Private Helper Methods ===
@@ -612,17 +612,17 @@ public class HoldingBaselineService {
                                                     BigDecimal seedMoney,
                                                     BigDecimal usdKrw) {
         List<BaselineResponse.ItemResponse> itemResponses = items.stream()
-                .map(item -> BaselineResponse.ItemResponse.builder()
-                        .assetId(item.asset.getId())
-                        .symbol(item.asset.getSymbol())
-                        .name(item.asset.getName())
-                        .market(item.asset.getMarket().name())
-                        .quantity(item.quantity)
-                        .avgPrice(item.currentPrice)
-                        .targetWeightPct(item.targetWeightPct)
-                        .currentPrice(item.currentPrice)
-                        .currentValue(item.priceInKrw.multiply(item.quantity))
-                        .build())
+                .map(item -> new BaselineResponse.ItemResponse(
+                        item.asset.getId(),
+                        item.asset.getSymbol(),
+                        item.asset.getName(),
+                        item.asset.getMarket().name(),
+                        item.quantity,
+                        item.currentPrice,
+                        item.targetWeightPct,
+                        item.currentPrice,
+                        item.priceInKrw.multiply(item.quantity)
+                ))
                 .toList();
 
         return BaselineResponse.from(baseline, itemResponses, seedMoney);
