@@ -424,7 +424,7 @@ public class HoldingBaselineService {
                     currentWeight.setScale(2, RoundingMode.HALF_UP),
                     deviation.setScale(2, RoundingMode.HALF_UP),
                     action,
-                    valueInfo.item.getQuantity().intValue(),
+                    valueInfo.item.getQuantity().setScale(0, RoundingMode.DOWN).intValue(),
                     valueInfo.currentPrice,
                     valueInfo.valueInBaseCurrency.setScale(0, RoundingMode.HALF_UP)
             ));
@@ -538,7 +538,7 @@ public class HoldingBaselineService {
 
             if (actionQuantity == 0) continue;
 
-            int currentQuantity = valueInfo.item.getQuantity().intValue();
+            int currentQuantity = valueInfo.item.getQuantity().setScale(0, RoundingMode.DOWN).intValue();
             int afterQuantity = action.equals("BUY")
                     ? currentQuantity + actionQuantity
                     : currentQuantity - actionQuantity;
