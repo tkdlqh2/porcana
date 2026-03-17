@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -168,5 +169,45 @@ public class Portfolio {
      */
     public boolean isDeleted() {
         return this.deletedAt != null;
+    }
+
+    /**
+     * Activate the portfolio (DRAFT -> ACTIVE)
+     */
+    public void activate() {
+        if (this.status != PortfolioStatus.DRAFT) {
+            throw new IllegalStateException("Only DRAFT portfolios can be activated");
+        }
+        this.status = PortfolioStatus.ACTIVE;
+        this.startedAt = LocalDate.now();
+    }
+
+    // ========== Aggregate Root: 하위 엔티티 생성 ==========
+
+    /**
+     * 포트폴리오에 자산 추가 (PortfolioAsset 생성)
+     */
+    public PortfolioAsset addAsset(UUID assetId, BigDecimal weightPct) {
+        if (this.id == null) {
+            throw new IllegalStateException("Portfolio must be persisted before adding assets");
+        }
+        return PortfolioAsset.create(this.id, assetId, weightPct);
+    }
+
+    /**
+     * 포트폴리오 스냅샷 생성
+     */
+    public PortfolioSnapshot createSnapshot(LocalDate effectiveDate, String note) {
+        if (this.id == null) {
+            throw new IllegalStateException("Portfolio must be persisted before creating snapshots");
+        }
+        return PortfolioSnapshot.create(this.id, effectiveDate, note);
+    }
+
+    /**
+     * 포트폴리오 스냅샷 생성 (note 없이)
+     */
+    public PortfolioSnapshot createSnapshot(LocalDate effectiveDate) {
+        return createSnapshot(effectiveDate, null);
     }
 }

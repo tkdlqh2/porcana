@@ -1,6 +1,7 @@
 package com.porcana.domain.portfolio;
 
 import com.porcana.domain.portfolio.command.CreatePortfolioCommand;
+import com.porcana.domain.portfolio.command.DirectCreatePortfolioCommand;
 import com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand;
 import com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand;
 import com.porcana.domain.portfolio.dto.*;
@@ -73,6 +74,26 @@ public class PortfolioController {
 
         CreatePortfolioCommand command = CreatePortfolioCommand.from(request, userId);
         CreatePortfolioResponse response = portfolioService.createPortfolio(command, userId, guestSessionId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "포트폴리오 직접 생성",
+            description = "종목과 비중을 직접 입력하여 포트폴리오를 생성합니다. 비중을 입력하지 않으면 1/n 균등 배분됩니다. 즉시 ACTIVE 상태로 생성됩니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "생성 성공"),
+                    @ApiResponse(responseCode = "400", description = "잘못된 요청 (비중 합계 오류, 종목 없음 등)", content = @Content)
+            }
+    )
+    @PostMapping("/direct")
+    public ResponseEntity<CreatePortfolioResponse> createPortfolioDirect(
+            @Valid @RequestBody DirectCreatePortfolioRequest request,
+            HttpServletRequest httpRequest) {
+        UUID userId = extractUserId();
+        UUID guestSessionId = guestSessionExtractor.extractGuestSessionId(httpRequest);
+
+        DirectCreatePortfolioCommand command = DirectCreatePortfolioCommand.from(request, userId);
+        CreatePortfolioResponse response = portfolioService.createPortfolioDirect(command, userId, guestSessionId);
         return ResponseEntity.ok(response);
     }
 
