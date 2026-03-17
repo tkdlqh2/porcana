@@ -3,6 +3,7 @@ package com.porcana.domain.portfolio.dto.baseline;
 import lombok.Builder;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,7 +53,7 @@ public record RebalancingPlanResponse(
                 false,
                 null,
                 null,
-                null
+                Collections.emptyList()
         );
     }
 
