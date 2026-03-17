@@ -283,6 +283,9 @@ public class HoldingBaselineService {
 
             BigDecimal currentPrice = getLatestPrice(asset);
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            if (priceInBaseCurrency.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
 
             BigDecimal currentValue = currentValues.getOrDefault(item.getAssetId(), BigDecimal.ZERO);
             BigDecimal currentWeight = currentTotalValue.compareTo(BigDecimal.ZERO) > 0
