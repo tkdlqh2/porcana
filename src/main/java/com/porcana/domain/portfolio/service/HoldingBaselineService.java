@@ -260,12 +260,14 @@ public class HoldingBaselineService {
         // 비중 부족 순으로 정렬
         List<PortfolioHoldingBaselineItem> sortedItems = baseline.getItems().stream()
                 .sorted((a, b) -> {
-                    BigDecimal aCurrentWeight = currentValues.getOrDefault(a.getAssetId(), BigDecimal.ZERO)
+                    BigDecimal aCurrentWeight = finalCurrentTotalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? currentValues.getOrDefault(a.getAssetId(), BigDecimal.ZERO)
                             .divide(finalCurrentTotalValue, 4, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal.valueOf(100));
-                    BigDecimal bCurrentWeight = currentValues.getOrDefault(b.getAssetId(), BigDecimal.ZERO)
+                            .multiply(BigDecimal.valueOf(100)) :  BigDecimal.ZERO;
+                    BigDecimal bCurrentWeight = finalCurrentTotalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? currentValues.getOrDefault(b.getAssetId(), BigDecimal.ZERO)
                             .divide(finalCurrentTotalValue, 4, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal.valueOf(100));
+                            .multiply(BigDecimal.valueOf(100)) : BigDecimal.ZERO;
 
                     BigDecimal aDiff = a.getTargetWeightPct().subtract(aCurrentWeight);
                     BigDecimal bDiff = b.getTargetWeightPct().subtract(bCurrentWeight);
@@ -522,6 +524,10 @@ public class HoldingBaselineService {
             int actionQuantity;
             BigDecimal actionAmount;
 
+            if (valueInfo.priceInBaseCurrency == null || valueInfo.priceInBaseCurrency.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
             if (diff.compareTo(BigDecimal.ZERO) > 0) {
                 // BUY
                 action = "BUY";
@@ -616,7 +622,7 @@ public class HoldingBaselineService {
     }
 
     private void validateOwnership(Portfolio portfolio, UUID userId) {
-        if (userId != null && !userId.equals(portfolio.getUserId())) {
+        if (userId == null || !userId.equals(portfolio.getUserId())) {
             throw new IllegalArgumentException("포트폴리오 접근 권한이 없습니다.");
         }
     }
@@ -624,7 +630,8 @@ public class HoldingBaselineService {
     private BigDecimal getLatestExchangeRate() {
         return exchangeRateRepository.findTopByCurrencyCodeOrderByExchangeDateDesc(CurrencyCode.USD)
                 .map(ExchangeRate::getBaseRate)
-                .orElse(BigDecimal.valueOf(1350));  // 기본값
+                .filter(rate -> rate.compareTo(BigDecimal.ZERO) > 0)
+                .orElseThrow(() -> new IllegalStateException("USD/KRW 환율 데이터가 없습니다."));
     }
 
     private BigDecimal getLatestPrice(Asset asset) {
@@ -640,7 +647,7 @@ public class HoldingBaselineService {
         try {
             return PortfolioHoldingBaseline.Currency.valueOf(currency.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return PortfolioHoldingBaseline.Currency.KRW;
+            throw new IllegalArgumentException("지원하지 않는 기준 통화입니다: " + currency, e);
         }
     }
 

@@ -23,7 +23,8 @@ public class PortfolioHoldingBaselineRepositoryImpl implements PortfolioHoldingB
         QPortfolioHoldingBaselineItem item = QPortfolioHoldingBaselineItem.portfolioHoldingBaselineItem;
 
         PortfolioHoldingBaseline result = queryFactory
-                .selectFrom(baseline)
+                .selectDistinct(baseline)
+                .from(baseline)
                 .leftJoin(baseline.items, item).fetchJoin()
                 .where(baseline.portfolioId.eq(portfolioId))
                 .fetchOne();
