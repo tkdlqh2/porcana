@@ -1,6 +1,7 @@
 package com.porcana.domain.portfolio.dto.baseline;
 
 import com.porcana.domain.portfolio.entity.PortfolioHoldingBaseline;
+import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.util.UUID;
 /**
  * Holding Baseline 조회 응답
  */
+@Builder
 public record BaselineResponse(
         boolean exists,
         UUID baselineId,
@@ -22,6 +24,7 @@ public record BaselineResponse(
         LocalDateTime confirmedAt,
         List<ItemResponse> items
 ) {
+    @Builder
     public record ItemResponse(
             UUID assetId,
             String symbol,

@@ -1,5 +1,7 @@
 package com.porcana.domain.portfolio.dto.baseline;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,6 +11,7 @@ import java.util.UUID;
  * 리밸런싱 상태 응답
  * 현재 보유 상태와 목표 비중의 괴리 확인
  */
+@Builder
 public record RebalanceStatusResponse(
         UUID portfolioId,
         boolean hasBaseline,
@@ -18,12 +21,14 @@ public record RebalanceStatusResponse(
         Summary summary,
         List<ItemStatus> items
 ) {
+    @Builder
     public record Summary(
             BigDecimal totalValueKrw,       // 전체 평가금액 (KRW)
             BigDecimal cashAmount,          // 현금 보유액
             BigDecimal maxDeviationPct      // 최대 괴리도
     ) {}
 
+    @Builder
     public record ItemStatus(
             UUID assetId,
             String symbol,

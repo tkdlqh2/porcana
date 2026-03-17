@@ -1,5 +1,7 @@
 package com.porcana.domain.portfolio.dto.baseline;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -8,6 +10,7 @@ import java.util.UUID;
  * 리밸런싱 플랜 응답
  * BUY + SELL 모두 포함
  */
+@Builder
 public record RebalancingPlanResponse(
         UUID portfolioId,
         UUID baselineId,
@@ -16,6 +19,7 @@ public record RebalancingPlanResponse(
         Summary summary,
         List<ActionItem> actions
 ) {
+    @Builder
     public record Summary(
             BigDecimal totalValueKrw,        // 현재 총 평가금액
             BigDecimal totalBuyAmount,       // 총 매수 금액
@@ -24,6 +28,7 @@ public record RebalancingPlanResponse(
             BigDecimal cashAfterRebalance    // 리밸런싱 후 예상 현금
     ) {}
 
+    @Builder
     public record ActionItem(
             UUID assetId,
             String symbol,

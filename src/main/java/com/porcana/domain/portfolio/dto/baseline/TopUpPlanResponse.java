@@ -1,5 +1,7 @@
 package com.porcana.domain.portfolio.dto.baseline;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -8,6 +10,7 @@ import java.util.UUID;
  * 추가 입금 추천 응답
  * BUY only - 매도 없이 부족한 자산만 채움
  */
+@Builder
 public record TopUpPlanResponse(
         UUID portfolioId,
         BigDecimal additionalCash,
@@ -17,6 +20,7 @@ public record TopUpPlanResponse(
         List<RecommendationItem> recommendations,
         BigDecimal remainingCash        // 사용 후 남는 현금
 ) {
+    @Builder
     public record RecommendationItem(
             UUID assetId,
             String symbol,
