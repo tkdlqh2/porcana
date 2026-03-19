@@ -39,9 +39,10 @@ public class PortfolioHoldingBaselineItem {
     private BigDecimal quantity;
 
     /**
-     * 평균 매수가 (선택)
+     * 평균 매수가 (필수)
+     * seedMoney 복원 계산에 필요
      */
-    @Column(name = "avg_price", precision = 18, scale = 4)
+    @Column(name = "avg_price", precision = 18, scale = 4, nullable = false)
     private BigDecimal avgPrice;
 
     /**
@@ -79,8 +80,8 @@ public class PortfolioHoldingBaselineItem {
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("quantity must be non-negative");
         }
-        if (avgPrice != null && avgPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("avgPrice must be non-negative");
+        if (avgPrice == null || avgPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("avgPrice must be non-negative and not null");
         }
         if (targetWeightPct == null) {
             throw new IllegalArgumentException("targetWeightPct must not be null");
@@ -97,5 +98,29 @@ public class PortfolioHoldingBaselineItem {
                 .avgPrice(avgPrice)
                 .targetWeightPct(targetWeightPct)
                 .build();
+    }
+
+    /**
+     * 추가 매수 반영
+     * 수량 증가 + 평균 단가 가중 평균 계산
+     *
+     * @param additionalQuantity 추가 매수 수량
+     * @param purchasePrice 매수 단가
+     */
+    public void addPurchase(BigDecimal additionalQuantity, BigDecimal purchasePrice) {
+        if (additionalQuantity == null || additionalQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("additionalQuantity must be positive");
+        }
+        if (purchasePrice == null || purchasePrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("purchasePrice must be positive");
+        }
+
+        // 가중 평균 계산: (기존수량 * 기존단가 + 추가수량 * 매수단가) / (기존수량 + 추가수량)
+        BigDecimal totalCost = this.quantity.multiply(this.avgPrice)
+                .add(additionalQuantity.multiply(purchasePrice));
+        BigDecimal newQuantity = this.quantity.add(additionalQuantity);
+
+        this.avgPrice = totalCost.divide(newQuantity, 4, java.math.RoundingMode.HALF_UP);
+        this.quantity = newQuantity;
     }
 }
