@@ -144,4 +144,23 @@ public class PortfolioHoldingBaseline {
         this.memo = memo;
         this.confirmedAt = LocalDateTime.now();
     }
+
+    /**
+     * 현금 보유액 추가
+     */
+    public void addCash(BigDecimal amount) {
+        if (amount == null) {
+            return;
+        }
+        this.cashAmount = (this.cashAmount != null ? this.cashAmount : BigDecimal.ZERO).add(amount);
+        this.confirmedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 현금 보유액 설정
+     */
+    public void setCashAmount(BigDecimal cashAmount) {
+        this.cashAmount = cashAmount != null ? cashAmount : BigDecimal.ZERO;
+        this.confirmedAt = LocalDateTime.now();
+    }
 }

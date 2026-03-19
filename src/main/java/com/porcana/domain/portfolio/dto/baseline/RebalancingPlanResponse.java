@@ -17,12 +17,13 @@ public record RebalancingPlanResponse(
         UUID baselineId,
         boolean needsRebalancing,
         BigDecimal thresholdPct,
+        String baseCurrency,             // 기준 통화 (KRW 또는 USD)
         Summary summary,
         List<ActionItem> actions
 ) {
     @Builder
     public record Summary(
-            BigDecimal totalValueKrw,        // 현재 총 평가금액
+            BigDecimal totalValue,           // 현재 총 평가금액 (baseCurrency 기준)
             BigDecimal totalBuyAmount,       // 총 매수 금액
             BigDecimal totalSellAmount,      // 총 매도 금액
             BigDecimal netCashFlow,          // 순 현금 흐름 (sell - buy)
@@ -43,7 +44,7 @@ public record RebalancingPlanResponse(
             int actionQuantity,              // 매수/매도 수량
             int afterQuantity,               // 실행 후 수량
             BigDecimal currentPrice,         // 현재가
-            BigDecimal actionAmountKrw       // 매수/매도 금액 (KRW)
+            BigDecimal actionAmount          // 매수/매도 금액 (baseCurrency 기준)
     ) {}
 
     public static RebalancingPlanResponse noBaseline(UUID portfolioId) {
@@ -53,19 +54,22 @@ public record RebalancingPlanResponse(
                 false,
                 null,
                 null,
+                null,
                 Collections.emptyList()
         );
     }
 
     public static RebalancingPlanResponse noRebalancingNeeded(UUID portfolioId, UUID baselineId,
-                                                               BigDecimal thresholdPct, BigDecimal totalValueKrw) {
+                                                               BigDecimal thresholdPct, String baseCurrency,
+                                                               BigDecimal totalValue) {
         return new RebalancingPlanResponse(
                 portfolioId,
                 baselineId,
                 false,
                 thresholdPct,
+                baseCurrency,
                 new Summary(
-                        totalValueKrw,
+                        totalValue,
                         BigDecimal.ZERO,
                         BigDecimal.ZERO,
                         BigDecimal.ZERO,

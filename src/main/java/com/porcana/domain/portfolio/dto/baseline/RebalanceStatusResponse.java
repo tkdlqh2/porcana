@@ -18,12 +18,13 @@ public record RebalanceStatusResponse(
         boolean needsRebalancing,
         LocalDateTime checkedAt,
         BigDecimal thresholdPct,   // 괴리 기준 (기본 5%)
+        String baseCurrency,       // 기준 통화 (KRW 또는 USD)
         Summary summary,
         List<ItemStatus> items
 ) {
     @Builder
     public record Summary(
-            BigDecimal totalValueKrw,       // 전체 평가금액 (KRW)
+            BigDecimal totalValue,          // 전체 평가금액 (baseCurrency 기준)
             BigDecimal cashAmount,          // 현금 보유액
             BigDecimal maxDeviationPct      // 최대 괴리도
     ) {}
@@ -40,7 +41,7 @@ public record RebalanceStatusResponse(
             String action,                   // "BUY", "SELL", "HOLD"
             int currentQuantity,             // 현재 보유 수량
             BigDecimal currentPrice,         // 현재가
-            BigDecimal currentValueKrw       // 현재 평가금액 (KRW)
+            BigDecimal currentValue          // 현재 평가금액 (baseCurrency 기준)
     ) {}
 
     public static RebalanceStatusResponse noBaseline(UUID portfolioId) {
@@ -49,6 +50,7 @@ public record RebalanceStatusResponse(
                 false,
                 false,
                 LocalDateTime.now(),
+                null,
                 null,
                 null,
                 null

@@ -55,6 +55,17 @@ public class HoldingBaselineController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "추가 입금 실행", description = "실제 매수한 내역을 반영하여 baseline을 업데이트합니다.")
+    @PostMapping("/top-up")
+    public ResponseEntity<ExecuteTopUpResponse> executeTopUp(
+            @PathVariable UUID portfolioId,
+            @Valid @RequestBody ExecuteTopUpRequest request,
+            @CurrentUser UUID userId) {
+
+        ExecuteTopUpResponse response = holdingBaselineService.executeTopUp(portfolioId, userId, request);
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "리밸런싱 상태 조회", description = "현재 보유 상태와 목표 비중의 괴리를 확인합니다.")
     @GetMapping("/rebalance-status")
     public ResponseEntity<RebalanceStatusResponse> getRebalanceStatus(

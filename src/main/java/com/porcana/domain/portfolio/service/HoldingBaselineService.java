@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -344,6 +345,123 @@ public class HoldingBaselineService {
     }
 
     /**
+     * 추가 입금 실행
+     * 실제 매수 내역을 반영하여 baseline 업데이트
+     */
+    @Transactional
+    public ExecuteTopUpResponse executeTopUp(UUID portfolioId, UUID userId, ExecuteTopUpRequest request) {
+        Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new IllegalArgumentException("포트폴리오를 찾을 수 없습니다: " + portfolioId));
+
+        validateOwnership(portfolio, userId);
+
+        PortfolioHoldingBaseline baseline = baselineRepository.findByPortfolioIdWithItems(portfolioId)
+                .orElseThrow(() -> new IllegalStateException("Baseline이 설정되지 않았습니다. 먼저 시드 금액을 설정해주세요."));
+
+        BigDecimal usdKrw = getLatestExchangeRate();
+        PortfolioHoldingBaseline.Currency baseCurrency = baseline.getBaseCurrency();
+
+        // 기존 자산 정보 조회
+        List<UUID> existingAssetIds = baseline.getItems().stream()
+                .map(PortfolioHoldingBaselineItem::getAssetId)
+                .toList();
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(existingAssetIds).stream()
+                .collect(Collectors.toMap(Asset::getId, a -> a));
+
+        // 매수 요청의 자산 ID 검증
+        List<UUID> purchaseAssetIds = request.purchases().stream()
+                .map(ExecuteTopUpRequest.PurchaseItem::assetId)
+                .toList();
+        for (UUID assetId : purchaseAssetIds) {
+            if (!assetMap.containsKey(assetId)) {
+                throw new IllegalArgumentException("Baseline에 없는 자산입니다: " + assetId);
+            }
+        }
+
+        // 이전 총 평가금액 계산
+        BigDecimal previousTotalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
+            Asset asset = assetMap.get(item.getAssetId());
+            if (asset == null) continue;
+            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            previousTotalValue = previousTotalValue.add(priceInBaseCurrency.multiply(item.getQuantity()));
+        }
+
+        // baseline item을 Map으로 변환
+        Map<UUID, PortfolioHoldingBaselineItem> itemMap = baseline.getItems().stream()
+                .collect(Collectors.toMap(PortfolioHoldingBaselineItem::getAssetId, item -> item));
+
+        // 매수 반영 및 응답 데이터 생성
+        List<ExecuteTopUpResponse.UpdatedItem> updatedItems = new ArrayList<>();
+        BigDecimal totalPurchaseAmount = BigDecimal.ZERO;
+
+        for (ExecuteTopUpRequest.PurchaseItem purchase : request.purchases()) {
+            PortfolioHoldingBaselineItem item = itemMap.get(purchase.assetId());
+            Asset asset = assetMap.get(purchase.assetId());
+
+            BigDecimal previousQuantity = item.getQuantity();
+            BigDecimal previousAvgPrice = item.getAvgPrice();
+
+            // 매수 반영 (가중 평균 계산 포함)
+            item.addPurchase(purchase.quantity(), purchase.purchasePrice());
+
+            // 매수 금액 계산 (기준 통화로 변환)
+            BigDecimal purchasePriceInBaseCurrency = convertPriceToBaseCurrency(
+                    asset, purchase.purchasePrice(), baseCurrency, usdKrw);
+            BigDecimal purchaseAmount = purchasePriceInBaseCurrency.multiply(purchase.quantity());
+            totalPurchaseAmount = totalPurchaseAmount.add(purchaseAmount);
+
+            updatedItems.add(ExecuteTopUpResponse.UpdatedItem.builder()
+                    .assetId(asset.getId())
+                    .symbol(asset.getSymbol())
+                    .name(asset.getName())
+                    .previousQuantity(previousQuantity)
+                    .addedQuantity(purchase.quantity())
+                    .newQuantity(item.getQuantity())
+                    .previousAvgPrice(previousAvgPrice)
+                    .newAvgPrice(item.getAvgPrice())
+                    .build());
+        }
+
+        // 남은 현금 계산 및 baseline 업데이트
+        BigDecimal remainingCash = request.additionalCash().subtract(totalPurchaseAmount);
+        BigDecimal newCashAmount = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+
+        if (Boolean.TRUE.equals(request.addRemainingCashToBaseline())) {
+            newCashAmount = newCashAmount.add(remainingCash);
+            baseline.setCashAmount(newCashAmount);
+        }
+
+        // 새 총 평가금액 계산
+        BigDecimal newTotalValue = newCashAmount;
+        for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
+            Asset asset = assetMap.get(item.getAssetId());
+            if (asset == null) continue;
+            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            newTotalValue = newTotalValue.add(priceInBaseCurrency.multiply(item.getQuantity()));
+        }
+
+        baselineRepository.save(baseline);
+
+        return ExecuteTopUpResponse.builder()
+                .portfolioId(portfolioId)
+                .baselineId(baseline.getId())
+                .baseCurrency(baseCurrency.name())
+                .summary(ExecuteTopUpResponse.Summary.builder()
+                        .additionalCash(request.additionalCash())
+                        .totalPurchaseAmount(totalPurchaseAmount.setScale(0, RoundingMode.HALF_UP))
+                        .remainingCash(remainingCash.setScale(0, RoundingMode.HALF_UP))
+                        .previousTotalValue(previousTotalValue.setScale(0, RoundingMode.HALF_UP))
+                        .newTotalValue(newTotalValue.setScale(0, RoundingMode.HALF_UP))
+                        .newCashAmount(newCashAmount.setScale(0, RoundingMode.HALF_UP))
+                        .build())
+                .updatedItems(updatedItems)
+                .build();
+    }
+
+    /**
      * 리밸런싱 상태 조회
      * 현재 보유 상태와 목표 비중의 괴리 확인
      */
@@ -436,8 +554,9 @@ public class HoldingBaselineService {
                 portfolioId,
                 true,
                 needsRebalancing,
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 threshold,
+                baseCurrency.name(),
                 new RebalanceStatusResponse.Summary(
                         totalValue.setScale(0, RoundingMode.HALF_UP),
                         baseline.getCashAmount(),
@@ -567,7 +686,7 @@ public class HoldingBaselineService {
         }
 
         if (!needsRebalancing) {
-            return RebalancingPlanResponse.noRebalancingNeeded(portfolioId, baseline.getId(), threshold, totalValue);
+            return RebalancingPlanResponse.noRebalancingNeeded(portfolioId, baseline.getId(), threshold, baseCurrency.name(), totalValue);
         }
 
         BigDecimal netCashFlow = totalSellAmount.subtract(totalBuyAmount);
@@ -579,6 +698,7 @@ public class HoldingBaselineService {
                 baseline.getId(),
                 true,
                 threshold,
+                baseCurrency.name(),
                 new RebalancingPlanResponse.Summary(
                         totalValue.setScale(0, RoundingMode.HALF_UP),
                         totalBuyAmount.setScale(0, RoundingMode.HALF_UP),
@@ -637,7 +757,9 @@ public class HoldingBaselineService {
     private BigDecimal getLatestPrice(Asset asset) {
         return assetPriceRepository.findFirstByAssetOrderByPriceDateDesc(asset)
                 .map(AssetPrice::getClosePrice)
-                .orElse(BigDecimal.ZERO);
+                .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
+                .orElseThrow(() -> new IllegalStateException(
+                        String.format("가격 데이터가 없습니다: %s (%s)", asset.getSymbol(), asset.getMarket())));
     }
 
     private PortfolioHoldingBaseline.Currency parseCurrency(String currency) {

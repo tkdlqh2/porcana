@@ -268,7 +268,8 @@ class HoldingBaselineControllerTest extends BaseIntegrationTest {
                     .body("portfolioId", equalTo(TEST_PORTFOLIO_ID.toString()))
                     .body("hasBaseline", equalTo(true))
                     .body("thresholdPct", equalTo(5.0f))
-                    .body("summary.totalValueKrw", notNullValue())
+                    .body("baseCurrency", notNullValue())
+                    .body("summary.totalValue", notNullValue())
                     .body("items", hasSize(2));
         }
 
