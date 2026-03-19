@@ -286,6 +286,13 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
         BigDecimal startPrice = startPriceOpt.get().getPrice();
         BigDecimal targetPrice = targetPriceOpt.get().getPrice();
 
+        // Skip if price is invalid (0 or negative)
+        if (startPrice.compareTo(BigDecimal.ZERO) <= 0 || targetPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Invalid price for asset {} (start={}, target={})",
+                    asset.getSymbol(), startPrice, targetPrice);
+            return Optional.empty();
+        }
+
         BigDecimal assetReturnLocal = targetPrice.subtract(startPrice)
                 .divide(startPrice, 6, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
