@@ -122,6 +122,9 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             return new int[]{0, 0};
         }
 
+        // 스냅샷별 시작가 캐시 (동일 스냅샷 재사용 시 DB 조회 방지)
+        Map<UUID, Map<UUID, BigDecimal>> startPriceCache = new HashMap<>();
+
         // Iterate through each date from startDate to endDate
         LocalDate currentDate = startDate;
         while (!currentDate.isAfter(endDate)) {
@@ -133,7 +136,7 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             }
 
             // Calculate and save performance for this date
-            boolean success = calculateAndSavePerformance(portfolio, currentDate);
+            boolean success = calculateAndSavePerformance(portfolio, currentDate, startPriceCache);
             if (success) {
                 inserted++;
             }
@@ -146,8 +149,10 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
 
     /**
      * 특정 날짜의 포트폴리오 수익률 계산 및 저장
+     * @param startPriceCache 스냅샷별 시작가 캐시 (snapshotId -> assetId -> price)
      */
-    private boolean calculateAndSavePerformance(Portfolio portfolio, LocalDate targetDate) {
+    private boolean calculateAndSavePerformance(Portfolio portfolio, LocalDate targetDate,
+                                                 Map<UUID, Map<UUID, BigDecimal>> startPriceCache) {
         // Find applicable snapshot (effectiveDate <= targetDate)
         Optional<PortfolioSnapshot> snapshotOpt = snapshotRepository
                 .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
@@ -180,10 +185,22 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             return false;
         }
 
-        // Pre-load prices for all assets (N+1 방지)
-        // snapshotDate와 targetDate 범위의 가격 데이터를 일괄 조회
-        LocalDate lookbackStart = snapshotDate.minusDays(7);
-        Map<UUID, List<AssetPrice>> pricesByAsset = loadPricesForAssets(assetIds, lookbackStart, targetDate);
+        // 시작가: 캐시에서 조회하거나 없으면 DB에서 로드 후 캐싱
+        Map<UUID, BigDecimal> startPrices = startPriceCache.computeIfAbsent(snapshot.getId(), sid -> {
+            LocalDate startLookback = snapshotDate.minusDays(7);
+            Map<UUID, List<AssetPrice>> startPricesByAsset = loadPricesForAssets(assetIds, startLookback, snapshotDate);
+            Map<UUID, BigDecimal> result = new HashMap<>();
+            for (UUID assetId : assetIds) {
+                List<AssetPrice> prices = startPricesByAsset.getOrDefault(assetId, Collections.emptyList());
+                findClosestPriceFromList(prices, snapshotDate)
+                        .ifPresent(ap -> result.put(assetId, ap.getPrice()));
+            }
+            return result;
+        });
+
+        // 타겟가: 매번 조회 (7일 윈도우만)
+        LocalDate targetLookback = targetDate.minusDays(7);
+        Map<UUID, List<AssetPrice>> targetPricesByAsset = loadPricesForAssets(assetIds, targetLookback, targetDate);
 
         // Calculate returns
         List<AssetCalculation> calculations = new ArrayList<>();
@@ -191,9 +208,22 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
 
         for (PortfolioSnapshotAsset snapshotAsset : snapshotAssets) {
             Asset asset = assetMap.get(snapshotAsset.getAssetId());
-            List<AssetPrice> assetPrices = pricesByAsset.getOrDefault(asset.getId(), Collections.emptyList());
 
-            Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate, assetPrices);
+            BigDecimal startPrice = startPrices.get(asset.getId());
+            if (startPrice == null) {
+                log.debug("No start price for asset {} on {}", asset.getSymbol(), snapshotDate);
+                return false;
+            }
+
+            List<AssetPrice> targetPrices = targetPricesByAsset.getOrDefault(asset.getId(), Collections.emptyList());
+            Optional<AssetPrice> targetPriceOpt = findClosestPriceFromList(targetPrices, targetDate);
+            if (targetPriceOpt.isEmpty()) {
+                log.debug("No target price for asset {} on {}", asset.getSymbol(), targetDate);
+                return false;
+            }
+            BigDecimal targetPrice = targetPriceOpt.get().getPrice();
+
+            Optional<AssetReturnResult> resultOpt = calculateAssetReturnFromPrices(asset, startPrice, targetPrice, snapshotDate, targetDate);
             if (resultOpt.isEmpty()) {
                 log.debug("Failed to calculate return for asset {} on {}", asset.getSymbol(), targetDate);
                 return false;
@@ -294,21 +324,12 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
                 .collect(Collectors.groupingBy(ap -> ap.getAsset().getId()));
     }
 
-    private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate,
-                                                             List<AssetPrice> assetPrices) {
-        Optional<AssetPrice> startPriceOpt = findClosestPriceFromList(assetPrices, startDate);
-        if (startPriceOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Optional<AssetPrice> targetPriceOpt = findClosestPriceFromList(assetPrices, targetDate);
-        if (targetPriceOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        BigDecimal startPrice = startPriceOpt.get().getPrice();
-        BigDecimal targetPrice = targetPriceOpt.get().getPrice();
-
+    /**
+     * 이미 조회된 시작가/타겟가로 수익률 계산
+     */
+    private Optional<AssetReturnResult> calculateAssetReturnFromPrices(Asset asset, BigDecimal startPrice,
+                                                                        BigDecimal targetPrice, LocalDate startDate,
+                                                                        LocalDate targetDate) {
         // Skip if price is invalid (0 or negative)
         if (startPrice.compareTo(BigDecimal.ZERO) <= 0 || targetPrice.compareTo(BigDecimal.ZERO) <= 0) {
             log.warn("Invalid price for asset {} (start={}, target={})",
