@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AssetPriceRepository extends JpaRepository<AssetPrice, UUID> {
+public interface AssetPriceRepository extends JpaRepository<AssetPrice, UUID>, AssetPriceRepositoryCustom {
 
     /**
      * Find price data for a specific asset and date

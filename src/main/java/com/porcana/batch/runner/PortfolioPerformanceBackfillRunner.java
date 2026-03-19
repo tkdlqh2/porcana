@@ -180,14 +180,20 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             return false;
         }
 
+        // Pre-load prices for all assets (N+1 방지)
+        // snapshotDate와 targetDate 범위의 가격 데이터를 일괄 조회
+        LocalDate lookbackStart = snapshotDate.minusDays(7);
+        Map<UUID, List<AssetPrice>> pricesByAsset = loadPricesForAssets(assetIds, lookbackStart, targetDate);
+
         // Calculate returns
         List<AssetCalculation> calculations = new ArrayList<>();
         BigDecimal totalCurrentValueKrw = BigDecimal.ZERO;
 
         for (PortfolioSnapshotAsset snapshotAsset : snapshotAssets) {
             Asset asset = assetMap.get(snapshotAsset.getAssetId());
+            List<AssetPrice> assetPrices = pricesByAsset.getOrDefault(asset.getId(), Collections.emptyList());
 
-            Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate);
+            Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate, assetPrices);
             if (resultOpt.isEmpty()) {
                 log.debug("Failed to calculate return for asset {} on {}", asset.getSymbol(), targetDate);
                 return false;
@@ -272,13 +278,34 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
         return true;
     }
 
-    private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate) {
-        Optional<AssetPrice> startPriceOpt = findClosestPrice(asset, startDate);
+    /**
+     * 자산 ID 목록에 대해 지정된 날짜 범위의 가격 데이터를 일괄 조회
+     */
+    private Map<UUID, List<AssetPrice>> loadPricesForAssets(List<UUID> assetIds, LocalDate startDate, LocalDate endDate) {
+        if (assetIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Asset> assets = assetRepository.findAllById(assetIds);
+        Map<UUID, List<AssetPrice>> result = new HashMap<>();
+
+        for (Asset asset : assets) {
+            List<AssetPrice> prices = assetPriceRepository.findByAssetAndPriceDateBetweenOrderByPriceDateAsc(
+                    asset, startDate, endDate);
+            result.put(asset.getId(), prices);
+        }
+
+        return result;
+    }
+
+    private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate,
+                                                             List<AssetPrice> assetPrices) {
+        Optional<AssetPrice> startPriceOpt = findClosestPriceFromList(assetPrices, startDate);
         if (startPriceOpt.isEmpty()) {
             return Optional.empty();
         }
 
-        Optional<AssetPrice> targetPriceOpt = findClosestPrice(asset, targetDate);
+        Optional<AssetPrice> targetPriceOpt = findClosestPriceFromList(assetPrices, targetDate);
         if (targetPriceOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -332,21 +359,28 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
         return Optional.of(fxReturn);
     }
 
-    private Optional<AssetPrice> findClosestPrice(Asset asset, LocalDate date) {
-        Optional<AssetPrice> exactPrice = assetPriceRepository.findByAssetAndPriceDate(asset, date);
-        if (exactPrice.isPresent()) {
-            return exactPrice;
-        }
-
-        LocalDate lookbackStart = date.minusDays(7);
-        List<AssetPrice> prices = assetPriceRepository.findByAssetAndPriceDateBetweenOrderByPriceDateAsc(
-                asset, lookbackStart, date);
-
+    /**
+     * 미리 로드된 가격 목록에서 지정된 날짜에 가장 가까운 가격을 찾음
+     * (DB 쿼리 없이 메모리에서 처리)
+     */
+    private Optional<AssetPrice> findClosestPriceFromList(List<AssetPrice> prices, LocalDate date) {
         if (prices.isEmpty()) {
             return Optional.empty();
         }
 
-        return Optional.of(prices.get(prices.size() - 1));
+        // 정확한 날짜 매칭 먼저 시도
+        Optional<AssetPrice> exactMatch = prices.stream()
+                .filter(p -> p.getPriceDate().equals(date))
+                .findFirst();
+        if (exactMatch.isPresent()) {
+            return exactMatch;
+        }
+
+        // date 이전의 가장 가까운 가격 찾기 (최대 7일 lookback)
+        LocalDate lookbackStart = date.minusDays(7);
+        return prices.stream()
+                .filter(p -> !p.getPriceDate().isAfter(date) && !p.getPriceDate().isBefore(lookbackStart))
+                .max(Comparator.comparing(AssetPrice::getPriceDate));
     }
 
     private Optional<ExchangeRate> findClosestExchangeRate(CurrencyCode currencyCode, LocalDate date) {

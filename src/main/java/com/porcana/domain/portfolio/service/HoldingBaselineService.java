@@ -72,6 +72,9 @@ public class HoldingBaselineService {
         // baseCurrency가 USD면 자산 가격을 USD로, KRW면 KRW로 계산
         boolean isUsdBase = baseCurrency == PortfolioHoldingBaseline.Currency.USD;
 
+        // 최신 가격 배치 조회 (N+1 쿼리 방지)
+        Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(assetIds);
+
         // 각 종목별 수량 계산
         List<CalculatedItem> calculatedItems = new ArrayList<>();
         BigDecimal totalInvested = BigDecimal.ZERO;
@@ -80,8 +83,8 @@ public class HoldingBaselineService {
             Asset asset = assetMap.get(pa.getAssetId());
             if (asset == null) continue;
 
-            // 현재가 조회
-            BigDecimal currentPrice = getLatestPrice(asset);
+            // 현재가 조회 (배치 로딩된 캐시에서)
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
             if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
@@ -177,6 +180,9 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
+        // 최신 가격 배치 조회 (N+1 쿼리 방지)
+        Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(assetIds);
+
         // 응답 생성 (기준 통화 기준)
         List<BaselineResponse.ItemResponse> itemResponses = new ArrayList<>();
         BigDecimal cashAmount = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
@@ -187,7 +193,8 @@ public class HoldingBaselineService {
             Asset asset = assetMap.get(item.getAssetId());
             if (asset == null) continue;
 
-            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) continue;
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             BigDecimal currentValue = priceInBaseCurrency.multiply(item.getQuantity());
             totalValue = totalValue.add(currentValue);
@@ -237,6 +244,9 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
+        // 최신 가격 배치 조회 (N+1 쿼리 방지)
+        Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(assetIds);
+
         // 현재 총 가치 계산 (기준 통화 기준)
         BigDecimal currentTotalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
         Map<UUID, BigDecimal> currentValues = new HashMap<>();
@@ -245,7 +255,8 @@ public class HoldingBaselineService {
             Asset asset = assetMap.get(item.getAssetId());
             if (asset == null) continue;
 
-            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) continue;
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             BigDecimal value = priceInBaseCurrency.multiply(item.getQuantity());
             currentValues.put(item.getAssetId(), value);
@@ -284,7 +295,9 @@ public class HoldingBaselineService {
             Asset asset = assetMap.get(item.getAssetId());
             if (asset == null) continue;
 
-            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) continue;
+
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             if (priceInBaseCurrency == null || priceInBaseCurrency.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
@@ -378,12 +391,16 @@ public class HoldingBaselineService {
             }
         }
 
+        // 최신 가격 배치 조회 (N+1 쿼리 방지)
+        Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(existingAssetIds);
+
         // 이전 총 평가금액 계산
         BigDecimal previousTotalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
         for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
             Asset asset = assetMap.get(item.getAssetId());
             if (asset == null) continue;
-            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) continue;
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             previousTotalValue = previousTotalValue.add(priceInBaseCurrency.multiply(item.getQuantity()));
         }
@@ -433,12 +450,13 @@ public class HoldingBaselineService {
             baseline.setCashAmount(newCashAmount);
         }
 
-        // 새 총 평가금액 계산
+        // 새 총 평가금액 계산 (이미 로딩된 latestPrices 재사용)
         BigDecimal newTotalValue = newCashAmount;
         for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
             Asset asset = assetMap.get(item.getAssetId());
             if (asset == null) continue;
-            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) continue;
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             newTotalValue = newTotalValue.add(priceInBaseCurrency.multiply(item.getQuantity()));
         }
@@ -489,6 +507,9 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
+        // 최신 가격 배치 조회 (N+1 쿼리 방지)
+        Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(assetIds);
+
         // 현재 총 가치 및 개별 자산 가치 계산 (기준 통화 기준)
         BigDecimal totalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
         Map<UUID, AssetValueInfo> assetValues = new HashMap<>();
@@ -497,7 +518,9 @@ public class HoldingBaselineService {
             Asset asset = assetMap.get(item.getAssetId());
             if (asset == null) continue;
 
-            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) continue;
+
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             BigDecimal valueInBaseCurrency = priceInBaseCurrency.multiply(item.getQuantity());
             totalValue = totalValue.add(valueInBaseCurrency);
@@ -594,6 +617,9 @@ public class HoldingBaselineService {
         Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
+        // 최신 가격 일괄 조회 (N+1 방지)
+        Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(assetIds);
+
         // 현재 총 가치 및 개별 자산 가치 계산 (기준 통화 기준)
         BigDecimal totalValue = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
         Map<UUID, AssetValueInfo> assetValues = new HashMap<>();
@@ -602,7 +628,10 @@ public class HoldingBaselineService {
             Asset asset = assetMap.get(item.getAssetId());
             if (asset == null) continue;
 
-            BigDecimal currentPrice = getLatestPrice(asset);
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) {
+                throw new IllegalStateException("자산의 가격 정보를 찾을 수 없습니다: " + asset.getSymbol());
+            }
             BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
             BigDecimal valueInBaseCurrency = priceInBaseCurrency.multiply(item.getQuantity());
             totalValue = totalValue.add(valueInBaseCurrency);
@@ -760,6 +789,24 @@ public class HoldingBaselineService {
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .orElseThrow(() -> new IllegalStateException(
                         String.format("가격 데이터가 없습니다: %s (%s)", asset.getSymbol(), asset.getMarket())));
+    }
+
+    /**
+     * 여러 자산의 최신 가격을 한 번에 조회 (N+1 쿼리 방지)
+     * @param assetIds 조회할 자산 ID 목록
+     * @return Map<AssetId, ClosePrice>
+     */
+    private Map<UUID, BigDecimal> getLatestPricesBatch(Collection<UUID> assetIds) {
+        if (assetIds == null || assetIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return assetPriceRepository.findLatestPricesByAssetIds(assetIds).stream()
+                .filter(ap -> ap.getClosePrice() != null && ap.getClosePrice().compareTo(BigDecimal.ZERO) > 0)
+                .collect(Collectors.toMap(
+                        ap -> ap.getAsset().getId(),
+                        AssetPrice::getClosePrice,
+                        (existing, replacement) -> existing  // 중복 시 첫 번째 값 유지
+                ));
     }
 
     private PortfolioHoldingBaseline.Currency parseCurrency(String currency) {
