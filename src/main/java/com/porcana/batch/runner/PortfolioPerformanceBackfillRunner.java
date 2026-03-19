@@ -122,6 +122,9 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             return new int[]{0, 0};
         }
 
+        // 스냅샷별 시작가 캐시 (동일 스냅샷 재사용 시 DB 조회 방지)
+        Map<UUID, Map<UUID, BigDecimal>> startPriceCache = new HashMap<>();
+
         // Iterate through each date from startDate to endDate
         LocalDate currentDate = startDate;
         while (!currentDate.isAfter(endDate)) {
@@ -133,7 +136,7 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             }
 
             // Calculate and save performance for this date
-            boolean success = calculateAndSavePerformance(portfolio, currentDate);
+            boolean success = calculateAndSavePerformance(portfolio, currentDate, startPriceCache);
             if (success) {
                 inserted++;
             }
@@ -146,8 +149,10 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
 
     /**
      * 특정 날짜의 포트폴리오 수익률 계산 및 저장
+     * @param startPriceCache 스냅샷별 시작가 캐시 (snapshotId -> assetId -> price)
      */
-    private boolean calculateAndSavePerformance(Portfolio portfolio, LocalDate targetDate) {
+    private boolean calculateAndSavePerformance(Portfolio portfolio, LocalDate targetDate,
+                                                 Map<UUID, Map<UUID, BigDecimal>> startPriceCache) {
         // Find applicable snapshot (effectiveDate <= targetDate)
         Optional<PortfolioSnapshot> snapshotOpt = snapshotRepository
                 .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
@@ -180,6 +185,23 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             return false;
         }
 
+        // 시작가: 캐시에서 조회하거나 없으면 DB에서 로드 후 캐싱
+        Map<UUID, BigDecimal> startPrices = startPriceCache.computeIfAbsent(snapshot.getId(), sid -> {
+            LocalDate startLookback = snapshotDate.minusDays(7);
+            Map<UUID, List<AssetPrice>> startPricesByAsset = loadPricesForAssets(assetIds, startLookback, snapshotDate);
+            Map<UUID, BigDecimal> result = new HashMap<>();
+            for (UUID assetId : assetIds) {
+                List<AssetPrice> prices = startPricesByAsset.getOrDefault(assetId, Collections.emptyList());
+                findClosestPriceFromList(prices, snapshotDate)
+                        .ifPresent(ap -> result.put(assetId, ap.getPrice()));
+            }
+            return result;
+        });
+
+        // 타겟가: 매번 조회 (7일 윈도우만)
+        LocalDate targetLookback = targetDate.minusDays(7);
+        Map<UUID, List<AssetPrice>> targetPricesByAsset = loadPricesForAssets(assetIds, targetLookback, targetDate);
+
         // Calculate returns
         List<AssetCalculation> calculations = new ArrayList<>();
         BigDecimal totalCurrentValueKrw = BigDecimal.ZERO;
@@ -187,7 +209,21 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
         for (PortfolioSnapshotAsset snapshotAsset : snapshotAssets) {
             Asset asset = assetMap.get(snapshotAsset.getAssetId());
 
-            Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate);
+            BigDecimal startPrice = startPrices.get(asset.getId());
+            if (startPrice == null) {
+                log.debug("No start price for asset {} on {}", asset.getSymbol(), snapshotDate);
+                return false;
+            }
+
+            List<AssetPrice> targetPrices = targetPricesByAsset.getOrDefault(asset.getId(), Collections.emptyList());
+            Optional<AssetPrice> targetPriceOpt = findClosestPriceFromList(targetPrices, targetDate);
+            if (targetPriceOpt.isEmpty()) {
+                log.debug("No target price for asset {} on {}", asset.getSymbol(), targetDate);
+                return false;
+            }
+            BigDecimal targetPrice = targetPriceOpt.get().getPrice();
+
+            Optional<AssetReturnResult> resultOpt = calculateAssetReturnFromPrices(asset, startPrice, targetPrice, snapshotDate, targetDate);
             if (resultOpt.isEmpty()) {
                 log.debug("Failed to calculate return for asset {} on {}", asset.getSymbol(), targetDate);
                 return false;
@@ -272,19 +308,34 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
         return true;
     }
 
-    private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate) {
-        Optional<AssetPrice> startPriceOpt = findClosestPrice(asset, startDate);
-        if (startPriceOpt.isEmpty()) {
-            return Optional.empty();
+    /**
+     * 자산 ID 목록에 대해 지정된 날짜 범위의 가격 데이터를 일괄 조회
+     */
+    private Map<UUID, List<AssetPrice>> loadPricesForAssets(List<UUID> assetIds, LocalDate startDate, LocalDate endDate) {
+        if (assetIds.isEmpty()) {
+            return Collections.emptyMap();
         }
 
-        Optional<AssetPrice> targetPriceOpt = findClosestPrice(asset, targetDate);
-        if (targetPriceOpt.isEmpty()) {
+        // 한 번의 쿼리로 모든 자산의 가격 조회 (N+1 방지)
+        List<AssetPrice> allPrices = assetPriceRepository.findPricesByAssetIdsAndDateRange(assetIds, startDate, endDate);
+
+        // assetId별로 그룹핑
+        return allPrices.stream()
+                .collect(Collectors.groupingBy(ap -> ap.getAsset().getId()));
+    }
+
+    /**
+     * 이미 조회된 시작가/타겟가로 수익률 계산
+     */
+    private Optional<AssetReturnResult> calculateAssetReturnFromPrices(Asset asset, BigDecimal startPrice,
+                                                                        BigDecimal targetPrice, LocalDate startDate,
+                                                                        LocalDate targetDate) {
+        // Skip if price is invalid (0 or negative)
+        if (startPrice.compareTo(BigDecimal.ZERO) <= 0 || targetPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Invalid price for asset {} (start={}, target={})",
+                    asset.getSymbol(), startPrice, targetPrice);
             return Optional.empty();
         }
-
-        BigDecimal startPrice = startPriceOpt.get().getPrice();
-        BigDecimal targetPrice = targetPriceOpt.get().getPrice();
 
         BigDecimal assetReturnLocal = targetPrice.subtract(startPrice)
                 .divide(startPrice, 6, RoundingMode.HALF_UP)
@@ -325,21 +376,28 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
         return Optional.of(fxReturn);
     }
 
-    private Optional<AssetPrice> findClosestPrice(Asset asset, LocalDate date) {
-        Optional<AssetPrice> exactPrice = assetPriceRepository.findByAssetAndPriceDate(asset, date);
-        if (exactPrice.isPresent()) {
-            return exactPrice;
-        }
-
-        LocalDate lookbackStart = date.minusDays(7);
-        List<AssetPrice> prices = assetPriceRepository.findByAssetAndPriceDateBetweenOrderByPriceDateAsc(
-                asset, lookbackStart, date);
-
+    /**
+     * 미리 로드된 가격 목록에서 지정된 날짜에 가장 가까운 가격을 찾음
+     * (DB 쿼리 없이 메모리에서 처리)
+     */
+    private Optional<AssetPrice> findClosestPriceFromList(List<AssetPrice> prices, LocalDate date) {
         if (prices.isEmpty()) {
             return Optional.empty();
         }
 
-        return Optional.of(prices.get(prices.size() - 1));
+        // 정확한 날짜 매칭 먼저 시도
+        Optional<AssetPrice> exactMatch = prices.stream()
+                .filter(p -> p.getPriceDate().equals(date))
+                .findFirst();
+        if (exactMatch.isPresent()) {
+            return exactMatch;
+        }
+
+        // date 이전의 가장 가까운 가격 찾기 (최대 7일 lookback)
+        LocalDate lookbackStart = date.minusDays(7);
+        return prices.stream()
+                .filter(p -> !p.getPriceDate().isAfter(date) && !p.getPriceDate().isBefore(lookbackStart))
+                .max(Comparator.comparing(AssetPrice::getPriceDate));
     }
 
     private Optional<ExchangeRate> findClosestExchangeRate(CurrencyCode currencyCode, LocalDate date) {

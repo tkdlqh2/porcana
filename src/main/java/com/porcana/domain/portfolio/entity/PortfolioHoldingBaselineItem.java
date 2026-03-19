@@ -1,0 +1,126 @@
+package com.porcana.domain.portfolio.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+/**
+ * Holding Baseline의 개별 종목 보유 수량
+ */
+@Entity
+@Table(name = "portfolio_holding_baseline_items")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class PortfolioHoldingBaselineItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "baseline_id", nullable = false)
+    private PortfolioHoldingBaseline baseline;
+
+    @Column(name = "asset_id", nullable = false)
+    private UUID assetId;
+
+    /**
+     * 보유 수량
+     */
+    @Column(name = "quantity", precision = 18, scale = 6, nullable = false)
+    private BigDecimal quantity;
+
+    /**
+     * 평균 매수가 (필수)
+     * seedMoney 복원 계산에 필요
+     */
+    @Column(name = "avg_price", precision = 18, scale = 4, nullable = false)
+    private BigDecimal avgPrice;
+
+    /**
+     * baseline 생성 당시 목표 비중 (참고용)
+     */
+    @Column(name = "target_weight_pct", precision = 5, scale = 2, nullable = false)
+    private BigDecimal targetWeightPct;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private PortfolioHoldingBaselineItem(PortfolioHoldingBaseline baseline, UUID assetId,
+                                          BigDecimal quantity, BigDecimal avgPrice, BigDecimal targetWeightPct) {
+        this.baseline = baseline;
+        this.assetId = assetId;
+        this.quantity = quantity;
+        this.avgPrice = avgPrice;
+        this.targetWeightPct = targetWeightPct;
+    }
+
+    public static PortfolioHoldingBaselineItem create(PortfolioHoldingBaseline baseline, UUID assetId,
+                                                       BigDecimal quantity, BigDecimal avgPrice, BigDecimal targetWeightPct) {
+        if (baseline == null) {
+            throw new IllegalArgumentException("baseline must not be null");
+        }
+        if (assetId == null) {
+            throw new IllegalArgumentException("assetId must not be null");
+        }
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("quantity must be non-negative");
+        }
+        if (avgPrice == null || avgPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("avgPrice must be non-negative and not null");
+        }
+        if (targetWeightPct == null) {
+            throw new IllegalArgumentException("targetWeightPct must not be null");
+        }
+
+        if (targetWeightPct.compareTo(BigDecimal.ZERO) < 0 || targetWeightPct.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException("targetWeightPct must be between 0 and 100");
+        }
+
+        return PortfolioHoldingBaselineItem.builder()
+                .baseline(baseline)
+                .assetId(assetId)
+                .quantity(quantity)
+                .avgPrice(avgPrice)
+                .targetWeightPct(targetWeightPct)
+                .build();
+    }
+
+    /**
+     * 추가 매수 반영
+     * 수량 증가 + 평균 단가 가중 평균 계산
+     *
+     * @param additionalQuantity 추가 매수 수량
+     * @param purchasePrice 매수 단가
+     */
+    public void addPurchase(BigDecimal additionalQuantity, BigDecimal purchasePrice) {
+        if (additionalQuantity == null || additionalQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("additionalQuantity must be positive");
+        }
+        if (purchasePrice == null || purchasePrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("purchasePrice must be positive");
+        }
+
+        // 가중 평균 계산: (기존수량 * 기존단가 + 추가수량 * 매수단가) / (기존수량 + 추가수량)
+        BigDecimal totalCost = this.quantity.multiply(this.avgPrice)
+                .add(additionalQuantity.multiply(purchasePrice));
+        BigDecimal newQuantity = this.quantity.add(additionalQuantity);
+
+        this.avgPrice = totalCost.divide(newQuantity, 4, java.math.RoundingMode.HALF_UP);
+        this.quantity = newQuantity;
+    }
+}
