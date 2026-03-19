@@ -286,16 +286,12 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
             return Collections.emptyMap();
         }
 
-        List<Asset> assets = assetRepository.findAllById(assetIds);
-        Map<UUID, List<AssetPrice>> result = new HashMap<>();
+        // 한 번의 쿼리로 모든 자산의 가격 조회 (N+1 방지)
+        List<AssetPrice> allPrices = assetPriceRepository.findPricesByAssetIdsAndDateRange(assetIds, startDate, endDate);
 
-        for (Asset asset : assets) {
-            List<AssetPrice> prices = assetPriceRepository.findByAssetAndPriceDateBetweenOrderByPriceDateAsc(
-                    asset, startDate, endDate);
-            result.put(asset.getId(), prices);
-        }
-
-        return result;
+        // assetId별로 그룹핑
+        return allPrices.stream()
+                .collect(Collectors.groupingBy(ap -> ap.getAsset().getId()));
     }
 
     private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate,

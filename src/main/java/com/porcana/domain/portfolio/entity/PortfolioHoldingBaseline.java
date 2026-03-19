@@ -101,6 +101,8 @@ public class PortfolioHoldingBaseline {
         }
         if (cashAmount == null) {
             cashAmount = BigDecimal.ZERO;
+        } else if (cashAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("cashAmount must be non-negative");
         }
 
         return PortfolioHoldingBaseline.builder()

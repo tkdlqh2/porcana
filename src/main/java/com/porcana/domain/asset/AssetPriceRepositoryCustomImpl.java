@@ -6,6 +6,7 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +46,28 @@ public class AssetPriceRepositoryCustomImpl implements AssetPriceRepositoryCusto
                                         .where(apSub.asset.id.eq(ap.asset.id))
                         )
                 )
+                .fetch();
+    }
+
+    @Override
+    public List<AssetPrice> findPricesByAssetIdsAndDateRange(Collection<UUID> assetIds, LocalDate startDate, LocalDate endDate) {
+        if (assetIds == null || assetIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        QAssetPrice ap = QAssetPrice.assetPrice;
+
+        // SELECT ap FROM AssetPrice ap
+        // WHERE ap.asset.id IN :assetIds
+        // AND ap.priceDate BETWEEN :startDate AND :endDate
+        // ORDER BY ap.asset.id, ap.priceDate ASC
+        return queryFactory
+                .selectFrom(ap)
+                .where(
+                        ap.asset.id.in(assetIds),
+                        ap.priceDate.between(startDate, endDate)
+                )
+                .orderBy(ap.asset.id.asc(), ap.priceDate.asc())
                 .fetch();
     }
 }
