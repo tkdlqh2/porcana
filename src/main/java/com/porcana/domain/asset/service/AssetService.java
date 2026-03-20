@@ -8,8 +8,11 @@ import com.porcana.domain.asset.dto.AssetInMainPortfolioResponse;
 import com.porcana.domain.asset.dto.AssetLibraryResponse;
 import com.porcana.domain.asset.dto.AssetLibrarySearchCondition;
 import com.porcana.domain.asset.dto.AssetSearchResponse;
+import com.porcana.domain.asset.dto.personality.AssetPersonality;
+import com.porcana.domain.asset.dto.personality.AssetPersonalityResponse;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
+import com.porcana.domain.asset.service.personality.AssetPersonalityRuleEngine;
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioAsset;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
@@ -63,6 +66,9 @@ public class AssetService {
         Asset asset = assetRepository.findById(assetId)
                 .orElseThrow(() -> new IllegalArgumentException("Asset not found"));
 
+        // 자산 성격 계산
+        AssetPersonality personality = AssetPersonalityRuleEngine.compute(asset);
+
         return AssetDetailResponse.builder()
                 .assetId(asset.getId().toString())
                 .ticker(asset.getSymbol())
@@ -71,8 +77,10 @@ public class AssetService {
                 .country(asset.getMarket() == Asset.Market.KR ? "KR" : "US")
                 .sector(asset.getSector() != null ? asset.getSector().name() : null)
                 .currency(asset.getMarket() == Asset.Market.KR ? "KRW" : "USD")
-                .imageUrl(null) // TODO: Add image URL logic
+                .imageUrl(asset.getImageUrl())
                 .description(null) // TODO: Add description field to Asset entity
+                .currentRiskLevel(asset.getCurrentRiskLevel())
+                .personality(AssetPersonalityResponse.from(personality))
                 .build();
     }
 
