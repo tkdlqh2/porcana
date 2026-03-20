@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -68,6 +69,28 @@ public class Asset {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    // 배당 관련 필드
+    @Column(name = "dividend_available")
+    private Boolean dividendAvailable;
+
+    @Column(name = "dividend_yield", precision = 10, scale = 6)
+    private BigDecimal dividendYield;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dividend_frequency", length = 20)
+    private DividendFrequency dividendFrequency;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dividend_category", length = 30)
+    private DividendCategory dividendCategory;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dividend_data_status", length = 20)
+    private DividendDataStatus dividendDataStatus;
+
+    @Column(name = "last_dividend_date")
+    private LocalDate lastDividendDate;
+
     @Column(nullable = false)
     private LocalDate asOf;
 
@@ -82,7 +105,10 @@ public class Asset {
     @Builder
     public Asset(Market market, String symbol, String name, AssetType type, Sector sector,
                  AssetClass assetClass, List<UniverseTag> universeTags, Boolean active,
-                 String imageUrl, LocalDate asOf) {
+                 String imageUrl, Boolean dividendAvailable, BigDecimal dividendYield,
+                 DividendFrequency dividendFrequency, DividendCategory dividendCategory,
+                 DividendDataStatus dividendDataStatus, LocalDate lastDividendDate,
+                 LocalDate asOf) {
         this.market = market;
         this.symbol = symbol;
         this.name = name;
@@ -92,6 +118,12 @@ public class Asset {
         this.universeTags = universeTags != null ? universeTags : new ArrayList<>();
         this.active = active != null ? active : false;
         this.imageUrl = imageUrl;
+        this.dividendAvailable = dividendAvailable;
+        this.dividendYield = dividendYield;
+        this.dividendFrequency = dividendFrequency;
+        this.dividendCategory = dividendCategory;
+        this.dividendDataStatus = dividendDataStatus;
+        this.lastDividendDate = lastDividendDate;
         this.asOf = asOf;
     }
 
@@ -130,6 +162,20 @@ public class Asset {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    /**
+     * 배당 데이터 일괄 업데이트
+     */
+    public void updateDividendData(Boolean dividendAvailable, BigDecimal dividendYield,
+                                   DividendFrequency dividendFrequency, DividendCategory dividendCategory,
+                                   DividendDataStatus dividendDataStatus, LocalDate lastDividendDate) {
+        this.dividendAvailable = dividendAvailable;
+        this.dividendYield = dividendYield;
+        this.dividendFrequency = dividendFrequency;
+        this.dividendCategory = dividendCategory;
+        this.dividendDataStatus = dividendDataStatus;
+        this.lastDividendDate = lastDividendDate;
     }
 
     public enum Market {
