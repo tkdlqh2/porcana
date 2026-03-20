@@ -25,9 +25,7 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -42,7 +40,8 @@ public class FmpAssetProvider implements UsAssetDataProvider {
 
     private static final String PROFILE_ENDPOINT = "/stable/profile";
     private static final String HISTORICAL_PRICE_ENDPOINT = "/stable/historical-price-eod/full";
-    private static final String HISTORICAL_DIVIDENDS_ENDPOINT = "/api/v3/historical-price-full/stock_dividend";
+    private static final String DIVIDENDS_ENDPOINT = "/stable/dividends";
+    private static final String RATIOS_TTM_ENDPOINT = "/stable/ratios-ttm";
     private static final String SP500_CSV = "batch/s&p500.csv";
     private static final String NASDAQ100_CSV = "batch/nasdaq100.csv";
 
@@ -385,7 +384,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
     }
 
     /**
-     * Fetch dividend data for a single symbol from FMP API
+     * Fetch dividend data for a single symbol from FMP API (stable endpoints)
      *
      * @param symbol The stock symbol
      * @return DividendData containing yield, frequency, category, etc.
@@ -397,18 +396,17 @@ public class FmpAssetProvider implements UsAssetDataProvider {
         }
 
         try {
-            // 1. Fetch profile for lastDiv and price
+            // 1. Fetch dividend history from /stable/dividends
+            List<FmpDividend> dividends = fetchDividends(symbol);
+
+            // 2. Fetch ratios for TTM yield
+            FmpRatiosTtm ratios = fetchRatiosTtm(symbol);
+
+            // 3. Fetch profile for sector/industry info
             FmpProfile profile = fetchProfile(symbol);
-            if (profile == null) {
-                log.debug("No profile data for symbol: {}", symbol);
-                return null;
-            }
 
-            // 2. Fetch historical dividends for frequency analysis
-            List<FmpDividend> dividends = fetchHistoricalDividends(symbol);
-
-            // 3. Calculate dividend data
-            return calculateDividendData(symbol, profile, dividends);
+            // 4. Calculate dividend data
+            return calculateDividendData(symbol, dividends, ratios, profile);
 
         } catch (Exception e) {
             log.warn("Failed to fetch dividend data for symbol: {}. Error: {}", symbol, e.getMessage());
@@ -431,27 +429,45 @@ public class FmpAssetProvider implements UsAssetDataProvider {
         }
     }
 
-    private List<FmpDividend> fetchHistoricalDividends(String symbol) {
-        // FMP Historical Dividends API
-        String url = String.format("%s/%s/%s?apikey=%s", baseUrl, HISTORICAL_DIVIDENDS_ENDPOINT, symbol, apiKey);
+    private List<FmpDividend> fetchDividends(String symbol) {
+        // FMP Stable Dividends API: /stable/dividends?symbol=AAPL
+        String url = String.format("%s%s?symbol=%s&apikey=%s", baseUrl, DIVIDENDS_ENDPOINT, symbol, apiKey);
 
         try {
-            FmpDividendResponse response = restTemplate.getForObject(url, FmpDividendResponse.class);
-            if (response == null || response.getHistorical() == null) {
+            FmpDividend[] dividends = restTemplate.getForObject(url, FmpDividend[].class);
+            if (dividends == null) {
                 return new ArrayList<>();
             }
-            return response.getHistorical();
+            return new ArrayList<>(List.of(dividends));
         } catch (Exception e) {
-            log.debug("Failed to fetch historical dividends for {}: {}", symbol, e.getMessage());
+            log.debug("Failed to fetch dividends for {}: {}", symbol, e.getMessage());
             return new ArrayList<>();
         }
     }
 
-    private DividendData calculateDividendData(String symbol, FmpProfile profile, List<FmpDividend> dividends) {
-        // Check if dividend available
-        boolean hasDividend = profile.getLastDiv() != null && profile.getLastDiv() > 0;
+    private FmpRatiosTtm fetchRatiosTtm(String symbol) {
+        // FMP Stable Ratios TTM API: /stable/ratios-ttm?symbol=AAPL
+        String url = String.format("%s%s?symbol=%s&apikey=%s", baseUrl, RATIOS_TTM_ENDPOINT, symbol, apiKey);
 
-        if (!hasDividend && dividends.isEmpty()) {
+        try {
+            FmpRatiosTtm[] ratios = restTemplate.getForObject(url, FmpRatiosTtm[].class);
+            if (ratios == null || ratios.length == 0) {
+                return null;
+            }
+            return ratios[0];
+        } catch (Exception e) {
+            log.debug("Failed to fetch ratios-ttm for {}: {}", symbol, e.getMessage());
+            return null;
+        }
+    }
+
+    private DividendData calculateDividendData(String symbol, List<FmpDividend> dividends,
+                                                FmpRatiosTtm ratios, FmpProfile profile) {
+        // Check if dividend available
+        boolean hasDividend = !dividends.isEmpty() ||
+                (ratios != null && ratios.getDividendYieldTTM() != null && ratios.getDividendYieldTTM() > 0);
+
+        if (!hasDividend) {
             return DividendData.builder()
                     .dividendAvailable(false)
                     .dividendYield(null)
@@ -462,16 +478,13 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                     .build();
         }
 
-        // Calculate dividend yield from lastDiv and price
+        // Get dividend yield from ratios-ttm (most accurate)
         BigDecimal dividendYield = null;
-        if (profile.getLastDiv() != null && profile.getPrice() != null && profile.getPrice() > 0) {
-            // lastDiv is per-share dividend, need to annualize based on frequency
-            // For now, assume lastDiv is already annualized (FMP typically provides TTM dividend)
-            double yield = profile.getLastDiv() / profile.getPrice();
-            dividendYield = BigDecimal.valueOf(yield).setScale(6, RoundingMode.HALF_UP);
+        if (ratios != null && ratios.getDividendYieldTTM() != null) {
+            dividendYield = BigDecimal.valueOf(ratios.getDividendYieldTTM()).setScale(6, RoundingMode.HALF_UP);
         }
 
-        // Determine frequency from historical dividends
+        // Determine frequency from dividend data (FMP provides it directly)
         DividendFrequency frequency = determineDividendFrequency(dividends);
 
         // Determine category based on yield
@@ -480,7 +493,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
         // Get last dividend date
         LocalDate lastDividendDate = null;
         if (!dividends.isEmpty()) {
-            dividends.sort(Comparator.comparing(FmpDividend::getPaymentDate, Comparator.nullsLast(Comparator.reverseOrder())));
+            // Dividends are already sorted by date desc from API
             FmpDividend lastDividend = dividends.get(0);
             if (lastDividend.getPaymentDate() != null) {
                 try {
@@ -506,53 +519,19 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             return DividendFrequency.UNKNOWN;
         }
 
-        // Filter last 2 years of dividends
-        LocalDate twoYearsAgo = LocalDate.now().minusYears(2);
-        List<FmpDividend> recentDividends = dividends.stream()
-                .filter(d -> {
-                    if (d.getPaymentDate() == null) return false;
-                    try {
-                        LocalDate date = LocalDate.parse(d.getPaymentDate());
-                        return date.isAfter(twoYearsAgo);
-                    } catch (Exception e) {
-                        return false;
-                    }
-                })
-                .sorted(Comparator.comparing(d -> LocalDate.parse(d.getPaymentDate())))
-                .toList();
-
-        if (recentDividends.size() < 2) {
-            return DividendFrequency.UNKNOWN;
+        // FMP provides frequency directly in dividend data
+        FmpDividend firstDividend = dividends.get(0);
+        if (firstDividend.getFrequency() != null) {
+            return switch (firstDividend.getFrequency().toLowerCase()) {
+                case "monthly" -> DividendFrequency.MONTHLY;
+                case "quarterly" -> DividendFrequency.QUARTERLY;
+                case "semi-annual", "semi-annually" -> DividendFrequency.SEMI_ANNUAL;
+                case "annual", "annually" -> DividendFrequency.ANNUAL;
+                default -> DividendFrequency.IRREGULAR;
+            };
         }
 
-        // Calculate average days between dividends
-        long totalDays = 0;
-        int intervals = 0;
-        for (int i = 1; i < recentDividends.size(); i++) {
-            LocalDate prevDate = LocalDate.parse(recentDividends.get(i - 1).getPaymentDate());
-            LocalDate currDate = LocalDate.parse(recentDividends.get(i).getPaymentDate());
-            totalDays += ChronoUnit.DAYS.between(prevDate, currDate);
-            intervals++;
-        }
-
-        if (intervals == 0) {
-            return DividendFrequency.UNKNOWN;
-        }
-
-        long avgDays = totalDays / intervals;
-
-        // Determine frequency based on average interval
-        if (avgDays <= 45) {          // ~30 days = monthly
-            return DividendFrequency.MONTHLY;
-        } else if (avgDays <= 120) {  // ~90 days = quarterly
-            return DividendFrequency.QUARTERLY;
-        } else if (avgDays <= 210) {  // ~180 days = semi-annual
-            return DividendFrequency.SEMI_ANNUAL;
-        } else if (avgDays <= 400) {  // ~365 days = annual
-            return DividendFrequency.ANNUAL;
-        } else {
-            return DividendFrequency.IRREGULAR;
-        }
+        return DividendFrequency.UNKNOWN;
     }
 
     private DividendCategory determineDividendCategory(BigDecimal dividendYield, FmpProfile profile) {
@@ -561,9 +540,9 @@ public class FmpAssetProvider implements UsAssetDataProvider {
         }
 
         // Check for REIT (Real Estate Investment Trust)
-        if (profile.getSector() != null &&
+        if (profile != null && profile.getSector() != null &&
                 (profile.getSector().toLowerCase().contains("real estate") ||
-                 profile.getIndustry() != null && profile.getIndustry().toLowerCase().contains("reit"))) {
+                 (profile.getIndustry() != null && profile.getIndustry().toLowerCase().contains("reit")))) {
             return DividendCategory.REIT_LIKE;
         }
 
@@ -592,35 +571,16 @@ public class FmpAssetProvider implements UsAssetDataProvider {
     }
 
     /**
-     * FMP Historical Dividends Response
-     */
-    @Data
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class FmpDividendResponse {
-        @JsonProperty("symbol")
-        private String symbol;
-
-        @JsonProperty("historical")
-        private List<FmpDividend> historical;
-    }
-
-    /**
-     * FMP Dividend Entry
+     * FMP Dividend Entry (from /stable/dividends)
      */
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static class FmpDividend {
+        @JsonProperty("symbol")
+        private String symbol;
+
         @JsonProperty("date")
         private String date;
-
-        @JsonProperty("label")
-        private String label;
-
-        @JsonProperty("adjDividend")
-        private Double adjDividend;
-
-        @JsonProperty("dividend")
-        private Double dividend;
 
         @JsonProperty("recordDate")
         private String recordDate;
@@ -630,6 +590,37 @@ public class FmpAssetProvider implements UsAssetDataProvider {
 
         @JsonProperty("declarationDate")
         private String declarationDate;
+
+        @JsonProperty("adjDividend")
+        private Double adjDividend;
+
+        @JsonProperty("dividend")
+        private Double dividend;
+
+        @JsonProperty("yield")
+        private Double yield;
+
+        @JsonProperty("frequency")
+        private String frequency;
+    }
+
+    /**
+     * FMP Ratios TTM (from /stable/ratios-ttm)
+     */
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class FmpRatiosTtm {
+        @JsonProperty("symbol")
+        private String symbol;
+
+        @JsonProperty("dividendYieldTTM")
+        private Double dividendYieldTTM;
+
+        @JsonProperty("dividendPerShareTTM")
+        private Double dividendPerShareTTM;
+
+        @JsonProperty("dividendPayoutRatioTTM")
+        private Double dividendPayoutRatioTTM;
     }
 
     /**
