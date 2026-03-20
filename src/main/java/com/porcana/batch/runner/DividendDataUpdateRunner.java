@@ -8,9 +8,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * ApplicationRunner for updating dividend data from FMP API
@@ -26,15 +28,18 @@ public class DividendDataUpdateRunner implements ApplicationRunner {
 
     private final AssetRepository assetRepository;
     private final FmpAssetProvider fmpAssetProvider;
+    private final DividendDataUpdateRunner self;
     private final boolean enabled;
 
     public DividendDataUpdateRunner(
             AssetRepository assetRepository,
             FmpAssetProvider fmpAssetProvider,
-            @Value("${DIVIDEND_UPDATE_ENABLED:false}") boolean enabled) {
+            @Value("${DIVIDEND_UPDATE_ENABLED:false}") boolean enabled,
+            @org.springframework.context.annotation.Lazy DividendDataUpdateRunner self) {
         this.assetRepository = assetRepository;
         this.fmpAssetProvider = fmpAssetProvider;
         this.enabled = enabled;
+        this.self = self;
     }
 
     @Override
@@ -55,9 +60,11 @@ public class DividendDataUpdateRunner implements ApplicationRunner {
         }
     }
 
-    @Transactional
+    /**
+     * Main update loop - no transaction here to avoid long-running transaction
+     */
     public void updateDividendData() {
-        // Fetch all active US market assets
+        // Fetch all active US market asset IDs (read-only, quick query)
         List<Asset> usAssets = assetRepository.findByMarketAndActiveTrue(Asset.Market.US);
         log.info("Found {} active US market assets to update dividend data", usAssets.size());
 
@@ -68,6 +75,7 @@ public class DividendDataUpdateRunner implements ApplicationRunner {
 
         for (int i = 0; i < usAssets.size(); i++) {
             Asset asset = usAssets.get(i);
+            UUID assetId = asset.getId();
             String symbol = asset.getSymbol();
 
             try {
@@ -81,17 +89,8 @@ public class DividendDataUpdateRunner implements ApplicationRunner {
                     continue;
                 }
 
-                // Update asset with dividend data
-                asset.updateDividendData(
-                        dividendData.getDividendAvailable(),
-                        dividendData.getDividendYield(),
-                        dividendData.getDividendFrequency(),
-                        dividendData.getDividendCategory(),
-                        dividendData.getDividendDataStatus(),
-                        dividendData.getLastDividendDate()
-                );
-
-                assetRepository.save(asset);
+                // Update in separate transaction (short-lived)
+                self.updateSingleAsset(assetId, dividendData);
                 updated++;
 
                 log.info("Updated dividend data for {}: yield={}, frequency={}, category={}",
@@ -121,5 +120,25 @@ public class DividendDataUpdateRunner implements ApplicationRunner {
 
         log.info("Dividend data update completed: {} total, {} updated, {} failed, {} skipped",
                 total, updated, failed, skipped);
+    }
+
+    /**
+     * Update single asset in its own transaction
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateSingleAsset(UUID assetId, FmpAssetProvider.DividendData dividendData) {
+        Asset asset = assetRepository.findById(assetId)
+                .orElseThrow(() -> new IllegalArgumentException("Asset not found: " + assetId));
+
+        asset.updateDividendData(
+                dividendData.getDividendAvailable(),
+                dividendData.getDividendYield(),
+                dividendData.getDividendFrequency(),
+                dividendData.getDividendCategory(),
+                dividendData.getDividendDataStatus(),
+                dividendData.getLastDividendDate()
+        );
+
+        assetRepository.save(asset);
     }
 }
