@@ -23,11 +23,16 @@ public class DeckAnalysisEngine {
 
     /**
      * 포트폴리오 분석 수행
+     *
+     * @throws IllegalStateException 포지션 비중이 음수인 경우
      */
     public static DeckAnalysis analyze(List<PositionWithAsset> positions) {
         if (positions == null || positions.isEmpty()) {
             return emptyAnalysis();
         }
+
+        // 포지션 유효성 검증
+        validatePositions(positions);
 
         // 지표 계산
         DeckMetrics metrics = calculateMetrics(positions);
@@ -58,6 +63,23 @@ public class DeckAnalysisEngine {
     }
 
     /**
+     * 포지션 유효성 검증
+     */
+    private static void validatePositions(List<PositionWithAsset> positions) {
+        for (PositionWithAsset position : positions) {
+            if (position.getWeightPct() < 0) {
+                throw new IllegalStateException(
+                        "Position weight cannot be negative: " + position.getAsset().getSymbol()
+                                + " = " + position.getWeightPct() + "%");
+            }
+            if (position.getPersonality() == null) {
+                throw new IllegalStateException(
+                        "Position personality must be computed before analysis: " + position.getAsset().getSymbol());
+            }
+        }
+    }
+
+    /**
      * 지표 계산
      */
     private static DeckMetrics calculateMetrics(List<PositionWithAsset> positions) {
@@ -66,7 +88,7 @@ public class DeckAnalysisEngine {
                 .sum();
 
         if (totalWeight <= 0) {
-            totalWeight = 100.0; // 방어적 처리
+            throw new IllegalStateException("Total portfolio weight must be positive: " + totalWeight);
         }
 
         // 위험도: null 제외 자산 비중만 분모로 사용

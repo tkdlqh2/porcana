@@ -20,6 +20,10 @@ import java.math.BigDecimal;
 @UtilityClass
 public class AssetPersonalityRuleEngine {
 
+    // 배당 수익률 임계값 상수
+    private static final BigDecimal THRESHOLD_INCOME_CORE = new BigDecimal("0.0400");      // 4% 이상 → INCOME_CORE
+    private static final BigDecimal THRESHOLD_DIVIDEND_FOCUSED = new BigDecimal("0.0200"); // 2% 이상 → DIVIDEND_FOCUSED
+
     /**
      * Asset으로부터 성격 전체를 순차적으로 계산
      */
@@ -81,7 +85,7 @@ public class AssetPersonalityRuleEngine {
             return DividendProfile.INCOME_CORE;
         }
 
-        if (yield.compareTo(new BigDecimal("0.0400")) >= 0
+        if (yield.compareTo(THRESHOLD_INCOME_CORE) >= 0
                 && (frequency == DividendFrequency.MONTHLY || frequency == DividendFrequency.QUARTERLY)) {
             return DividendProfile.INCOME_CORE;
         }
@@ -91,7 +95,7 @@ public class AssetPersonalityRuleEngine {
             return DividendProfile.DIVIDEND_FOCUSED;
         }
 
-        if (yield.compareTo(new BigDecimal("0.0200")) >= 0
+        if (yield.compareTo(THRESHOLD_DIVIDEND_FOCUSED) >= 0
                 && isDividendFriendlySector(asset.getSector())) {
             return DividendProfile.DIVIDEND_FOCUSED;
         }

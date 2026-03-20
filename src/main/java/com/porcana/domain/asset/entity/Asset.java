@@ -166,10 +166,28 @@ public class Asset {
 
     /**
      * 배당 데이터 일괄 업데이트
+     *
+     * @throws IllegalArgumentException 배당 수익률이 음수이거나 100%를 초과하는 경우,
+     *                                  또는 마지막 배당일이 미래인 경우
      */
     public void updateDividendData(Boolean dividendAvailable, BigDecimal dividendYield,
                                    DividendFrequency dividendFrequency, DividendCategory dividendCategory,
                                    DividendDataStatus dividendDataStatus, LocalDate lastDividendDate) {
+        // 배당 수익률 검증
+        if (dividendYield != null) {
+            if (dividendYield.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Dividend yield cannot be negative: " + dividendYield);
+            }
+            if (dividendYield.compareTo(BigDecimal.ONE) > 0) {
+                throw new IllegalArgumentException("Dividend yield cannot exceed 100%: " + dividendYield);
+            }
+        }
+
+        // 마지막 배당일 검증
+        if (lastDividendDate != null && lastDividendDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Last dividend date cannot be in the future: " + lastDividendDate);
+        }
+
         this.dividendAvailable = dividendAvailable;
         this.dividendYield = dividendYield;
         this.dividendFrequency = dividendFrequency;
