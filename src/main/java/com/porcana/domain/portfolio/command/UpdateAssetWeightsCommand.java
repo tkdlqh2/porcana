@@ -15,6 +15,7 @@ public class UpdateAssetWeightsCommand {
     private final UUID portfolioId;
     private final UUID userId;
     private final List<AssetWeightUpdate> weights;
+    private final boolean applyToBaseline;
 
     @Getter
     @Builder
@@ -35,6 +36,7 @@ public class UpdateAssetWeightsCommand {
                 .portfolioId(portfolioId)
                 .userId(userId)
                 .weights(weights)
+                .applyToBaseline(Boolean.TRUE.equals(request.applyToBaseline()))
                 .build();
     }
 }

@@ -93,7 +93,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -121,7 +122,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -138,7 +140,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 60.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 40.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -164,7 +167,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 50.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 40.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -189,7 +193,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 50.00),
                         new UpdateAssetWeightsRequest.AssetWeight(nonExistentAssetId, 50.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -209,7 +214,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -231,7 +237,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -267,7 +274,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -359,7 +367,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(testAssetKrId.toString(), 70.00),
                         new UpdateAssetWeightsRequest.AssetWeight(testAssetUsId.toString(), 30.00)
-                )
+                ),
+                null
         );
 
         given()
@@ -588,7 +597,8 @@ class PortfolioControllerTest extends BaseIntegrationTest {
                 List.of(
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
                         new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
-                )
+                ),
+                null
         );
 
         given()

@@ -46,6 +46,7 @@ public class PortfolioService {
     private final SnapshotAssetDailyReturnRepository snapshotAssetDailyReturnRepository;
     private final PortfolioSnapshotRepository portfolioSnapshotRepository;
     private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
+    private final PortfolioHoldingBaselineRepository holdingBaselineRepository;
 
     private static final int MAX_GUEST_PORTFOLIOS = 3;
 
@@ -739,6 +740,27 @@ public class PortfolioService {
                 today,
                 "Portfolio rebalancing"
         );
+
+        // baseline에도 목표 비중 반영
+        if (command.isApplyToBaseline()) {
+            holdingBaselineRepository.findByPortfolioIdWithItems(command.getPortfolioId())
+                    .ifPresent(baseline -> {
+                        Map<UUID, PortfolioHoldingBaselineItem> baselineItemMap = baseline.getItems().stream()
+                                .collect(Collectors.toMap(PortfolioHoldingBaselineItem::getAssetId, item -> item));
+
+                        for (UpdateAssetWeightsCommand.AssetWeightUpdate weightUpdate : command.getWeights()) {
+                            PortfolioHoldingBaselineItem item = baselineItemMap.get(weightUpdate.getAssetId());
+                            if (item == null) {
+                                throw new IllegalArgumentException(
+                                        "Baseline item not found for asset: " + weightUpdate.getAssetId()
+                                );
+                            }
+                            item.updateTargetWeight(weightUpdate.getWeightPct());
+
+                        }
+                        holdingBaselineRepository.save(baseline);
+                    });
+        }
 
         return UpdateAssetWeightsResponse.from(portfolio, updatedWeights);
     }

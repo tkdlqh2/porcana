@@ -123,4 +123,20 @@ public class PortfolioHoldingBaselineItem {
         this.avgPrice = totalCost.divide(newQuantity, 4, java.math.RoundingMode.HALF_UP);
         this.quantity = newQuantity;
     }
+
+    /**
+     * 목표 비중 업데이트
+     * 포트폴리오 비중 수정 시 baseline에도 반영할 때 사용
+     *
+     * @param newTargetWeightPct 새로운 목표 비중 (0~100)
+     */
+    public void updateTargetWeight(BigDecimal newTargetWeightPct) {
+        if (newTargetWeightPct == null) {
+            throw new IllegalArgumentException("targetWeightPct must not be null");
+        }
+        if (newTargetWeightPct.compareTo(BigDecimal.ZERO) < 0 || newTargetWeightPct.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException("targetWeightPct must be between 0 and 100");
+        }
+        this.targetWeightPct = newTargetWeightPct;
+    }
 }

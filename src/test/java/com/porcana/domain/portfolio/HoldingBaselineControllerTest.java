@@ -1,6 +1,7 @@
 package com.porcana.domain.portfolio;
 
 import com.porcana.BaseIntegrationTest;
+import com.porcana.domain.portfolio.dto.UpdateAssetWeightsRequest;
 import com.porcana.domain.portfolio.dto.baseline.ExecuteTopUpRequest;
 import com.porcana.domain.portfolio.dto.baseline.RebalancingPlanRequest;
 import com.porcana.domain.portfolio.dto.baseline.SetSeedRequest;
@@ -829,6 +830,312 @@ class HoldingBaselineControllerTest extends BaseIntegrationTest {
                     .log().all()
                     .statusCode(200)
                     .body("thresholdPct", equalTo(5.0f));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /portfolios/{portfolioId}/weights - applyToBaseline 옵션 테스트")
+    class ApplyToBaselineTest {
+
+        @Test
+        @DisplayName("성공 - applyToBaseline=true 시 baseline targetWeightPct 업데이트")
+        void updateWeights_applyToBaseline_true() {
+            String accessToken = createAccessToken();
+
+            // 1. 먼저 시드 설정 (baseline 생성)
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200);
+
+            // 2. 초기 baseline 상태 확인 (50/50)
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/holding-baseline", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200)
+                    .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(50.0f))
+                    .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(50.0f));
+
+            // 3. applyToBaseline=true로 비중 수정 (70/30)
+            UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                    List.of(
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
+                    ),
+                    true  // applyToBaseline = true
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("weights", hasSize(2));
+
+            // 4. baseline의 targetWeightPct가 70/30으로 변경되었는지 확인
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/holding-baseline", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(70.0f))
+                    .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(30.0f));
+        }
+
+        @Test
+        @DisplayName("성공 - applyToBaseline=false 시 baseline targetWeightPct 유지")
+        void updateWeights_applyToBaseline_false() {
+            String accessToken = createAccessToken();
+
+            // 1. 먼저 시드 설정 (baseline 생성)
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200);
+
+            // 2. 초기 baseline 상태 확인 (50/50)
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/holding-baseline", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200)
+                    .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(50.0f))
+                    .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(50.0f));
+
+            // 3. applyToBaseline=false로 비중 수정 (70/30)
+            UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                    List.of(
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
+                    ),
+                    false  // applyToBaseline = false
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("weights", hasSize(2));
+
+            // 4. baseline의 targetWeightPct가 여전히 50/50인지 확인
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/holding-baseline", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(50.0f))
+                    .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(50.0f));
+        }
+
+        @Test
+        @DisplayName("성공 - applyToBaseline=null (기본값) 시 baseline targetWeightPct 유지")
+        void updateWeights_applyToBaseline_null() {
+            String accessToken = createAccessToken();
+
+            // 1. 먼저 시드 설정 (baseline 생성)
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200);
+
+            // 2. 초기 baseline 상태 확인 (50/50)
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/holding-baseline", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200)
+                    .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(50.0f))
+                    .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(50.0f));
+
+            // 3. applyToBaseline=null로 비중 수정 (70/30)
+            UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                    List.of(
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
+                    ),
+                    null  // applyToBaseline = null (기본값)
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("weights", hasSize(2));
+
+            // 4. baseline의 targetWeightPct가 여전히 50/50인지 확인
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/holding-baseline", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(50.0f))
+                    .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(50.0f));
+        }
+
+        @Test
+        @DisplayName("성공 - baseline 없이 applyToBaseline=true 요청 시 정상 처리 (무시)")
+        void updateWeights_applyToBaseline_true_noBaseline() {
+            String accessToken = createAccessToken();
+
+            // baseline 설정 없이 바로 비중 수정 (applyToBaseline=true)
+            UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                    List.of(
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
+                    ),
+                    true  // applyToBaseline = true
+            );
+
+            // baseline이 없어도 에러 없이 정상 처리되어야 함
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("weights", hasSize(2))
+                    .body("weights.assetId", containsInAnyOrder(
+                            TEST_ASSET_KR_ID.toString(),
+                            TEST_ASSET_US_ID.toString()
+                    ))
+                    .body("weights.weightPct", containsInAnyOrder(70.0f, 30.0f));
+
+            // baseline이 여전히 없는지 확인
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/holding-baseline", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200)
+                    .body("exists", equalTo(false));
+        }
+
+        @Test
+        @DisplayName("성공 - applyToBaseline=true 후 리밸런싱 상태에서 새 목표 비중 반영 확인")
+        void updateWeights_applyToBaseline_true_verifyInRebalanceStatus() {
+            String accessToken = createAccessToken();
+
+            // 1. 시드 설정 (baseline 생성)
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200);
+
+            // 2. applyToBaseline=true로 비중 수정 (70/30)
+            UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                    List.of(
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 70.00),
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_US_ID.toString(), 30.00)
+                    ),
+                    true
+            );
+
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200);
+
+            // 3. 리밸런싱 상태 조회에서 새 목표 비중(70/30) 반영 확인
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+            .when()
+                    .get("/portfolios/{portfolioId}/rebalance-status", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(200)
+                    .body("hasBaseline", equalTo(true))
+                    .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(70.0f))
+                    .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(30.0f));
+        }
+
+        @Test
+        @DisplayName("실패 - applyToBaseline=true 시 baseline에 없는 자산 포함하면 예외 발생")
+        void updateWeights_applyToBaseline_true_assetNotInBaseline_shouldFail() {
+            String accessToken = createAccessToken();
+
+            // 1. 시드 설정 (baseline 생성 - KR, US 두 자산만 포함)
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200);
+
+            // 2. baseline에 존재하지 않는 자산 ID로 비중 수정 시도
+            UUID nonExistentAssetId = UUID.fromString("99999999-9999-9999-9999-999999999999");
+            UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                    List.of(
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 50.00),
+                            new UpdateAssetWeightsRequest.AssetWeight(nonExistentAssetId.toString(), 50.00)
+                    ),
+                    true  // applyToBaseline = true
+            );
+
+            // 3. baseline에 없는 자산이 포함되어 있으므로 400 에러 발생
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(400)
+                    .body("message", containsString("not found"));
         }
     }
 }
