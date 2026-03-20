@@ -67,6 +67,10 @@ public class DeckAnalysisEngine {
      */
     private static void validatePositions(List<PositionWithAsset> positions) {
         for (PositionWithAsset position : positions) {
+            if (position.getWeightPct() == null) {
+                throw new IllegalStateException(
+                        "Position weight cannot be null: " + position.getAsset().getSymbol());
+            }
             if (position.getWeightPct() < 0) {
                 throw new IllegalStateException(
                         "Position weight cannot be negative: " + position.getAsset().getSymbol()

@@ -218,22 +218,32 @@ class DeckAnalysisEngineTest extends BaseIntegrationTest {
         @DisplayName("균형형: 어떤 조건도 충족하지 않음")
         void balancedStyle() {
             // given: 균형 잡힌 포트폴리오 - 각 역할이 적절히 분산
-            // GROWTH < 50%, INCOME < 40%, DEFENSIVE+HEDGE < 40%, topSector < 50%
+            // GROWTH < 50%, INCOME < 40%, INCOME_CORE < 30%, DEFENSIVE+HEDGE < 40%, topSector < 50%
+            // Role 분류: JPM(risk=3, Financials)=GROWTH, MSFT(risk=2, IT)=CORE,
+            //           JNJ(risk=2, Healthcare)=DEFENSIVE, VYM(DIVIDEND ETF)=INCOME,
+            //           GLD(COMMODITY ETF)=HEDGE, NEE(risk=2, Utilities)=DEFENSIVE
             List<PositionWithAsset> positions = List.of(
-                    createPosition(AAPL, 20.0),   // GROWTH, IT
-                    createPosition(MSFT, 15.0),   // CORE (low risk IT)
-                    createPosition(JNJ, 15.0),    // DEFENSIVE, Healthcare
-                    createPosition(JPM, 15.0),    // CORE or GROWTH, Financials
-                    createPosition(VYM, 20.0),    // INCOME
-                    createPosition(GLD, 15.0)     // HEDGE
+                    createPosition(JPM, 30.0),    // GROWTH, Financials (risk=3)
+                    createPosition(MSFT, 25.0),   // CORE, IT (risk=2)
+                    createPosition(JNJ, 15.0),    // DEFENSIVE, Healthcare (risk=2)
+                    createPosition(VYM, 15.0),    // INCOME, Dividend ETF
+                    createPosition(GLD, 10.0),    // HEDGE, Commodity ETF
+                    createPosition(NEE, 5.0)      // DEFENSIVE, Utilities (risk=2)
             );
 
             // when
             DeckAnalysis analysis = DeckAnalysisEngine.analyze(positions);
 
-            // then: 각 조건이 임계값 미만이면 BALANCED
-            // 실제 결과를 검증 (AGGRESSIVE, CASHFLOW, DEFENSIVE, GROWTH, THEMATIC 아닌 경우)
-            assertThat(analysis.getStyle()).isIn(DeckStyle.BALANCED, DeckStyle.GROWTH);
+            // then: 각 조건이 임계값 미만이어야 BALANCED
+            // - GROWTH(30%) < 50%
+            // - INCOME(15%) < 40%
+            // - DEFENSIVE(20%) + HEDGE(10%) = 30% < 40%
+            // - topSector(Financials 30%) < 50%
+            assertThat(analysis.getMetrics().getGrowthWeight()).isLessThan(50);
+            assertThat(analysis.getMetrics().getIncomeWeight()).isLessThan(40);
+            assertThat(analysis.getMetrics().getDefensiveWeight() + analysis.getMetrics().getHedgeWeight()).isLessThan(40);
+            assertThat(analysis.getMetrics().getTopSectorWeight()).isLessThan(50);
+            assertThat(analysis.getStyle()).isEqualTo(DeckStyle.BALANCED);
         }
     }
 
