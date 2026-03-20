@@ -744,9 +744,13 @@ public class PortfolioService {
 
                         for (UpdateAssetWeightsCommand.AssetWeightUpdate weightUpdate : command.getWeights()) {
                             PortfolioHoldingBaselineItem item = baselineItemMap.get(weightUpdate.getAssetId());
-                            if (item != null) {
-                                item.updateTargetWeight(weightUpdate.getWeightPct());
+                            if (item == null) {
+                                throw new IllegalArgumentException(
+                                        "Baseline item not found for asset: " + weightUpdate.getAssetId()
+                                );
                             }
+                            item.updateTargetWeight(weightUpdate.getWeightPct());
+
                         }
                         holdingBaselineRepository.save(baseline);
                     });
