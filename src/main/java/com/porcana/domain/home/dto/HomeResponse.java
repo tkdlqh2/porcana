@@ -37,7 +37,8 @@ public class HomeResponse {
         private final String ticker;
         private final String name;
         private final String imageUrl;
-        private final Double weightPct;
+        private final Double weightPct;        // 현재 시가총액 기준 비중
+        private final Double targetWeightPct;  // 스냅샷 설정 비중 (목표 비중)
         private final Double returnPct;
     }
 
