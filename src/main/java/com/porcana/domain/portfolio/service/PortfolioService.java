@@ -1,14 +1,20 @@
 package com.porcana.domain.portfolio.service;
 
 import com.porcana.domain.asset.AssetRepository;
+import com.porcana.domain.asset.dto.personality.AssetPersonality;
 import com.porcana.domain.asset.entity.Asset;
+import com.porcana.domain.asset.service.personality.AssetPersonalityRuleEngine;
 import com.porcana.domain.portfolio.command.CreatePortfolioCommand;
 import com.porcana.domain.portfolio.command.DirectCreatePortfolioCommand;
 import com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand;
 import com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand;
 import com.porcana.domain.portfolio.dto.*;
+import com.porcana.domain.portfolio.dto.deck.DeckAnalysis;
+import com.porcana.domain.portfolio.dto.deck.DeckAnalysisResponse;
+import com.porcana.domain.portfolio.dto.deck.PositionWithAsset;
 import com.porcana.domain.portfolio.entity.*;
 import com.porcana.domain.portfolio.repository.*;
+import com.porcana.domain.portfolio.service.deck.DeckAnalysisEngine;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -767,6 +773,74 @@ public class PortfolioService {
                     "비중 수정은 오전 7:00~7:45 사이에 불가능합니다. 수익률 업데이트 중입니다."
             );
         }
+    }
+
+    /**
+     * 포트폴리오 덱 분석
+     */
+    public DeckAnalysisResponse getDeckAnalysis(UUID portfolioId, UUID userId, UUID guestSessionId) {
+        Portfolio portfolio = findPortfolioWithOwnership(portfolioId, userId, guestSessionId);
+
+        // 포트폴리오 자산 조회
+        List<PortfolioAsset> portfolioAssets = portfolioAssetRepository.findByPortfolioId(portfolioId);
+        if (portfolioAssets.isEmpty()) {
+            return DeckAnalysisResponse.from(portfolioId, DeckAnalysisEngine.analyze(List.of()));
+        }
+
+        // 자산 정보 조회
+        Set<UUID> assetIds = portfolioAssets.stream()
+                .map(PortfolioAsset::getAssetId)
+                .collect(Collectors.toSet());
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+                .collect(Collectors.toMap(Asset::getId, a -> a));
+
+        // 최신 비중 조회 (스냅샷 기반)
+        Map<UUID, Double> latestWeights = getDeckLatestWeights(portfolioId, assetIds);
+
+        // PositionWithAsset 목록 생성
+        List<PositionWithAsset> positions = portfolioAssets.stream()
+                .map(pa -> {
+                    Asset asset = assetMap.get(pa.getAssetId());
+                    if (asset == null) return null;
+
+                    // 비중: 스냅샷 기반 또는 PortfolioAsset 기반
+                    Double weight = latestWeights.getOrDefault(pa.getAssetId(),
+                            pa.getWeightPct() != null ? pa.getWeightPct().doubleValue() : 0.0);
+
+                    // 자산 성격 계산
+                    AssetPersonality personality = AssetPersonalityRuleEngine.compute(asset);
+
+                    return new PositionWithAsset(asset, weight, personality);
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        // 덱 분석 실행
+        DeckAnalysis analysis = DeckAnalysisEngine.analyze(positions);
+        return DeckAnalysisResponse.from(portfolioId, analysis);
+    }
+
+    /**
+     * 덱 분석용 최신 스냅샷 기반 비중 조회
+     */
+    private Map<UUID, Double> getDeckLatestWeights(UUID portfolioId, Set<UUID> assetIds) {
+        Optional<PortfolioSnapshot> latestSnapshot = portfolioSnapshotRepository
+                .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(portfolioId, LocalDate.now());
+
+        if (latestSnapshot.isEmpty()) {
+            return Map.of();
+        }
+
+        List<PortfolioSnapshotAsset> snapshotAssets = portfolioSnapshotAssetRepository
+                .findBySnapshotId(latestSnapshot.get().getId());
+
+        return snapshotAssets.stream()
+                .filter(sa -> assetIds.contains(sa.getAssetId()))
+                .collect(Collectors.toMap(
+                        PortfolioSnapshotAsset::getAssetId,
+                        sa -> sa.getWeight().doubleValue(),
+                        (a, b) -> a
+                ));
     }
 
     /**

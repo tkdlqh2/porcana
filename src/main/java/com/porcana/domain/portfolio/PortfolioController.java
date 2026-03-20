@@ -5,6 +5,7 @@ import com.porcana.domain.portfolio.command.DirectCreatePortfolioCommand;
 import com.porcana.domain.portfolio.command.UpdateAssetWeightsCommand;
 import com.porcana.domain.portfolio.command.UpdatePortfolioNameCommand;
 import com.porcana.domain.portfolio.dto.*;
+import com.porcana.domain.portfolio.dto.deck.DeckAnalysisResponse;
 import com.porcana.domain.portfolio.service.PortfolioService;
 import com.porcana.global.guest.GuestSessionExtractor;
 import com.porcana.global.security.CurrentUser;
@@ -133,6 +134,25 @@ public class PortfolioController {
         UUID guestSessionId = guestSessionExtractor.extractGuestSessionId(request);
 
         PortfolioPerformanceResponse response = portfolioService.getPortfolioPerformance(portfolioId, userId, guestSessionId, range);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "포트폴리오 덱 분석",
+            description = "포트폴리오의 구성을 분석하여 스타일, 지표, 시그널을 반환합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "조회 성공"),
+                    @ApiResponse(responseCode = "400", description = "포트폴리오를 찾을 수 없거나 권한이 없음", content = @Content)
+            }
+    )
+    @GetMapping("/{portfolioId}/deck-analysis")
+    public ResponseEntity<DeckAnalysisResponse> getDeckAnalysis(
+            @Parameter(description = "포트폴리오 ID", required = true) @PathVariable UUID portfolioId,
+            HttpServletRequest request) {
+        UUID userId = extractUserId();
+        UUID guestSessionId = guestSessionExtractor.extractGuestSessionId(request);
+
+        DeckAnalysisResponse response = portfolioService.getDeckAnalysis(portfolioId, userId, guestSessionId);
         return ResponseEntity.ok(response);
     }
 
