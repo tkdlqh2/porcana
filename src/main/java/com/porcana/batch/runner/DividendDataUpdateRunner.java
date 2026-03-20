@@ -3,8 +3,8 @@ package com.porcana.batch.runner;
 import com.porcana.batch.provider.us.FmpAssetProvider;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -15,24 +15,31 @@ import java.util.List;
 /**
  * ApplicationRunner for updating dividend data from FMP API
  *
- * Usage: Run the application with DIVIDEND_UPDATE_ENABLED=true environment variable
- * To disable: Comment out @Component annotation or don't set the env variable
+ * Usage: Set DIVIDEND_UPDATE_ENABLED=true in application.yml or as environment variable
  *
  * Example:
  *   DIVIDEND_UPDATE_ENABLED=true ./gradlew bootRun
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DividendDataUpdateRunner implements ApplicationRunner {
 
     private final AssetRepository assetRepository;
     private final FmpAssetProvider fmpAssetProvider;
+    private final boolean enabled;
+
+    public DividendDataUpdateRunner(
+            AssetRepository assetRepository,
+            FmpAssetProvider fmpAssetProvider,
+            @Value("${DIVIDEND_UPDATE_ENABLED:false}") boolean enabled) {
+        this.assetRepository = assetRepository;
+        this.fmpAssetProvider = fmpAssetProvider;
+        this.enabled = enabled;
+    }
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        String enabled = System.getenv("DIVIDEND_UPDATE_ENABLED");
-        if (!"true".equalsIgnoreCase(enabled)) {
+        if (!enabled) {
             log.info("Dividend data update is disabled. Set DIVIDEND_UPDATE_ENABLED=true to enable.");
             return;
         }
