@@ -1036,8 +1036,11 @@ class HoldingBaselineControllerTest extends BaseIntegrationTest {
                     .log().all()
                     .statusCode(200)
                     .body("weights", hasSize(2))
-                    .body("weights[0].weightPct", anyOf(equalTo(70.0f), equalTo(30.0f)))
-                    .body("weights[1].weightPct", anyOf(equalTo(70.0f), equalTo(30.0f)));
+                    .body("weights.assetId", containsInAnyOrder(
+                            TEST_ASSET_KR_ID.toString(),
+                            TEST_ASSET_US_ID.toString()
+                    ))
+                    .body("weights.weightPct", containsInAnyOrder(70.0f, 30.0f));
 
             // baseline이 여전히 없는지 확인
             given()
@@ -1094,6 +1097,45 @@ class HoldingBaselineControllerTest extends BaseIntegrationTest {
                     .body("hasBaseline", equalTo(true))
                     .body("items.find { it.symbol == 'BASELINE_KR' }.targetWeightPct", equalTo(70.0f))
                     .body("items.find { it.symbol == 'BASELINE_US' }.targetWeightPct", equalTo(30.0f));
+        }
+
+        @Test
+        @DisplayName("실패 - applyToBaseline=true 시 baseline에 없는 자산 포함하면 예외 발생")
+        void updateWeights_applyToBaseline_true_assetNotInBaseline_shouldFail() {
+            String accessToken = createAccessToken();
+
+            // 1. 시드 설정 (baseline 생성 - KR, US 두 자산만 포함)
+            SetSeedRequest setSeedRequest = new SetSeedRequest(new BigDecimal("10000000"), "KRW");
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(setSeedRequest)
+            .when()
+                    .put("/portfolios/{portfolioId}/seed", TEST_PORTFOLIO_ID)
+            .then()
+                    .statusCode(200);
+
+            // 2. baseline에 존재하지 않는 자산 ID로 비중 수정 시도
+            UUID nonExistentAssetId = UUID.fromString("99999999-9999-9999-9999-999999999999");
+            UpdateAssetWeightsRequest request = new UpdateAssetWeightsRequest(
+                    List.of(
+                            new UpdateAssetWeightsRequest.AssetWeight(TEST_ASSET_KR_ID.toString(), 50.00),
+                            new UpdateAssetWeightsRequest.AssetWeight(nonExistentAssetId.toString(), 50.00)
+                    ),
+                    true  // applyToBaseline = true
+            );
+
+            // 3. baseline에 없는 자산이 포함되어 있으므로 400 에러 발생
+            given()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+            .when()
+                    .put("/portfolios/{portfolioId}/weights", TEST_PORTFOLIO_ID)
+            .then()
+                    .log().all()
+                    .statusCode(400)
+                    .body("message", containsString("not found"));
         }
     }
 }
