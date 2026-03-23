@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=375, initial-scale=1.0">
+  <title>7. 비중 설정 - Porcana</title>
+  <link rel="stylesheet" href="common.css">
+  <style>
+    .new-tag {
+      display: inline-block;
+      background: #ef4444;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="nav-link">← 목록으로</a>
+
+  <div class="screen">
+    <div class="screen-content">
+      <div class="status-bar">
+        <span>5:33</span>
+        <span>70%</span>
+      </div>
+
+      <div class="header">
+        <a href="06-library-select.html" class="back-btn" style="text-decoration:none; color:#fff;">‹</a>
+        <div class="header-title" style="flex:1;">비중 설정</div>
+      </div>
+
+      <div style="padding:0 20px 16px;">
+        <div style="color:#888; font-size:14px;">각 종목의 비중을 설정해주세요</div>
+      </div>
+
+      <div class="equal-weight-btn">
+        <span>⚖️</span>
+        <span>동일 비중으로 설정 (20%씩)</span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #222;">
+        <span style="color:#888; font-size:13px;">선택한 종목 (5개)</span>
+        <span class="weight-total">합계: 100.00%</span>
+      </div>
+
+      <div class="weight-setting-item">
+        <div class="asset-logo">S</div>
+        <div class="asset-info">
+          <div class="asset-name">삼성전자</div>
+          <div class="asset-code">005930 · KR</div>
+        </div>
+        <div class="weight-slider-container">
+          <input type="range" class="weight-slider" value="25" min="0" max="100">
+        </div>
+        <div class="weight-value">25%</div>
+        <div class="remove-btn">✕</div>
+      </div>
+
+      <div class="weight-setting-item">
+        <div class="asset-logo">A</div>
+        <div class="asset-info">
+          <div class="asset-name">Apple</div>
+          <div class="asset-code">AAPL · US</div>
+        </div>
+        <div class="weight-slider-container">
+          <input type="range" class="weight-slider" value="20" min="0" max="100">
+        </div>
+        <div class="weight-value">20%</div>
+        <div class="remove-btn">✕</div>
+      </div>
+
+      <div class="weight-setting-item">
+        <div class="asset-logo">N</div>
+        <div class="asset-info">
+          <div class="asset-name">NVIDIA</div>
+          <div class="asset-code">NVDA · US</div>
+        </div>
+        <div class="weight-slider-container">
+          <input type="range" class="weight-slider" value="25" min="0" max="100">
+        </div>
+        <div class="weight-value">25%</div>
+        <div class="remove-btn">✕</div>
+      </div>
+
+      <div class="weight-setting-item">
+        <div class="asset-logo">S</div>
+        <div class="asset-info">
+          <div class="asset-name">SPY</div>
+          <div class="asset-code">SPY · US</div>
+        </div>
+        <div class="weight-slider-container">
+          <input type="range" class="weight-slider" value="20" min="0" max="100">
+        </div>
+        <div class="weight-value">20%</div>
+        <div class="remove-btn">✕</div>
+      </div>
+
+      <div class="weight-setting-item">
+        <div class="asset-logo">S</div>
+        <div class="asset-info">
+          <div class="asset-name">SK텔레콤</div>
+          <div class="asset-code">017670 · KR</div>
+        </div>
+        <div class="weight-slider-container">
+          <input type="range" class="weight-slider" value="10" min="0" max="100">
+        </div>
+        <div class="weight-value">10%</div>
+        <div class="remove-btn">✕</div>
+      </div>
+
+      <div style="padding:16px 20px;">
+        <a href="06-library-select.html" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:14px; border:1px dashed #333; border-radius:12px; color:#666; text-decoration:none; font-size:14px;">
+          <span>+</span>
+          <span>종목 추가하기</span>
+        </a>
+      </div>
+
+      <div class="summary-card">
+        <div style="font-weight:600; margin-bottom:16px;">포트폴리오 요약</div>
+        <div class="summary-row">
+          <span class="summary-label">총 종목 수</span>
+          <span class="summary-value">5개</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">예상 위험도</span>
+          <div class="risk-meter-small">
+            <div class="risk-dot filled"></div>
+            <div class="risk-dot filled"></div>
+            <div class="risk-dot filled"></div>
+            <div class="risk-dot"></div>
+            <div class="risk-dot"></div>
+          </div>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">시장 분포</span>
+          <span class="summary-value">🇰🇷 35% / 🇺🇸 65%</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">자산 유형</span>
+          <span class="summary-value">주식 80% / ETF 20%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <a href="06-library-select.html" class="btn btn-secondary" style="text-decoration:none;">이전</a>
+      <a href="08-create-name.html" class="btn btn-primary" style="text-decoration:none;">포트폴리오 생성</a>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <span class="nav-icon">📋</span>
+        <span>포트폴리오</span>
+      </div>
+      <div class="nav-add" style="background:#444;">✕</div>
+      <div class="nav-item">
+        <span class="nav-icon">👤</span>
+        <span>마이페이지</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

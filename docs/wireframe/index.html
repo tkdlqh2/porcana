@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Porcana Wireframe - Index</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    h1 { margin-bottom: 8px; }
+    .subtitle { color: #888; margin-bottom: 40px; }
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 20px;
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.2s;
+      border: 1px solid #333;
+    }
+    .card:hover {
+      background: #222;
+      border-color: #22c55e;
+      transform: translateY(-2px);
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.5;
+    }
+    .new-tag {
+      background: #ef4444;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .landscape-tag {
+      background: #3b82f6;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Porcana Wireframe v2.0</h1>
+  <p class="subtitle">화면을 클릭하여 프로토타입을 확인하세요</p>
+
+  <div class="section">
+    <div class="section-title">기존 화면</div>
+    <div class="grid">
+      <a href="01-home.html" class="card">
+        <div class="card-title">1. 홈</div>
+        <div class="card-desc">메인 포트폴리오 수익률 차트와 주요 자산 목록</div>
+      </a>
+      <a href="02-portfolio-list.html" class="card">
+        <div class="card-title">2. 포트폴리오 목록</div>
+        <div class="card-desc">검색 기능과 포트폴리오 카드 목록</div>
+      </a>
+      <a href="03-portfolio-detail.html" class="card">
+        <div class="card-title">3. 포트폴리오 상세</div>
+        <div class="card-desc">수익률, 위험도, 분산도, 자산 목록</div>
+      </a>
+      <a href="04-weight-edit.html" class="card">
+        <div class="card-title">4. 자산 비중 수정</div>
+        <div class="card-desc">기존 포트폴리오의 비중 직접 수정</div>
+      </a>
+      <a href="08-create-name.html" class="card">
+        <div class="card-title">8. 이름 입력 모달</div>
+        <div class="card-desc">새 포트폴리오 이름 입력</div>
+      </a>
+      <a href="09-mypage.html" class="card">
+        <div class="card-title">9. 마이페이지</div>
+        <div class="card-desc">내정보 변경, 컬러 모드, 로그아웃</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">덱 직접 생성 플로우 (NEW)</div>
+    <div class="grid">
+      <a href="05-create-select.html" class="card">
+        <div class="card-title">5. 생성 방식 선택 <span class="new-tag">NEW</span></div>
+        <div class="card-desc">아레나 드래프트 vs 라이브러리에서 직접 선택</div>
+      </a>
+      <a href="06-library-select.html" class="card">
+        <div class="card-title">6. 종목 라이브러리 <span class="new-tag">NEW</span> <span class="landscape-tag">가로</span></div>
+        <div class="card-desc">하스스톤 스타일 덱 빌더. 왼쪽 라이브러리 + 오른쪽 선택 목록</div>
+      </a>
+      <a href="07-weight-setting.html" class="card">
+        <div class="card-title">7. 비중 설정 <span class="new-tag">NEW</span></div>
+        <div class="card-desc">선택한 종목들의 비중을 슬라이더로 설정</div>
+      </a>
+    </div>
+  </div>
+
+  <div style="margin-top:60px; padding-top:20px; border-top:1px solid #333; color:#666; font-size:13px;">
+    <p>Flow: [+] 버튼 → 5. 생성 방식 선택 → 6. 종목 라이브러리 → 7. 비중 설정 → 8. 이름 입력 → 완료</p>
+  </div>
+</body>
+</html>
