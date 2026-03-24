@@ -47,3 +47,6 @@ Thumbs.db
 *.pid
 application-local.yml
 application-prod.yml
+
+# Claude Code
+.mcp.json
