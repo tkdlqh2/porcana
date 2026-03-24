@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=375, initial-scale=1.0">
-  <title>3-a. 포트폴리오 상세 (시드 미설정) - Porcana</title>
+  <title>3-b. 포트폴리오 상세 (시드 설정 완료) - Porcana</title>
   <link rel="stylesheet" href="common.css">
 </head>
 <body>
@@ -43,15 +43,39 @@
         </div>
       </div>
 
-      <!-- 시드 설정 유도 배너 -->
-      <a href="10-seed-setting.html" class="seed-banner" style="display:block; text-decoration:none; color:#fff;">
-        <div class="seed-banner-icon">💰</div>
-        <div class="seed-banner-title">투자 금액을 설정해보세요</div>
-        <div class="seed-banner-desc">시드 금액을 입력하면 각 종목별 매수 수량을 자동으로 계산해드려요</div>
-        <div class="seed-banner-cta">
-          시드 설정하기 <span>→</span>
+      <!-- 투자 관리 카드 (시드 설정 완료 상태) -->
+      <div class="invest-manage-card">
+        <div class="invest-manage-header">
+          <div class="invest-manage-title">
+            💼 투자 관리
+            <span class="invest-manage-badge">운용중</span>
+          </div>
         </div>
-      </a>
+
+        <div class="invest-manage-summary">
+          <div class="invest-summary-item">
+            <div class="invest-summary-label">원금</div>
+            <div class="invest-summary-value">₩10.0M</div>
+          </div>
+          <div class="invest-summary-item">
+            <div class="invest-summary-label">평가금액</div>
+            <div class="invest-summary-value profit">₩10.4M</div>
+          </div>
+          <div class="invest-summary-item">
+            <div class="invest-summary-label">수익</div>
+            <div class="invest-summary-value profit">+₩367K</div>
+          </div>
+        </div>
+
+        <div class="invest-manage-actions">
+          <a href="11-holding-baseline.html" class="invest-action-btn" style="text-decoration:none;">
+            📋 보유 현황
+          </a>
+          <a href="12-topup-plan.html" class="invest-action-btn primary" style="text-decoration:none;">
+            💵 추가 입금
+          </a>
+        </div>
+      </div>
 
       <div class="section-divider">
         <div class="section-divider-line"></div>

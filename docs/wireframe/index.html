@@ -71,14 +71,37 @@
       padding: 2px 6px;
       border-radius: 4px;
     }
+    .flow-section {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid #333;
+    }
+    .flow-title {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .flow-item {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+      padding-left: 16px;
+      position: relative;
+    }
+    .flow-item::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #22c55e;
+    }
   </style>
 </head>
 <body>
-  <h1>Porcana Wireframe v2.0</h1>
+  <h1>Porcana Wireframe v3.1</h1>
   <p class="subtitle">화면을 클릭하여 프로토타입을 확인하세요</p>
 
   <div class="section">
-    <div class="section-title">기존 화면</div>
+    <div class="section-title">기본 화면</div>
     <div class="grid">
       <a href="01-home.html" class="card">
         <div class="card-title">1. 홈</div>
@@ -89,8 +112,12 @@
         <div class="card-desc">검색 기능과 포트폴리오 카드 목록</div>
       </a>
       <a href="03-portfolio-detail.html" class="card">
-        <div class="card-title">3. 포트폴리오 상세</div>
-        <div class="card-desc">수익률, 위험도, 분산도, 자산 목록</div>
+        <div class="card-title">3-a. 포트폴리오 상세 (시드 미설정)</div>
+        <div class="card-desc">시드 설정 유도 배너 표시. 목표 비중 기반</div>
+      </a>
+      <a href="03-b-portfolio-detail-with-seed.html" class="card">
+        <div class="card-title">3-b. 포트폴리오 상세 (시드 설정 완료) <span class="new-tag">NEW</span></div>
+        <div class="card-desc">투자 관리 카드 표시. 보유 현황/추가 입금 버튼</div>
       </a>
       <a href="04-weight-edit.html" class="card">
         <div class="card-title">4. 자산 비중 수정</div>
@@ -108,25 +135,67 @@
   </div>
 
   <div class="section">
-    <div class="section-title">덱 직접 생성 플로우 (NEW)</div>
+    <div class="section-title">덱 직접 생성 플로우</div>
     <div class="grid">
       <a href="05-create-select.html" class="card">
-        <div class="card-title">5. 생성 방식 선택 <span class="new-tag">NEW</span></div>
+        <div class="card-title">5. 생성 방식 선택</div>
         <div class="card-desc">아레나 드래프트 vs 라이브러리에서 직접 선택</div>
       </a>
       <a href="06-library-select.html" class="card">
-        <div class="card-title">6. 종목 라이브러리 <span class="new-tag">NEW</span> <span class="landscape-tag">가로</span></div>
+        <div class="card-title">6. 종목 라이브러리 <span class="landscape-tag">가로</span></div>
         <div class="card-desc">하스스톤 스타일 덱 빌더. 왼쪽 라이브러리 + 오른쪽 선택 목록</div>
       </a>
       <a href="07-weight-setting.html" class="card">
-        <div class="card-title">7. 비중 설정 <span class="new-tag">NEW</span></div>
+        <div class="card-title">7. 비중 설정</div>
         <div class="card-desc">선택한 종목들의 비중을 슬라이더로 설정</div>
       </a>
     </div>
   </div>
 
-  <div style="margin-top:60px; padding-top:20px; border-top:1px solid #333; color:#666; font-size:13px;">
-    <p>Flow: [+] 버튼 → 5. 생성 방식 선택 → 6. 종목 라이브러리 → 7. 비중 설정 → 8. 이름 입력 → 완료</p>
+  <div class="section">
+    <div class="section-title">시드 설정 & 투자 관리 플로우 <span class="new-tag">NEW</span></div>
+    <div class="grid">
+      <a href="10-seed-setting.html" class="card">
+        <div class="card-title">10. 시드 설정 <span class="new-tag">NEW</span></div>
+        <div class="card-desc">시드 금액 입력 → 종목별 매수 수량 자동 계산</div>
+      </a>
+      <a href="11-holding-baseline.html" class="card">
+        <div class="card-title">11. 보유 현황 <span class="new-tag">NEW</span></div>
+        <div class="card-desc">원금, 평가금액, 수익/손실, 종목별 보유 수량</div>
+      </a>
+      <a href="12-topup-plan.html" class="card">
+        <div class="card-title">12. 추가 입금 추천 <span class="new-tag">NEW</span></div>
+        <div class="card-desc">추가 금액 입력 → 리밸런싱 매수 추천</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">종목 상세 <span class="new-tag">NEW</span></div>
+    <div class="grid">
+      <a href="13-asset-detail.html" class="card">
+        <div class="card-title">13. 종목 상세 <span class="new-tag">NEW</span></div>
+        <div class="card-desc">종목 정보, 자산 성격 (역할/페르소나/배당), 위험도, 설명</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">통합 프로토타입</div>
+    <div class="grid">
+      <a href="prototype.html" class="card" style="border-color:#22c55e;">
+        <div class="card-title">📱 전체 화면 프로토타입</div>
+        <div class="card-desc">모든 화면을 한 페이지에서 확인 (v3.1 - 13개 화면)</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <div class="flow-title">사용자 플로우</div>
+    <div class="flow-item"><strong>포트폴리오 생성:</strong> [+] → 5. 생성 방식 선택 → 6. 종목 라이브러리 → 7. 비중 설정 → 8. 이름 입력 → 완료</div>
+    <div class="flow-item"><strong>시드 설정:</strong> 3-a. 상세(미설정) → 10. 시드 설정 → 3-b. 상세(설정완료)</div>
+    <div class="flow-item"><strong>추가 입금:</strong> 3-b. 상세 → 11. 보유 현황 → 12. 추가 입금 추천 → 매수 완료 반영</div>
+    <div class="flow-item"><strong>종목 상세:</strong> 포트폴리오 상세의 종목 클릭 → 13. 종목 상세</div>
   </div>
 </body>
 </html>
