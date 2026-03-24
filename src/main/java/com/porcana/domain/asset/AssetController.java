@@ -5,7 +5,6 @@ import com.porcana.domain.asset.dto.AssetDetailResponse;
 import com.porcana.domain.asset.dto.AssetInMainPortfolioResponse;
 import com.porcana.domain.asset.dto.AssetLibraryResponse;
 import com.porcana.domain.asset.dto.AssetLibrarySearchCondition;
-import com.porcana.domain.asset.dto.AssetSearchResponse;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -21,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Asset", description = "자산(종목) API")
@@ -35,7 +33,16 @@ public class AssetController {
 
     @Operation(
             summary = "종목 라이브러리 조회",
-            description = "모든 종목을 필터링하여 조회합니다. 시장, 타입, 섹터, 위험도 등으로 필터링 가능합니다.",
+            description = """
+                    종목을 필터링하여 조회합니다.
+                    - 시장(market): US, KR
+                    - 타입(type): STOCK, ETF
+                    - 섹터(sectors): STOCK용, 복수 선택 가능
+                    - 자산 클래스(assetClasses): ETF용, 복수 선택 가능
+                    - 위험도(riskLevels): 1-5, 복수 선택 가능
+                    - 검색어(query): symbol 또는 name으로 검색
+                    - 정렬(sortBy): name, symbol, riskLevel
+                    """,
             responses = {
                     @ApiResponse(responseCode = "200", description = "조회 성공"),
                     @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
@@ -46,21 +53,6 @@ public class AssetController {
             @ParameterObject AssetLibrarySearchCondition condition,
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
         AssetLibraryResponse response = assetService.getLibrary(condition, pageable);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "자산 검색",
-            description = "종목 코드(ticker) 또는 이름으로 자산을 검색합니다. 최대 20개까지 반환됩니다.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "검색 성공"),
-                    @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
-            }
-    )
-    @GetMapping("/search")
-    public ResponseEntity<List<AssetSearchResponse>> searchAssets(
-            @Parameter(description = "검색어 (ticker 또는 name)", required = true) @RequestParam String query) {
-        List<AssetSearchResponse> response = assetService.searchAssets(query);
         return ResponseEntity.ok(response);
     }
 
