@@ -47,6 +47,7 @@ public class PortfolioService {
     private final PortfolioSnapshotRepository portfolioSnapshotRepository;
     private final PortfolioSnapshotAssetRepository portfolioSnapshotAssetRepository;
     private final PortfolioHoldingBaselineRepository holdingBaselineRepository;
+    private final HoldingBaselineService holdingBaselineService;
 
     private static final int MAX_GUEST_PORTFOLIOS = 3;
 
@@ -243,6 +244,10 @@ public class PortfolioService {
         String diversityLevel = calculateDiversityLevel(portfolio.getId());
         Map<Integer, Double> riskDistribution = calculateRiskDistribution(positions);
 
+        // Get baseline summary if exists
+        PortfolioDetailResponse.BaselineSummary baselineSummary =
+                holdingBaselineService.getBaselineSummaryInternal(portfolio.getId());
+
         return PortfolioDetailResponse.from(
             portfolio,
             isMain,
@@ -250,7 +255,8 @@ public class PortfolioService {
             averageRiskLevel,
             diversityLevel,
             riskDistribution,
-            positions
+            positions,
+            baselineSummary
         );
     }
 

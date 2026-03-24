@@ -7,7 +7,6 @@ import com.porcana.domain.asset.dto.AssetDetailResponse;
 import com.porcana.domain.asset.dto.AssetInMainPortfolioResponse;
 import com.porcana.domain.asset.dto.AssetLibraryResponse;
 import com.porcana.domain.asset.dto.AssetLibrarySearchCondition;
-import com.porcana.domain.asset.dto.AssetSearchResponse;
 import com.porcana.domain.asset.dto.personality.AssetPersonality;
 import com.porcana.domain.asset.dto.personality.AssetPersonalityResponse;
 import com.porcana.domain.asset.entity.Asset;
@@ -21,7 +20,6 @@ import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,26 +39,6 @@ public class AssetService {
     private final PortfolioRepository portfolioRepository;
     private final PortfolioAssetRepository portfolioAssetRepository;
     private final com.porcana.domain.portfolio.service.PortfolioReturnCalculator portfolioReturnCalculator;
-
-    public List<AssetSearchResponse> searchAssets(String query) {
-        if (query == null || query.isBlank()) {
-            return Collections.emptyList();
-        }
-
-        List<Asset> assets = assetRepository.searchBySymbolOrName(query, PageRequest.of(0, 20));
-
-        return assets.stream()
-                .map(asset -> AssetSearchResponse.builder()
-                        .assetId(asset.getId().toString())
-                        .ticker(asset.getSymbol())
-                        .name(asset.getName())
-                        .exchange(asset.getMarket().name())
-                        .country(asset.getMarket() == Asset.Market.KR ? "KR" : "US")
-                        .sector(asset.getSector() != null ? asset.getSector().name() : null)
-                        .imageUrl(null) // TODO: Add image URL logic
-                        .build())
-                .collect(Collectors.toList());
-    }
 
     public AssetDetailResponse getAsset(UUID assetId) {
         Asset asset = assetRepository.findById(assetId)
@@ -127,6 +105,8 @@ public class AssetService {
             return AssetInMainPortfolioResponse.notIncluded();
         }
 
+        Portfolio portfolio = portfolioOpt.get();
+
         Optional<PortfolioAsset> portfolioAssetOpt = portfolioAssetRepository
                 .findByPortfolioIdAndAssetId(mainPortfolioId, assetId);
 
@@ -144,6 +124,7 @@ public class AssetService {
         return AssetInMainPortfolioResponse.builder()
                 .included(true)
                 .portfolioId(mainPortfolioId.toString())
+                .portfolioName(portfolio.getName())
                 .weightPct(portfolioAsset.getWeightPct().doubleValue())
                 .returnPct(returnPct)
                 .build();
