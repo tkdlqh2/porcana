@@ -105,6 +105,8 @@ public class AssetService {
             return AssetInMainPortfolioResponse.notIncluded();
         }
 
+        Portfolio portfolio = portfolioOpt.get();
+
         Optional<PortfolioAsset> portfolioAssetOpt = portfolioAssetRepository
                 .findByPortfolioIdAndAssetId(mainPortfolioId, assetId);
 
@@ -122,6 +124,7 @@ public class AssetService {
         return AssetInMainPortfolioResponse.builder()
                 .included(true)
                 .portfolioId(mainPortfolioId.toString())
+                .portfolioName(portfolio.getName())
                 .weightPct(portfolioAsset.getWeightPct().doubleValue())
                 .returnPct(returnPct)
                 .build();
