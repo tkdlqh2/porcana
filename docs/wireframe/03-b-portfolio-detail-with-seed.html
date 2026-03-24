@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=375, initial-scale=1.0">
+  <title>3-b. 포트폴리오 상세 (시드 설정 완료) - Porcana</title>
+  <link rel="stylesheet" href="common.css">
+</head>
+<body>
+  <a href="index.html" class="nav-link">← 목록으로</a>
+
+  <div class="screen">
+    <div class="screen-content">
+      <div class="status-bar">
+        <span>5:33</span>
+        <span>70%</span>
+      </div>
+
+      <div class="header">
+        <a href="02-portfolio-list.html" class="back-btn" style="text-decoration:none; color:#fff;">‹</a>
+        <div class="header-title" style="flex:1; text-align:center;">로로</div>
+        <div class="header-actions">
+          <span>🗑️</span>
+          <span class="star">⭐</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stat-label">📈 수익률</div>
+        <div class="stat-value positive">+3.67%</div>
+
+        <div class="stats-row" style="margin-top: 20px;">
+          <div class="stat-item">
+            <div class="stat-label">⚠️ 평균 위험도</div>
+            <div style="display:flex; gap:4px; margin-top:4px;">
+              <span style="color:#fbbf24;">⭐⭐</span><span style="color:#ef4444;">⭐</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">↗️ 분산도</div>
+            <div style="color:#fbbf24; font-weight:600; margin-top:4px;">높음</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 투자 관리 카드 (시드 설정 완료 상태) -->
+      <div class="invest-manage-card">
+        <div class="invest-manage-header">
+          <div class="invest-manage-title">
+            💼 투자 관리
+            <span class="invest-manage-badge">운용중</span>
+          </div>
+        </div>
+
+        <div class="invest-manage-summary">
+          <div class="invest-summary-item">
+            <div class="invest-summary-label">원금</div>
+            <div class="invest-summary-value">₩10.0M</div>
+          </div>
+          <div class="invest-summary-item">
+            <div class="invest-summary-label">평가금액</div>
+            <div class="invest-summary-value profit">₩10.4M</div>
+          </div>
+          <div class="invest-summary-item">
+            <div class="invest-summary-label">수익</div>
+            <div class="invest-summary-value profit">+₩367K</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:#15281c; border:1px solid #22c55e22; color:#cfe9d7; font-size:13px; line-height:1.5;">
+          추가 입금은 바로 실행되는 주문이 아니라, 현재 비중 기준의 추천 매수 플랜을 먼저 확인하는 흐름입니다.
+        </div>
+
+        <div class="invest-manage-actions">
+          <a href="11-holding-baseline.html" class="invest-action-btn" style="text-decoration:none;">
+            📋 보유 현황
+          </a>
+          <a href="12-topup-plan.html" class="invest-action-btn primary" style="text-decoration:none;">
+            💵 추가 입금 플랜
+          </a>
+        </div>
+      </div>
+
+      <div class="section-divider">
+        <div class="section-divider-line"></div>
+        <div class="section-divider-text">목표 비중</div>
+        <div class="section-divider-line"></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:0 20px;">
+        <div class="section-title" style="padding:0;">포트폴리오 구성</div>
+        <a href="04-weight-edit.html" class="btn btn-outline" style="width:auto; padding:8px 16px; font-size:13px; text-decoration:none;">비중 수정</a>
+      </div>
+
+      <a href="13-asset-detail.html" class="asset-item" style="text-decoration:none; color:#fff;">
+        <div class="asset-logo">📊</div>
+        <div class="asset-info">
+          <div class="asset-name">쏠리드</div>
+          <div class="asset-code">050890</div>
+        </div>
+        <div class="asset-weight">11.06%</div>
+        <div class="asset-return positive">80.63%</div>
+      </a>
+
+      <a href="13-asset-detail.html" class="asset-item" style="text-decoration:none; color:#fff;">
+        <div class="asset-logo">📊</div>
+        <div class="asset-info">
+          <div class="asset-name">삼성전자</div>
+          <div class="asset-code">005930</div>
+        </div>
+        <div class="asset-weight">10.75%</div>
+        <div class="asset-return negative">-3.23%</div>
+      </a>
+
+      <a href="13-asset-detail.html" class="asset-item" style="text-decoration:none; color:#fff;">
+        <div class="asset-logo">S</div>
+        <div class="asset-info">
+          <div class="asset-name">Sempra</div>
+          <div class="asset-code">SRE</div>
+        </div>
+        <div class="asset-weight">10.15%</div>
+        <div class="asset-return positive">29.21%</div>
+      </a>
+
+      <a href="13-asset-detail.html" class="asset-item" style="text-decoration:none; color:#fff;">
+        <div class="asset-logo">📊</div>
+        <div class="asset-info">
+          <div class="asset-name">한샘</div>
+          <div class="asset-code">009240</div>
+        </div>
+        <div class="asset-weight">9.8%</div>
+        <div class="asset-return negative">-11%</div>
+      </a>
+    </div>
+
+    <div class="bottom-nav">
+      <a href="01-home.html" class="nav-item active" style="text-decoration:none;">
+        <span class="nav-icon">📋</span>
+        <span>포트폴리오</span>
+      </a>
+      <a href="05-create-select.html" class="nav-add" style="text-decoration:none;">+</a>
+      <a href="09-mypage.html" class="nav-item" style="text-decoration:none;">
+        <span class="nav-icon">👤</span>
+        <span>마이페이지</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

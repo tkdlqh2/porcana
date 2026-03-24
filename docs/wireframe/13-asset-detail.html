@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=375, initial-scale=1.0">
+  <title>13. 종목 상세 - Porcana</title>
+  <link rel="stylesheet" href="common.css">
+</head>
+<body>
+  <a href="index.html" class="nav-link">← 목록으로</a>
+
+  <div class="screen">
+    <div class="screen-content">
+      <div class="status-bar">
+        <span>5:33</span>
+        <span>70%</span>
+      </div>
+
+      <div class="header">
+        <a href="03-portfolio-detail.html" class="back-btn" style="text-decoration:none; color:#fff;">‹</a>
+        <div class="header-title" style="flex:1; text-align:center;">종목 상세</div>
+        <div style="width:24px;"></div>
+      </div>
+
+      <!-- 종목 기본 정보 -->
+      <div class="asset-detail-header">
+        <div class="asset-detail-logo">📊</div>
+        <div class="asset-detail-name">삼성전자</div>
+        <div class="asset-detail-ticker">005930 • KRX • KRW</div>
+      </div>
+
+      <!-- 현재가 -->
+      <div class="asset-price-section">
+        <div class="asset-current-price">₩59,800</div>
+        <div class="asset-price-change negative">-₩1,200 (-1.97%) 오늘</div>
+      </div>
+
+      <!-- 차트 영역 -->
+      <div class="chart-area" style="margin:20px;">
+        <div class="chart-line"></div>
+      </div>
+
+      <!-- 자산 성격 (Personality) -->
+      <div class="personality-section">
+        <div class="section-title" style="padding:0 0 12px 0;">자산 성격</div>
+
+        <div class="personality-tags">
+          <div class="personality-tag role-core">
+            🏛️ 핵심 (CORE)
+          </div>
+          <div class="personality-tag">
+            📊 개별 주식
+          </div>
+          <div class="personality-tag role-growth">
+            🚀 성장형
+          </div>
+          <div class="personality-tag dividend">
+            💰 배당 있음
+          </div>
+        </div>
+
+        <div class="personality-description">
+          포트폴리오의 안정적 기반이 되는 종목입니다. 대형주로서 시장 변동성에 상대적으로 안정적이며, 분기 배당을 통해 현금 흐름을 제공합니다.
+        </div>
+      </div>
+
+      <!-- 위험도 -->
+      <div class="info-rows">
+        <div class="info-row">
+          <span class="info-row-label">현재 위험도</span>
+          <div class="risk-level-display">
+            <div class="risk-level-bar">
+              <div class="risk-level-dot filled level-3"></div>
+              <div class="risk-level-dot filled level-3"></div>
+              <div class="risk-level-dot filled level-3"></div>
+              <div class="risk-level-dot"></div>
+              <div class="risk-level-dot"></div>
+            </div>
+            <span style="margin-left:8px; color:#fbbf24;">3</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-row-label">섹터</span>
+          <span class="info-row-value">정보기술 (IT)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row-label">거래소</span>
+          <span class="info-row-value">한국거래소 (KRX)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row-label">통화</span>
+          <span class="info-row-value">KRW (원)</span>
+        </div>
+      </div>
+
+      <!-- 종목 설명 -->
+      <div style="padding:20px;">
+        <div class="section-title" style="padding:0 0 12px 0;">종목 설명</div>
+        <div style="font-size:14px; color:#aaa; line-height:1.6;">
+          삼성전자는 대한민국의 대표적인 전자제품 제조 기업으로, 반도체, 스마트폰, 디스플레이, 가전제품 등을 생산합니다. 글로벌 메모리 반도체 시장 1위, 스마트폰 시장 점유율 상위권을 유지하고 있습니다.
+        </div>
+      </div>
+
+      <!-- 내 메인 포트폴리오 포함 여부 -->
+      <div class="card" style="background:#1a2f1a; border:1px solid #22c55e33;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:24px;">✅</span>
+          <div>
+            <div style="font-weight:600; margin-bottom:4px;">내 포트폴리오에 포함됨</div>
+            <div style="font-size:13px; color:#888;">로로 포트폴리오 • 비중 10.75%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <a href="01-home.html" class="nav-item active" style="text-decoration:none;">
+        <span class="nav-icon">📋</span>
+        <span>포트폴리오</span>
+      </a>
+      <a href="05-create-select.html" class="nav-add" style="text-decoration:none;">+</a>
+      <a href="09-mypage.html" class="nav-item" style="text-decoration:none;">
+        <span class="nav-icon">👤</span>
+        <span>마이페이지</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

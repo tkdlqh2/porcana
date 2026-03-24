@@ -337,6 +337,9 @@ public class PortfolioService {
         // Get latest market-cap based weights
         Map<UUID, Double> latestWeights = getLatestWeights(portfolioId, assetIds);
 
+        // Get snapshot target weights
+        Map<UUID, Double> snapshotWeights = getSnapshotWeights(portfolioId, assetIds);
+
         return portfolioAssets.stream()
                 .map(pa -> {
                     Asset asset = assetMap.get(pa.getAssetId());
@@ -347,6 +350,8 @@ public class PortfolioService {
                     Double returnPct = assetReturns.getOrDefault(pa.getAssetId(), 0.0);
                     // Use latest market-cap based weight, fallback to initial weight if not available
                     Double weightPct = latestWeights.getOrDefault(pa.getAssetId(), pa.getWeightPct().doubleValue());
+                    // Snapshot target weight
+                    Double targetWeightPct = snapshotWeights.getOrDefault(pa.getAssetId(), pa.getWeightPct().doubleValue());
 
                     return PortfolioDetailResponse.PositionInfo.builder()
                             .assetId(asset.getId().toString())
@@ -355,6 +360,7 @@ public class PortfolioService {
                             .currentRiskLevel(asset.getCurrentRiskLevel())
                             .imageUrl(asset.getImageUrl())
                             .weightPct(weightPct)
+                            .targetWeightPct(targetWeightPct)
                             .returnPct(returnPct)
                             .build();
                 })
@@ -412,6 +418,35 @@ public class PortfolioService {
             // Fallback to snapshot weight (after rebalancing)
             if (snapshotWeightMap.containsKey(assetId)) {
                 weights.put(assetId, snapshotWeightMap.get(assetId).doubleValue());
+            }
+        }
+
+        return weights;
+    }
+
+    /**
+     * Get snapshot target weights for assets
+     * Returns the weights set in the latest snapshot (target/initial allocation)
+     */
+    private Map<UUID, Double> getSnapshotWeights(UUID portfolioId, Set<UUID> assetIds) {
+        Map<UUID, Double> weights = new HashMap<>();
+
+        // Get the latest snapshot
+        Optional<PortfolioSnapshot> latestSnapshotOpt = portfolioSnapshotRepository
+                .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+                        portfolioId, LocalDate.now());
+
+        if (latestSnapshotOpt.isEmpty()) {
+            return weights;
+        }
+
+        // Get snapshot assets
+        List<PortfolioSnapshotAsset> snapshotAssets = portfolioSnapshotAssetRepository
+                .findBySnapshotId(latestSnapshotOpt.get().getId());
+
+        for (PortfolioSnapshotAsset sa : snapshotAssets) {
+            if (assetIds.contains(sa.getAssetId())) {
+                weights.put(sa.getAssetId(), sa.getWeight().doubleValue());
             }
         }
 

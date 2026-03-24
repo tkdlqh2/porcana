@@ -41,9 +41,14 @@ bin/
 
 # Windows
 Thumbs.db
+nul
 
 # Application
 *.log
 *.pid
 application-local.yml
 application-prod.yml
+
+# Claude Code
+.mcp.json
+.claude/settings.local.json

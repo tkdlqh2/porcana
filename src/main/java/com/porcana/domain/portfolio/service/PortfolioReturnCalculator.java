@@ -7,8 +7,10 @@ import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepositor
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,6 +28,7 @@ public class PortfolioReturnCalculator {
 
     /**
      * 포트폴리오 전체 누적 수익률 계산
+     * 각 스냅샷 기간의 마지막 수익률만 사용하여 복리 계산
      *
      * @param portfolioId 포트폴리오 ID
      * @return 누적 수익률 (%)
@@ -38,11 +41,25 @@ public class PortfolioReturnCalculator {
             return 0.0;
         }
 
-        // Calculate cumulative return: (1 + r1) * (1 + r2) * ... - 1
+        // 스냅샷별로 그룹핑하여 각 스냅샷의 마지막 날짜 수익률만 추출
+        Map<UUID, Optional<PortfolioDailyReturn>> lastBySnapshot = returns.stream()
+                .collect(Collectors.groupingBy(
+                        PortfolioDailyReturn::getSnapshotId,
+                        Collectors.maxBy(Comparator.comparing(PortfolioDailyReturn::getReturnDate))
+                ));
+
+        // 스냅샷 기간별 수익률을 날짜순으로 정렬
+        List<PortfolioDailyReturn> periodReturns = lastBySnapshot.values().stream()
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .sorted(Comparator.comparing(PortfolioDailyReturn::getReturnDate))
+                .collect(Collectors.toList());
+
+        // 스냅샷 기간별 수익률만 복리 계산: (1 + r1) * (1 + r2) * ... - 1
         double cumulativeReturn = 1.0;
-        for (PortfolioDailyReturn dailyReturn : returns) {
-            double dailyReturnValue = dailyReturn.getReturnTotal().doubleValue() / 100.0;
-            cumulativeReturn *= (1.0 + dailyReturnValue);
+        for (PortfolioDailyReturn periodReturn : periodReturns) {
+            double periodReturnValue = periodReturn.getReturnTotal().doubleValue() / 100.0;
+            cumulativeReturn *= (1.0 + periodReturnValue);
         }
 
         return (cumulativeReturn - 1.0) * 100.0;
@@ -50,6 +67,7 @@ public class PortfolioReturnCalculator {
 
     /**
      * 자산별 누적 수익률 계산
+     * 각 스냅샷 기간의 마지막 수익률만 사용하여 복리 계산
      *
      * @param portfolioId 포트폴리오 ID
      * @param assetIds    자산 ID 목록
@@ -81,11 +99,25 @@ public class PortfolioReturnCalculator {
                                 return 0.0;
                             }
 
-                            // 누적 수익률 계산: (1 + r1) * (1 + r2) * ... - 1
+                            // 스냅샷별로 그룹핑하여 각 스냅샷의 마지막 날짜 수익률만 추출
+                            Map<UUID, Optional<SnapshotAssetDailyReturn>> lastBySnapshot = dailyReturns.stream()
+                                    .collect(Collectors.groupingBy(
+                                            SnapshotAssetDailyReturn::getSnapshotId,
+                                            Collectors.maxBy(Comparator.comparing(SnapshotAssetDailyReturn::getReturnDate))
+                                    ));
+
+                            // 스냅샷 기간별 수익률을 날짜순으로 정렬
+                            List<SnapshotAssetDailyReturn> periodReturns = lastBySnapshot.values().stream()
+                                    .filter(Optional::isPresent)
+                                    .map(Optional::get)
+                                    .sorted(Comparator.comparing(SnapshotAssetDailyReturn::getReturnDate))
+                                    .collect(Collectors.toList());
+
+                            // 스냅샷 기간별 수익률만 복리 계산: (1 + r1) * (1 + r2) * ... - 1
                             double cumulativeReturn = 1.0;
-                            for (SnapshotAssetDailyReturn dailyReturn : dailyReturns) {
-                                double dailyReturnValue = dailyReturn.getAssetReturnTotal().doubleValue() / 100.0;
-                                cumulativeReturn *= (1.0 + dailyReturnValue);
+                            for (SnapshotAssetDailyReturn periodReturn : periodReturns) {
+                                double periodReturnValue = periodReturn.getAssetReturnTotal().doubleValue() / 100.0;
+                                cumulativeReturn *= (1.0 + periodReturnValue);
                             }
 
                             return (cumulativeReturn - 1.0) * 100.0;

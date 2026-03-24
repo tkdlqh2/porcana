@@ -61,7 +61,8 @@ public class PortfolioDetailResponse {
         private final String name;
         private final Integer currentRiskLevel;  // 1-5 (1: Low, 5: High)
         private final String imageUrl;  // 로고 이미지 URL
-        private final Double weightPct;
+        private final Double weightPct;        // 현재 시가총액 기준 비중
+        private final Double targetWeightPct;  // 스냅샷 설정 비중 (목표 비중)
         private final Double returnPct;
     }
 }

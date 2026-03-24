@@ -1,0 +1,445 @@
+# Wireframe vs Backend Gap Analysis
+
+기준:
+- 와이어프레임: `docs/wireframe/*.html`
+- 실제 백엔드: `src/main/java/com/porcana/domain/**`
+- 참고 문서: `CLAUDE.md`, `.claude/skills/*`
+
+작성일:
+- 2026-03-24 (최초 작성)
+- 2026-03-24 (최신 백엔드 코드 기준 업데이트)
+
+## 한눈에 보는 결론
+
+현재 와이어프레임과 백엔드는 **대부분 일치**합니다. 최근 업데이트로 `targetWeightPct` (목표 비중) 필드가 Home/Portfolio Detail API에 추가되어 와이어프레임 요구사항을 더 잘 충족합니다.
+
+남은 불일치는 아래 3가지 축에서 존재합니다:
+
+1. 화면은 되는 것처럼 보이지만, 백엔드는 아직 데이터가 부족한 경우 (종목 상세의 description, 현재가/오늘 변동)
+2. 화면은 열려 있어 보이지만, 실제 정책상 회원 전용으로 쓰기로 정리된 경우 (직접 생성, 시드/보유현황/추가입금)
+3. 반대로 백엔드에는 이미 있는데, 와이어프레임이나 기억상 없는 기능이 들어간 경우 (deck-analysis, rebalancing-plan)
+
+이번 정리에서 확정된 정책:
+
+- 비회원은 `arena style` 포트폴리오 생성만 허용
+- 직접 종목 선택 / 자산 라이브러리 / 시드 설정 / 보유 현황 / 추가 입금은 회원 중심 플로우로 본다
+- `종목 상세 > description`은 필요하지만 지금 당장은 미구현으로 유지
+- `종목 상세 > 현재가/오늘 변동`은 배치 구조상 당장 넣기 어렵기 때문에 현시점 TODO로 남긴다
+- `종목 상세 > 포함 포트폴리오 이름`은 추가 후보
+- `top-up-plan`은 추천안을 보여주는 API로 우선 사용하고, 사용자가 그대로 하거나 일부 수정해서 집행하는 흐름을 목표로 한다
+- 포트폴리오 목록 검색은 클라이언트에서 처리
+- 컬러 모드, 로그아웃은 서버 API 없이 클라이언트 처리
+- 비중 수정 시간 제한은 와이어프레임/문구에 반영 필요
+
+특히 질문에서 예시로 든 `종목 상세 > 내 포트폴리오에 포함됨`은 실제로 백엔드에 구현되어 있습니다.
+
+- 엔드포인트: `GET /api/v1/assets/{assetId}/in-my-main-portfolio`
+- 코드 위치: `src/main/java/com/porcana/domain/asset/AssetController.java`
+- 응답 DTO: `src/main/java/com/porcana/domain/asset/dto/AssetInMainPortfolioResponse.java`
+
+즉, 이 기능은 "와이어프레임만 있고 아직 안 만든 기능"이 아니라, 현재 코드 기준으로는 이미 존재합니다.
+
+## 핵심 불일치
+
+### 1. 종목 상세 화면은 화면 요구가 API보다 큼
+
+와이어프레임 `13-asset-detail.html`은 한 화면에서 아래를 모두 보여줍니다.
+
+- 현재가
+- 오늘 변동액 / 변동률
+- 차트
+- 자산 성격
+- 위험도
+- 종목 설명
+- 내 메인 포트폴리오 포함 여부
+- 포함된 포트폴리오 이름
+
+현재 백엔드는 이 정보를 한 번에 주지 않습니다.
+
+- `GET /assets/{assetId}`
+  - 제공: 기본 정보, 위험도, personality
+  - 부족: 현재가, 오늘 변동, 포트폴리오 이름
+  - 현재 `description`은 코드상 `null` 반환
+- `GET /assets/{assetId}/chart`
+  - 제공: OHLC 차트 포인트
+- `GET /assets/{assetId}/in-my-main-portfolio`
+  - 제공: `included`, `portfolioId`, `weightPct`, `returnPct`
+  - 부족: 포트폴리오 이름
+
+추가 메모:
+- `AssetService.getAsset()`에 `description(null) // TODO`가 명시돼 있음
+- 와이어프레임은 `삼성전자 • KRX • KRW`처럼 거래소명을 보여주지만, 현재 API의 `exchange`는 사실상 `KR`/`US` 수준에 가깝습니다.
+
+결론:
+- 화면은 가능하지만, 현재 API 조합만으로는 와이어프레임 그대로 구현되지 않습니다.
+- 특히 "현재가/오늘 변동"과 "종목 설명", "포트폴리오 이름"은 추가 작업이 필요합니다.
+
+### 2. 포트폴리오 목록 검색은 서버 gap이 아니라 클라이언트 처리 항목
+
+와이어프레임 `02-portfolio-list.html`에는 검색창이 있습니다.
+
+- placeholder: `포트폴리오 검색`
+
+현재 백엔드는 포트폴리오 목록 조회만 지원합니다.
+
+- `GET /api/v1/portfolios`
+
+하지만 아래는 없습니다.
+
+- 검색 query parameter
+- 이름 기반 필터링
+- 검색 결과용 별도 API
+
+정책 정리:
+
+- 포트폴리오 개수 제한이 있으므로 서버 검색 API를 추가하지 않고 클라이언트 필터링으로 처리
+
+결론:
+- 이 항목은 백엔드 미구현 이슈가 아니라 프론트 처리 항목입니다.
+
+### 3. 포트폴리오 목록 카드의 "하위 자산 수익률"은 현재 응답과 다름
+
+와이어프레임 `02-portfolio-list.html`은 카드 안에 상위 자산 2~3개를 보여주면서 각 자산 옆에 퍼센트를 표시합니다.
+시각적으로는 개별 자산 수익률처럼 보입니다.
+
+하지만 실제 `PortfolioListResponse`의 `topAssets`는 아래만 제공합니다.
+
+- `assetId`
+- `symbol`
+- `name`
+- `imageUrl`
+- `weight`
+
+즉 현재 응답에는 개별 자산 수익률이 없습니다.
+
+결론:
+- 카드 하위 퍼센트가 "비중"이면 구현 가능
+- 카드 하위 퍼센트가 "자산별 수익률"이면 백엔드 추가가 필요
+
+### 4. 직접 생성 플로우의 게스트 허용 여부는 현재 정책상 문제 아님
+
+백엔드 기준:
+
+- `POST /api/v1/portfolios/direct`
+  - 설명상 게스트 가능
+- 하지만 자산 탐색용 API는 모두 JWT 필요
+  - `GET /api/v1/assets/library`
+  - `GET /api/v1/assets/search`
+  - `GET /api/v1/assets/{assetId}`
+  - `GET /api/v1/assets/{assetId}/chart`
+  - `GET /api/v1/assets/{assetId}/in-my-main-portfolio`
+
+정책 정리:
+
+- 비회원은 아레나 스타일 생성만 허용
+- 직접 생성 플로우는 회원 중심으로 본다
+
+결론:
+- 현재 권한 구조는 의도와 맞습니다.
+- 다만 와이어프레임이나 문구에서 직접 생성이 비회원도 가능한 것처럼 보이지 않도록 정리할 필요는 있습니다.
+
+### 5. 시드/보유현황/추가입금은 회원 전용 정책으로 본다
+
+와이어프레임:
+
+- `10-seed-setting.html`
+- `11-holding-baseline.html`
+- `12-topup-plan.html`
+
+현재 백엔드:
+
+- `HoldingBaselineController` 전체가 `@SecurityRequirement(name = "JWT")`
+- 즉 전부 회원 전용
+
+지원 API:
+
+- `PUT /portfolios/{portfolioId}/seed`
+- `GET /portfolios/{portfolioId}/holding-baseline`
+- `POST /portfolios/{portfolioId}/top-up-plan`
+- `POST /portfolios/{portfolioId}/top-up`
+- `GET /portfolios/{portfolioId}/rebalance-status`
+- `POST /portfolios/{portfolioId}/rebalancing-plan`
+
+정책 정리:
+
+- 이 기능들은 회원 전용으로 유지
+
+결론:
+- 백엔드와 정책은 맞습니다.
+- 남은 일은 와이어프레임/문구에서 회원 전용이라는 점을 더 분명히 드러내는 것입니다.
+
+### 6. "추가 입금"은 우선 plan API 중심으로 운영
+
+와이어프레임 `12-topup-plan.html` 하단 CTA:
+
+- `매수 완료 반영`
+
+화면만 보면 추천안을 그대로 승인하는 1버튼 UX처럼 보입니다.
+
+하지만 실제 실행 API는:
+
+- `POST /portfolios/{portfolioId}/top-up`
+
+그리고 요청값이 더 복잡합니다.
+
+- `additionalCash`
+- `purchases[]`
+  - `assetId`
+  - `quantity`
+  - `purchasePrice`
+- `addRemainingCashToBaseline`
+
+즉 백엔드는 "실제 체결 수량/단가 입력"을 요구합니다.
+
+정책 정리:
+
+- 당장은 `top-up-plan`을 중심으로 추천안을 보여준다
+- 사용자는 추천안대로 직접 집행하거나 일부 수정해서 집행할 수 있다
+- 실행 API는 열어두되, 현재 UI는 plan 중심으로 간다
+
+결론:
+- 지금 당장 반드시 UI를 실행 API 중심으로 바꿀 필요는 없습니다.
+- 다만 와이어프레임의 `매수 완료 반영`은 구현 범위를 앞서가므로 문구/플로우 정리가 필요합니다.
+
+### 7. 마이페이지의 일부 항목은 클라이언트 처리로 본다
+
+와이어프레임 `09-mypage.html`:
+
+- 내정보 변경
+- 컬러 모드
+- 로그아웃
+- 회원탈퇴
+
+현재 백엔드:
+
+- `GET /api/v1/me`
+- `PATCH /api/v1/me`
+- `DELETE /api/v1/me`
+
+차이:
+
+- `PATCH /me`는 실질적으로 닉네임 수정 중심
+- `컬러 모드` 관련 API 없음
+- `로그아웃` API 없음
+  - JWT 구조라면 프론트 토큰 삭제로 처리할 수는 있음
+  - 하지만 서버 기반 로그아웃 API는 현재 없음
+
+정책 정리:
+
+- 컬러 모드: 클라이언트 처리
+- 로그아웃: 클라이언트 처리
+
+결론:
+- 이 두 항목은 백엔드 gap으로 보지 않습니다.
+- 서버 관점에서 남는 것은 `내 정보`, `회원탈퇴`입니다.
+
+## 반대로, 백엔드에는 있는데 와이어프레임에 거의 안 드러나는 기능
+
+### 1. 종목 상세의 "내 메인 포트폴리오 포함 여부"
+
+이건 현재 구현되어 있습니다.
+
+- `GET /assets/{assetId}/in-my-main-portfolio`
+
+다만 응답은 아래 정도입니다.
+
+- 포함 여부
+- 메인 포트폴리오 ID
+- 비중
+- 수익률
+
+와이어프레임처럼 포트폴리오 이름까지는 안 줍니다.
+
+### 2. 포트폴리오 덱 분석
+
+현재 백엔드에는 아래가 있습니다.
+
+- `GET /portfolios/{portfolioId}/deck-analysis`
+
+와이어프레임에는 이 기능이 별도 화면으로 드러나지 않습니다.
+
+즉 현재 구현 범위는 와이어프레임 MVP보다 이미 조금 더 나가 있습니다.
+
+### 3. 리밸런싱 상태 / 전체 리밸런싱 플랜
+
+현재 백엔드에는 아래가 있습니다.
+
+- `GET /portfolios/{portfolioId}/rebalance-status`
+- `POST /portfolios/{portfolioId}/rebalancing-plan`
+
+와이어프레임은 `보유 현황`, `추가 입금`까지만 직접적으로 보여주고, 전체 매수/매도 리밸런싱 UI는 아직 없습니다.
+
+## 화면별 정리
+
+### 01. 홈
+
+**완전 일치**
+
+- 백엔드 `GET /home` 있음
+- 메인 포트폴리오, 차트, 주요 자산 제공 가능
+- `PositionInfo`에 `weightPct` (현재 비중), `targetWeightPct` (목표 비중), `returnPct` (수익률) 모두 제공
+
+주의:
+- 와이어프레임 상단 우측 메뉴 아이콘은 백엔드 이슈 아님
+
+### 02. 포트폴리오 목록
+
+부분 불일치
+
+- 검색창: 클라이언트 필터링으로 처리
+- 카드 하위 자산 퍼센트: 현재는 비중 기준으로만 안정적 구현 가능
+
+### 03-a / 03-b. 포트폴리오 상세
+
+**대체로 일치**
+
+- 상세 API 자체는 있음
+- `PositionInfo`에 `weightPct` (현재 비중), `targetWeightPct` (목표 비중), `returnPct` (수익률) 모두 제공
+- `averageRiskLevel` (평균 위험도), `diversityLevel` (분산도) 제공
+- 투자 관리 카드에 필요한 `원금`, `평가금액`, `수익`, `잔여현금`은 별도 baseline API를 추가 호출해야 함
+  - `GET /portfolios/{portfolioId}/holding-baseline` → `seedMoney`, `totalValue`, `cashAmount` 제공
+
+### 04. 비중 수정
+
+대체로 맞습니다.
+
+- `PUT /portfolios/{portfolioId}/weights`
+
+주의:
+- 코드상 화-토 07:00~07:45 KST에는 비중 수정이 막힘
+- 와이어프레임에는 이 제한이 드러나지 않음
+- 이건 실제 반영 필요 항목
+
+### 05. 생성 방식 선택
+
+대체로 맞습니다.
+
+- 아레나 / 직접 생성 모두 백엔드 존재
+
+주의:
+- 현재 정책상 비회원은 아레나 중심이므로 큰 문제는 아님
+- 직접 생성이 회원 중심 플로우라는 점은 화면에서 더 명확히 표현하는 편이 좋음
+
+### 06. 종목 라이브러리
+
+부분 불일치
+
+- 라이브러리 API 자체는 있음
+- 시장/타입/위험도/정렬/검색 지원
+- 게스트 접근 불가는 현재 정책상 허용된 제약
+
+### 07. 비중 설정
+
+부분 불일치
+
+- 직접 생성 API는 가능
+- 다만 화면의 "예상 위험도 / 시장 분포 / 자산 유형" 요약을 위한 전용 미리보기 API는 없음
+- 프론트 계산 또는 추가 API 필요
+
+### 08. 이름 입력
+
+흐름상 불일치
+
+- 와이어프레임은 마지막에 이름 입력
+- 실제 `POST /portfolios/direct`는 `name`이 필수
+
+즉:
+- 프론트에서 마지막 단계까지 로컬 상태로 들고 있다가 최종 요청 시 이름 포함 전송하면 구현 가능
+- 백엔드 변경이 꼭 필요한 건 아니지만, 화면 플로우와 API 계약이 바로 대응되지는 않음
+
+### 09. 마이페이지
+
+부분 불일치
+
+- 회원탈퇴: 있음
+- 내정보 조회/수정: 있음
+- 컬러 모드: 클라이언트 처리
+- 로그아웃: 클라이언트 처리
+
+### 10. 시드 설정
+
+대체로 맞습니다.
+
+- `PUT /seed`로 수량 계산 가능
+- `baseCurrency`도 지원
+
+주의:
+- 회원 전용
+
+### 11. 보유 현황
+
+**완전 일치**
+
+- `GET /holding-baseline`로 모든 요소 구성 가능
+- `BaselineResponse` 제공 항목:
+  - `seedMoney` (원금)
+  - `totalValue` (현재 시가평가 총액)
+  - `cashAmount` (잔여 현금)
+  - `items[].quantity`, `items[].avgPrice` (수량, 평단가)
+  - `items[].targetWeightPct`, `items[].currentPrice`, `items[].currentValue`
+
+주의:
+- 화면의 수익/손실은 `seedMoney`와 `totalValue` 차이로 계산 가능 (프론트 계산)
+
+### 12. 추가 입금
+
+**대체로 일치**
+
+- `POST /portfolios/{portfolioId}/top-up-plan` API 제공
+- `TopUpPlanResponse` 제공 항목:
+  - `currentTotalValue`, `newTotalValue` (현재 총액 → 추가 후 총액)
+  - `recommendations[].targetWeightPct`, `currentWeightPct`, `weightAfterBuy`
+  - `recommendations[].recommendedQuantity`, `recommendedAmount`, `reason`
+  - `remainingCash` (남는 현금)
+- 현재 제품 방향은 우선 `top-up-plan` 중심
+- 와이어프레임의 완료 CTA 문구는 추후 정리 필요
+
+### 13. 종목 상세
+
+불일치가 가장 큼
+
+- personality: 있음
+- chart: 별도 API로 있음
+- 포함 여부: 있음
+- 종목 설명: 현재 없음
+- 현재가/오늘 변동: detail API에 없음
+- 포함 포트폴리오 이름: 없음
+
+## 정리 우선순위 제안
+
+우선순위 높음:
+
+1. 종목 상세 API 정리
+   - `description` 실제 제공 여부 결정
+   - 현재가/오늘 변동은 당장 보류
+   - 포함 포트폴리오 이름은 추가 후보
+
+2. 비중 수정 시간 제한을 화면/문구에 반영
+
+3. 추가 입금 와이어프레임 정리
+   - 우선 `top-up-plan` 중심으로 이해되게 수정
+   - `매수 완료 반영` 같은 확정형 문구는 재검토
+
+우선순위 중간:
+
+4. 종목 상세에서 포트폴리오 이름 노출 추가
+5. 직접 생성 플로우가 회원 중심임을 와이어프레임에 명시
+
+## 빠른 결론
+
+가장 중요한 포인트만 다시 적으면:
+
+**구현 완료 (와이어프레임과 일치):**
+- `홈` - 메인 포트폴리오, 차트, 자산별 비중/목표비중/수익률 모두 제공
+- `포트폴리오 상세` - 평균 위험도, 분산도, 자산별 목표비중/현재비중/수익률 제공
+- `보유 현황` - 원금, 평가금액, 잔여현금, 종목별 수량/평단가/현재가 제공
+- `추가 입금` - 추천 종목, 추천 수량/금액, 비중 변화, 추천 이유 제공
+- `종목 상세 > 내 포트폴리오에 포함됨` - 현재 백엔드에 이미 있습니다
+
+**아직 부족한 부분:**
+- 종목 상세의 `설명`, `포트폴리오 이름`은 아직 부족하고, `현재가/오늘 변동`은 당장 넣기 어렵습니다
+- 비중 수정 시간 제한은 실제 정책이므로 와이어프레임에도 반영해야 합니다
+
+**정책 관련:**
+- 비회원 관련 권한 구조는 현재 의도와 대체로 맞습니다. 비회원은 아레나 중심으로 보면 됩니다
+- `추가 입금`은 우선 `top-up-plan` 중심으로 이해해야 하고, 현재 와이어프레임의 완료형 문구는 정리가 필요합니다
