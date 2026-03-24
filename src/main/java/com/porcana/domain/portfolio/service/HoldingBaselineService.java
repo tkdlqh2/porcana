@@ -7,6 +7,7 @@ import com.porcana.domain.asset.entity.AssetPrice;
 import com.porcana.domain.exchangerate.ExchangeRateRepository;
 import com.porcana.domain.exchangerate.entity.CurrencyCode;
 import com.porcana.domain.exchangerate.entity.ExchangeRate;
+import com.porcana.domain.portfolio.dto.PortfolioDetailResponse;
 import com.porcana.domain.portfolio.dto.baseline.*;
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioAsset;
@@ -854,4 +855,72 @@ public class HoldingBaselineService {
             BigDecimal currentPrice,
             BigDecimal priceInBaseCurrency
     ) {}
+
+    /**
+     * Baseline 요약 정보 조회 (포트폴리오 상세용)
+     * 소유권 검증 없이 내부 사용 목적
+     *
+     * @param portfolioId 포트폴리오 ID
+     * @return BaselineSummary (없으면 null)
+     */
+    @Transactional(readOnly = true)
+    public PortfolioDetailResponse.BaselineSummary getBaselineSummaryInternal(UUID portfolioId) {
+        Optional<PortfolioHoldingBaseline> baselineOpt = baselineRepository.findByPortfolioIdWithItems(portfolioId);
+
+        if (baselineOpt.isEmpty()) {
+            return null;
+        }
+
+        PortfolioHoldingBaseline baseline = baselineOpt.get();
+        BigDecimal usdKrw = getLatestExchangeRate();
+        PortfolioHoldingBaseline.Currency baseCurrency = baseline.getBaseCurrency();
+
+        // 자산 정보 조회
+        List<UUID> assetIds = baseline.getItems().stream()
+                .map(PortfolioHoldingBaselineItem::getAssetId)
+                .toList();
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+                .collect(Collectors.toMap(Asset::getId, a -> a));
+
+        // 최신 가격 배치 조회
+        Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(assetIds);
+
+        // 계산
+        BigDecimal cashAmount = baseline.getCashAmount() != null ? baseline.getCashAmount() : BigDecimal.ZERO;
+        BigDecimal totalValue = cashAmount;
+        BigDecimal seedMoney = cashAmount;
+
+        for (PortfolioHoldingBaselineItem item : baseline.getItems()) {
+            Asset asset = assetMap.get(item.getAssetId());
+            if (asset == null) continue;
+
+            BigDecimal currentPrice = latestPrices.get(asset.getId());
+            if (currentPrice == null) continue;
+
+            BigDecimal priceInBaseCurrency = convertPriceToBaseCurrency(asset, currentPrice, baseCurrency, usdKrw);
+            BigDecimal currentValue = priceInBaseCurrency.multiply(item.getQuantity());
+            totalValue = totalValue.add(currentValue);
+
+            // 원본 시드 복원
+            BigDecimal avgPriceInBaseCurrency = convertPriceToBaseCurrency(asset, item.getAvgPrice(), baseCurrency, usdKrw);
+            seedMoney = seedMoney.add(avgPriceInBaseCurrency.multiply(item.getQuantity()));
+        }
+
+        // 수익 계산
+        BigDecimal profitAmount = totalValue.subtract(seedMoney);
+        Double profitPct = seedMoney.compareTo(BigDecimal.ZERO) > 0
+                ? profitAmount.multiply(BigDecimal.valueOf(100))
+                    .divide(seedMoney, 2, RoundingMode.HALF_UP)
+                    .doubleValue()
+                : 0.0;
+
+        return PortfolioDetailResponse.BaselineSummary.builder()
+                .seedMoney(seedMoney.setScale(0, RoundingMode.HALF_UP))
+                .totalValue(totalValue.setScale(0, RoundingMode.HALF_UP))
+                .cashAmount(cashAmount.setScale(0, RoundingMode.HALF_UP))
+                .profitAmount(profitAmount.setScale(0, RoundingMode.HALF_UP))
+                .profitPct(profitPct)
+                .baseCurrency(baseCurrency.name())
+                .build();
+    }
 }
