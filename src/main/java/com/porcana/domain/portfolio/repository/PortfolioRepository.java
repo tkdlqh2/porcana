@@ -57,6 +57,11 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
     List<Portfolio> findByGuestSessionIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID guestSessionId);
 
     /**
+     * Find active and finished portfolios for a guest session (exclude DRAFT and deleted)
+     */
+    List<Portfolio> findByGuestSessionIdAndStatusNotAndDeletedAtIsNullOrderByCreatedAtDesc(UUID guestSessionId, PortfolioStatus status);
+
+    /**
      * Find portfolio by ID and guest session ID (ownership validation, excluding deleted)
      */
     Optional<Portfolio> findByIdAndGuestSessionIdAndDeletedAtIsNull(UUID id, UUID guestSessionId);

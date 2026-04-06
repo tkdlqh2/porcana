@@ -60,20 +60,21 @@ public class PortfolioService {
 
     /**
      * Get portfolios for user or guest session
+     * Excludes DRAFT status portfolios (Arena in progress)
      */
     public List<PortfolioListResponse> getPortfolios(UUID userId, UUID guestSessionId) {
         List<Portfolio> portfolios;
         UUID mainPortfolioId = null;
 
         if (userId != null) {
-            // Authenticated user
+            // Authenticated user - exclude DRAFT status
             User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            portfolios = portfolioRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
+            portfolios = portfolioRepository.findByUserIdAndStatusNotAndDeletedAtIsNullOrderByCreatedAtDesc(userId, PortfolioStatus.DRAFT);
             mainPortfolioId = user.getMainPortfolioId();
         } else if (guestSessionId != null) {
-            // Guest session
-            portfolios = portfolioRepository.findByGuestSessionIdAndDeletedAtIsNullOrderByCreatedAtDesc(guestSessionId);
+            // Guest session - exclude DRAFT status
+            portfolios = portfolioRepository.findByGuestSessionIdAndStatusNotAndDeletedAtIsNullOrderByCreatedAtDesc(guestSessionId, PortfolioStatus.DRAFT);
         } else {
             throw new IllegalArgumentException("Either userId or guestSessionId must be provided");
         }
