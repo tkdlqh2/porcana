@@ -63,12 +63,17 @@ public class JwtTokenProvider {
     }
 
     public String getRoleFromToken(String token) {
-        return Jwts.parser()
+        String role = Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload()
                 .get("role", String.class);
+
+        if (role == null || role.isBlank()) {
+            throw new JwtException("Role claim is missing or empty in token");
+        }
+        return role;
     }
 
     public boolean validateToken(String token) {

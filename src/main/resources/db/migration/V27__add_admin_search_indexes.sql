@@ -1,31 +1,51 @@
 -- Admin API Performance Indexes
--- Purpose: Optimize admin search and list queries with case-insensitive search
+-- Purpose: Optimize admin search and list queries with case-insensitive CONTAINS search
 
 -- ========================================
--- User Search Indexes
+-- Enable pg_trgm Extension for LIKE '%keyword%' Support
+-- ========================================
+-- pg_trgm provides GIN indexes that support contains patterns (%keyword%)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- ========================================
+-- User Search Indexes (GIN for contains search)
 -- ========================================
 
--- Functional index for case-insensitive email search (filtered by deleted_at)
-CREATE INDEX idx_users_email_lower ON users(LOWER(email)) WHERE deleted_at IS NULL;
+-- GIN trigram index for case-insensitive email contains search
+CREATE INDEX idx_users_email_trgm ON users USING GIN (LOWER(email) gin_trgm_ops);
 
--- Functional index for case-insensitive nickname search (filtered by deleted_at)
-CREATE INDEX idx_users_nickname_lower ON users(LOWER(nickname)) WHERE deleted_at IS NULL;
+-- GIN trigram index for case-insensitive nickname contains search
+CREATE INDEX idx_users_nickname_trgm ON users USING GIN (LOWER(nickname) gin_trgm_ops);
 
 -- Composite index for role filter with deleted_at (replace existing role index)
 DROP INDEX IF EXISTS idx_users_role;
 CREATE INDEX idx_users_role_deleted ON users(role, deleted_at);
 
 -- ========================================
--- Portfolio Search Indexes
+-- Portfolio Search Indexes (GIN for contains search)
 -- ========================================
 
--- Functional index for case-insensitive portfolio name search
-CREATE INDEX idx_portfolios_name_lower ON portfolios(LOWER(name)) WHERE deleted_at IS NULL;
+-- GIN trigram index for case-insensitive portfolio name contains search
+CREATE INDEX idx_portfolios_name_trgm ON portfolios USING GIN (LOWER(name) gin_trgm_ops);
 
 -- ========================================
--- Asset Search Indexes
+-- Asset Search Indexes (GIN for contains search)
 -- ========================================
 
--- Functional indexes for case-insensitive asset search (admin API)
-CREATE INDEX idx_assets_symbol_lower ON assets(LOWER(symbol));
-CREATE INDEX idx_assets_name_lower ON assets(LOWER(name));
+-- GIN trigram indexes for case-insensitive asset search (admin API)
+CREATE INDEX idx_assets_symbol_trgm ON assets USING GIN (LOWER(symbol) gin_trgm_ops);
+CREATE INDEX idx_assets_name_trgm ON assets USING GIN (LOWER(name) gin_trgm_ops);
+
+-- ========================================
+-- Notes
+-- ========================================
+-- pg_trgm GIN indexes support:
+--   - LIKE '%keyword%' (contains)
+--   - LIKE 'keyword%' (prefix)
+--   - ILIKE patterns (case-insensitive)
+--   - Similarity searches
+--
+-- Trade-offs:
+--   - Slower write operations (index updates)
+--   - Larger index size
+--   - Faster contains searches (10-100x improvement)
