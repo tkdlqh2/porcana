@@ -49,8 +49,8 @@ public class AdminService {
      */
     @Transactional
     public AdminUserDetailResponse createAdmin(CreateAdminRequest request) {
-        // Check if email is already registered
-        if (userRepository.existsByEmail(request.email())) {
+        // Check if email is already registered (only check non-deleted users)
+        if (userRepository.existsByEmailAndDeletedAtIsNull(request.email())) {
             throw new IllegalArgumentException("Email already exists: " + request.email());
         }
 
