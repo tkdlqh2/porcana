@@ -82,4 +82,12 @@ public interface ArenaSessionRepository extends JpaRepository<ArenaSession, UUID
      * Returns the number of deleted sessions
      */
     int deleteByUserId(UUID userId);
+
+    // ===== Admin API Support =====
+
+    /**
+     * Count arena sessions for a user
+     * Used for admin user detail view
+     */
+    long countByUserId(UUID userId);
 }

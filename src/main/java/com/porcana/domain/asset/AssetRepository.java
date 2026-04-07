@@ -2,7 +2,10 @@ package com.porcana.domain.asset;
 
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.Sector;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetRepositoryCustom {
+public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetRepositoryCustom, JpaSpecificationExecutor<Asset> {
 
     /**
      * Find asset by symbol and market (natural key)
@@ -240,4 +243,18 @@ public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetReposi
             @Param("excludeIds") UUID[] excludeIds,
             @Param("limit") int limit
     );
+
+    // ========================================
+    // Admin API Support
+    // ========================================
+
+    /**
+     * Find all assets with pagination for admin
+     */
+    Page<Asset> findAll(Pageable pageable);
+
+    /**
+     * Find assets by market with pagination for admin
+     */
+    Page<Asset> findByMarket(Asset.Market market, Pageable pageable);
 }
