@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>포트폴리오 목록 - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item active">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">포트폴리오 관리</div>
+          <div class="page-subtitle">전체 포트폴리오 현황을 조회합니다</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card">
+          <div class="stat-card-label">전체 포트폴리오</div>
+          <div class="stat-card-value">1,523</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">ACTIVE</div>
+          <div class="stat-card-value" style="color:#22c55e;">856</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">DRAFT</div>
+          <div class="stat-card-value" style="color:#fbbf24;">412</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">FINISHED</div>
+          <div class="stat-card-value" style="color:#94a3b8;">255</div>
+        </div>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="toolbar">
+        <input type="text" class="search-input" placeholder="포트폴리오 이름으로 검색">
+        <select class="filter-select">
+          <option value="">전체 상태</option>
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="DRAFT">DRAFT</option>
+          <option value="FINISHED">FINISHED</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>포트폴리오</th>
+              <th>소유자</th>
+              <th>상태</th>
+              <th>종목 수</th>
+              <th>수익률</th>
+              <th>시작일</th>
+              <th>생성일</th>
+              <th>액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <a href="06-portfolio-detail.html" class="table-link">로로</a>
+                  <span style="color:#fbbf24;font-size:14px;">⭐</span>
+                </div>
+              </td>
+              <td>
+                <a href="03-user-detail.html" class="table-link">김투자</a>
+              </td>
+              <td><span class="badge badge-active">ACTIVE</span></td>
+              <td>10</td>
+              <td class="return-positive">+3.67%</td>
+              <td>2024-01-15</td>
+              <td>2024-01-15</td>
+              <td>
+                <button class="btn btn-outline btn-sm">상세</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="06-portfolio-detail.html" class="table-link">테크 포커스</a>
+              </td>
+              <td>
+                <a href="03-user-detail.html" class="table-link">이주식</a>
+              </td>
+              <td><span class="badge badge-active">ACTIVE</span></td>
+              <td>8</td>
+              <td class="return-negative">-1.24%</td>
+              <td>2024-01-16</td>
+              <td>2024-01-16</td>
+              <td>
+                <button class="btn btn-outline btn-sm">상세</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="06-portfolio-detail.html" class="table-link">배당 성장</a>
+              </td>
+              <td>
+                <a href="03-user-detail.html" class="table-link">박배당</a>
+              </td>
+              <td><span class="badge badge-draft">DRAFT</span></td>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+              <td>2024-01-14</td>
+              <td>
+                <button class="btn btn-outline btn-sm">상세</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="06-portfolio-detail.html" class="table-link">글로벌 인덱스</a>
+              </td>
+              <td>
+                <a href="03-user-detail.html" class="table-link">최성장</a>
+              </td>
+              <td><span class="badge badge-active">ACTIVE</span></td>
+              <td>12</td>
+              <td class="return-positive">+7.82%</td>
+              <td>2024-01-10</td>
+              <td>2024-01-10</td>
+              <td>
+                <button class="btn btn-outline btn-sm">상세</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="06-portfolio-detail.html" class="table-link">안전 자산</a>
+              </td>
+              <td>
+                <a href="03-user-detail.html" class="table-link">정밸런스</a>
+              </td>
+              <td><span class="badge badge-finished">FINISHED</span></td>
+              <td>6</td>
+              <td class="return-positive">+2.15%</td>
+              <td>2023-12-01</td>
+              <td>2023-12-01</td>
+              <td>
+                <button class="btn btn-outline btn-sm">상세</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="06-portfolio-detail.html" class="table-link">AI 투자</a>
+              </td>
+              <td>
+                <span style="color:#888;">게스트</span>
+              </td>
+              <td><span class="badge badge-draft">DRAFT</span></td>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+              <td>2024-01-18</td>
+              <td>
+                <button class="btn btn-outline btn-sm">상세</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <div class="pagination-info">
+            총 1,523개 중 1-20 표시
+          </div>
+          <div class="pagination-buttons">
+            <button class="pagination-btn" disabled>이전</button>
+            <button class="pagination-btn active">1</button>
+            <button class="pagination-btn">2</button>
+            <button class="pagination-btn">3</button>
+            <button class="pagination-btn">...</button>
+            <button class="pagination-btn">77</button>
+            <button class="pagination-btn">다음</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

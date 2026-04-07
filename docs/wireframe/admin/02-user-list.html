@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원 목록 - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item active">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">회원 관리</div>
+          <div class="page-subtitle">등록된 회원 목록을 조회하고 관리합니다</div>
+        </div>
+        <button class="btn btn-primary" onclick="showCreateAdminModal()">
+          <span>+</span> 관리자 추가
+        </button>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="toolbar">
+        <input type="text" class="search-input" placeholder="이메일 또는 닉네임으로 검색">
+        <select class="filter-select">
+          <option value="">전체 역할</option>
+          <option value="USER">USER</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>회원</th>
+              <th>이메일</th>
+              <th>역할</th>
+              <th>포트폴리오</th>
+              <th>아레나</th>
+              <th>가입일</th>
+              <th>액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="user-avatar">관</div>
+                  <a href="03-user-detail.html" class="table-link">관리자</a>
+                </div>
+              </td>
+              <td>admin@porcana.io</td>
+              <td><span class="badge badge-admin">ADMIN</span></td>
+              <td>-</td>
+              <td>-</td>
+              <td>2024-01-01</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm">상세</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="user-avatar">김</div>
+                  <a href="03-user-detail.html" class="table-link">김투자</a>
+                </div>
+              </td>
+              <td>kim@email.com</td>
+              <td><span class="badge badge-user">USER</span></td>
+              <td>3</td>
+              <td>5</td>
+              <td>2024-01-15</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm">상세</button>
+                  <button class="btn btn-danger btn-sm">탈퇴</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="user-avatar">이</div>
+                  <a href="03-user-detail.html" class="table-link">이주식</a>
+                </div>
+              </td>
+              <td>lee@email.com</td>
+              <td><span class="badge badge-user">USER</span></td>
+              <td>2</td>
+              <td>3</td>
+              <td>2024-01-14</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm">상세</button>
+                  <button class="btn btn-danger btn-sm">탈퇴</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="user-avatar">박</div>
+                  <a href="03-user-detail.html" class="table-link">박배당</a>
+                </div>
+              </td>
+              <td>park@email.com</td>
+              <td><span class="badge badge-user">USER</span></td>
+              <td>1</td>
+              <td>1</td>
+              <td>2024-01-14</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm">상세</button>
+                  <button class="btn btn-danger btn-sm">탈퇴</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="user-avatar">최</div>
+                  <a href="03-user-detail.html" class="table-link">최성장</a>
+                </div>
+              </td>
+              <td>choi@email.com</td>
+              <td><span class="badge badge-user">USER</span></td>
+              <td>4</td>
+              <td>8</td>
+              <td>2024-01-12</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm">상세</button>
+                  <button class="btn btn-danger btn-sm">탈퇴</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="user-avatar">정</div>
+                  <a href="03-user-detail.html" class="table-link">정밸런스</a>
+                </div>
+              </td>
+              <td>jung@email.com</td>
+              <td><span class="badge badge-user">USER</span></td>
+              <td>2</td>
+              <td>2</td>
+              <td>2024-01-10</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm">상세</button>
+                  <button class="btn btn-danger btn-sm">탈퇴</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <div class="pagination-info">
+            총 1,234명 중 1-20 표시
+          </div>
+          <div class="pagination-buttons">
+            <button class="pagination-btn" disabled>이전</button>
+            <button class="pagination-btn active">1</button>
+            <button class="pagination-btn">2</button>
+            <button class="pagination-btn">3</button>
+            <button class="pagination-btn">...</button>
+            <button class="pagination-btn">62</button>
+            <button class="pagination-btn">다음</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Create Admin Modal -->
+  <div class="modal-backdrop" id="createAdminModal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">새 관리자 추가</div>
+        <button class="modal-close" onclick="hideCreateAdminModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">이메일</label>
+        <input type="email" class="form-input" placeholder="admin@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">닉네임</label>
+        <input type="text" class="form-input" placeholder="관리자 닉네임">
+      </div>
+      <div class="form-group">
+        <label class="form-label">비밀번호</label>
+        <input type="password" class="form-input" placeholder="8자 이상">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="hideCreateAdminModal()">취소</button>
+        <button class="btn btn-primary">관리자 생성</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showCreateAdminModal() {
+      document.getElementById('createAdminModal').style.display = 'flex';
+    }
+    function hideCreateAdminModal() {
+      document.getElementById('createAdminModal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

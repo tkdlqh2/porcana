@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Porcana</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item active">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">대시보드</div>
+          <div class="page-subtitle">Porcana 관리자 현황</div>
+        </div>
+        <button class="btn btn-primary">
+          <span>+</span> 관리자 추가
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-label">총 회원 수</div>
+          <div class="stat-card-value">1,234</div>
+          <div class="stat-card-change positive">+12% 이번 주</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">활성 포트폴리오</div>
+          <div class="stat-card-value">856</div>
+          <div class="stat-card-change positive">+8% 이번 주</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">등록 종목</div>
+          <div class="stat-card-value">3,421</div>
+          <div class="stat-card-change">KR: 2,100 / US: 1,321</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">아레나 완료</div>
+          <div class="stat-card-value">523</div>
+          <div class="stat-card-change positive">+15% 이번 주</div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="detail-grid">
+        <div class="card">
+          <div class="card-title">
+            <span>👥</span> 최근 가입 회원
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>회원</th>
+                <th>가입일</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="user-avatar">김</div>
+                    <div>
+                      <div>김투자</div>
+                      <div style="font-size:12px;color:#666;">kim@email.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td>2024-01-15</td>
+                <td><span class="badge badge-user">USER</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="user-avatar">이</div>
+                    <div>
+                      <div>이주식</div>
+                      <div style="font-size:12px;color:#666;">lee@email.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td>2024-01-14</td>
+                <td><span class="badge badge-user">USER</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="user-avatar">박</div>
+                    <div>
+                      <div>박배당</div>
+                      <div style="font-size:12px;color:#666;">park@email.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td>2024-01-14</td>
+                <td><span class="badge badge-user">USER</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="padding:12px;text-align:center;">
+            <a href="02-user-list.html" class="table-link">전체 보기 →</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>💼</span> 최근 생성된 포트폴리오
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>포트폴리오</th>
+                <th>회원</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <a href="06-portfolio-detail.html" class="table-link">로로</a>
+                </td>
+                <td>김투자</td>
+                <td><span class="badge badge-active">ACTIVE</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <a href="06-portfolio-detail.html" class="table-link">테크 포커스</a>
+                </td>
+                <td>이주식</td>
+                <td><span class="badge badge-active">ACTIVE</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <a href="06-portfolio-detail.html" class="table-link">배당 성장</a>
+                </td>
+                <td>박배당</td>
+                <td><span class="badge badge-draft">DRAFT</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="padding:12px;text-align:center;">
+            <a href="05-portfolio-list.html" class="table-link">전체 보기 →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Status -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚙️</span> 배치 작업 현황
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>작업명</th>
+              <th>마지막 실행</th>
+              <th>상태</th>
+              <th>소요 시간</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>krDailyPriceJob</td>
+              <td>2024-01-15 07:00</td>
+              <td><span class="badge badge-active">성공</span></td>
+              <td>2분 34초</td>
+            </tr>
+            <tr>
+              <td>usDailyPriceJob</td>
+              <td>2024-01-15 07:05</td>
+              <td><span class="badge badge-active">성공</span></td>
+              <td>3분 12초</td>
+            </tr>
+            <tr>
+              <td>portfolioPerformanceJob</td>
+              <td>2024-01-15 07:30</td>
+              <td><span class="badge badge-active">성공</span></td>
+              <td>5분 48초</td>
+            </tr>
+            <tr>
+              <td>exchangeRateJob</td>
+              <td>2024-01-15 07:15</td>
+              <td><span class="badge badge-active">성공</span></td>
+              <td>12초</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

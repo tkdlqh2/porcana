@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>종목 관리 - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item active">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">종목 관리</div>
+          <div class="page-subtitle">등록된 종목의 이미지 및 배당 정보를 수정합니다</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card">
+          <div class="stat-card-label">전체 종목</div>
+          <div class="stat-card-value">3,421</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">한국 (KR)</div>
+          <div class="stat-card-value">2,100</div>
+          <div class="stat-card-change">주식 1,800 / ETF 300</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">미국 (US)</div>
+          <div class="stat-card-value">1,321</div>
+          <div class="stat-card-change">주식 1,000 / ETF 321</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">활성 종목</div>
+          <div class="stat-card-value">3,200</div>
+        </div>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="toolbar">
+        <input type="text" class="search-input" placeholder="심볼 또는 종목명으로 검색">
+        <select class="filter-select">
+          <option value="">전체 시장</option>
+          <option value="KR">한국 (KR)</option>
+          <option value="US">미국 (US)</option>
+        </select>
+        <select class="filter-select">
+          <option value="">전체 타입</option>
+          <option value="STOCK">주식</option>
+          <option value="ETF">ETF</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>종목</th>
+              <th>시장</th>
+              <th>타입</th>
+              <th>섹터/클래스</th>
+              <th>위험도</th>
+              <th>활성</th>
+              <th>이미지</th>
+              <th>배당</th>
+              <th>액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">A</div>
+                  <div>
+                    <div>Apple Inc.</div>
+                    <div style="font-size:12px;color:#666;">AAPL</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-us">US</span></td>
+              <td>STOCK</td>
+              <td>정보기술</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td><span class="badge badge-active">활성</span></td>
+              <td style="color:#22c55e;">있음</td>
+              <td>0.5%</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm" onclick="showEditModal('AAPL')">수정</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">삼</div>
+                  <div>
+                    <div>삼성전자</div>
+                    <div style="font-size:12px;color:#666;">005930</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-kr">KR</span></td>
+              <td>STOCK</td>
+              <td>정보기술</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td><span class="badge badge-active">활성</span></td>
+              <td style="color:#888;">없음</td>
+              <td>2.1%</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm" onclick="showEditModal('005930')">수정</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">S</div>
+                  <div>
+                    <div>SPDR S&P 500 ETF</div>
+                    <div style="font-size:12px;color:#666;">SPY</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-us">US</span></td>
+              <td>ETF</td>
+              <td>EQUITY_INDEX</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td><span class="badge badge-active">활성</span></td>
+              <td style="color:#22c55e;">있음</td>
+              <td>1.3%</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm" onclick="showEditModal('SPY')">수정</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">N</div>
+                  <div>
+                    <div>NVIDIA Corporation</div>
+                    <div style="font-size:12px;color:#666;">NVDA</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-us">US</span></td>
+              <td>STOCK</td>
+              <td>정보기술</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td><span class="badge badge-active">활성</span></td>
+              <td style="color:#22c55e;">있음</td>
+              <td>0.02%</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm" onclick="showEditModal('NVDA')">수정</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">K</div>
+                  <div>
+                    <div>KODEX 200</div>
+                    <div style="font-size:12px;color:#666;">069500</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-kr">KR</span></td>
+              <td>ETF</td>
+              <td>EQUITY_INDEX</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td><span class="badge badge-active">활성</span></td>
+              <td style="color:#888;">없음</td>
+              <td>1.8%</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm" onclick="showEditModal('069500')">수정</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <div class="pagination-info">
+            총 3,421개 중 1-20 표시
+          </div>
+          <div class="pagination-buttons">
+            <button class="pagination-btn" disabled>이전</button>
+            <button class="pagination-btn active">1</button>
+            <button class="pagination-btn">2</button>
+            <button class="pagination-btn">3</button>
+            <button class="pagination-btn">...</button>
+            <button class="pagination-btn">172</button>
+            <button class="pagination-btn">다음</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Edit Asset Modal -->
+  <div class="modal-backdrop" id="editAssetModal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">종목 정보 수정</div>
+        <button class="modal-close" onclick="hideEditModal()">&times;</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:16px;background:#111;border-radius:8px;">
+        <div class="asset-logo-sm" style="width:48px;height:48px;font-size:16px;">A</div>
+        <div>
+          <div style="font-weight:600;">Apple Inc.</div>
+          <div style="font-size:13px;color:#888;">AAPL · US · STOCK</div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;color:#888;margin-bottom:12px;border-bottom:1px solid #333;padding-bottom:8px;">이미지 설정</div>
+      <div class="form-group">
+        <label class="form-label">이미지 URL</label>
+        <input type="text" class="form-input" placeholder="https://example.com/logo.png" value="https://financialmodelingprep.com/image-stock/AAPL.png">
+      </div>
+
+      <div style="font-size:13px;color:#888;margin-bottom:12px;margin-top:24px;border-bottom:1px solid #333;padding-bottom:8px;">배당 정보</div>
+      <div class="form-group">
+        <label class="form-label">배당 수익률 (%)</label>
+        <input type="number" class="form-input" placeholder="0.00" value="0.50" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">연간 배당금 ($)</label>
+        <input type="number" class="form-input" placeholder="0.00" value="0.96" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">배당 주기</label>
+        <select class="form-input">
+          <option value="">선택 안함</option>
+          <option value="MONTHLY">매월</option>
+          <option value="QUARTERLY" selected>분기별</option>
+          <option value="SEMI_ANNUALLY">반기별</option>
+          <option value="ANNUALLY">연간</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="hideEditModal()">취소</button>
+        <button class="btn btn-primary">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showEditModal(symbol) {
+      document.getElementById('editAssetModal').style.display = 'flex';
+    }
+    function hideEditModal() {
+      document.getElementById('editAssetModal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

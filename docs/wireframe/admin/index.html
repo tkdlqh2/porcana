@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Porcana Admin Wireframe - Index</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    h1 { margin-bottom: 8px; }
+    .subtitle { color: #888; margin-bottom: 40px; }
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 20px;
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.2s;
+      border: 1px solid #333;
+    }
+    .card:hover {
+      background: #222;
+      border-color: #7c3aed;
+      transform: translateY(-2px);
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.5;
+    }
+    .admin-tag {
+      background: #7c3aed;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .back-link {
+      display: inline-block;
+      color: #888;
+      text-decoration: none;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .back-link:hover { color: #22c55e; }
+    .api-ref {
+      margin-top: 60px;
+      padding: 20px;
+      background: #111;
+      border-radius: 12px;
+      border: 1px solid #222;
+    }
+    .api-ref-title {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .api-endpoint {
+      font-family: monospace;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 6px;
+      padding: 4px 0;
+    }
+    .api-endpoint .method {
+      display: inline-block;
+      width: 60px;
+      color: #22c55e;
+    }
+    .api-endpoint .method.post { color: #fbbf24; }
+    .api-endpoint .method.patch { color: #3b82f6; }
+    .api-endpoint .method.delete { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">&larr; 사용자 앱 와이어프레임</a>
+
+  <h1>Porcana Admin Wireframe <span class="admin-tag">ADMIN</span></h1>
+  <p class="subtitle">관리자 대시보드 화면 프로토타입</p>
+
+  <div class="section">
+    <div class="section-title">대시보드</div>
+    <div class="grid">
+      <a href="01-dashboard.html" class="card">
+        <div class="card-title">1. 대시보드</div>
+        <div class="card-desc">전체 현황 요약 - 회원 수, 종목 수, 포트폴리오 수 통계</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">회원 관리</div>
+    <div class="grid">
+      <a href="02-user-list.html" class="card">
+        <div class="card-title">2. 회원 목록</div>
+        <div class="card-desc">회원 검색, 역할 필터링, 페이지네이션</div>
+      </a>
+      <a href="03-user-detail.html" class="card">
+        <div class="card-title">3. 회원 상세</div>
+        <div class="card-desc">회원 정보, 포트폴리오 목록, 아레나 이력</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">종목 관리</div>
+    <div class="grid">
+      <a href="04-asset-list.html" class="card">
+        <div class="card-title">4. 종목 목록</div>
+        <div class="card-desc">종목 검색, 시장 필터, 이미지/배당 정보 수정</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">포트폴리오 관리</div>
+    <div class="grid">
+      <a href="05-portfolio-list.html" class="card">
+        <div class="card-title">5. 포트폴리오 목록</div>
+        <div class="card-desc">전체 포트폴리오 조회, 이름 검색</div>
+      </a>
+      <a href="06-portfolio-detail.html" class="card">
+        <div class="card-title">6. 포트폴리오 상세</div>
+        <div class="card-desc">포트폴리오 정보, 보유 종목, 수익률</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="api-ref">
+    <div class="api-ref-title">Admin API Endpoints (참고)</div>
+    <div class="api-endpoint"><span class="method post">POST</span> /api/v1/admin/admins - 관리자 생성</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/users - 회원 목록</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/users/{userId} - 회원 상세</div>
+    <div class="api-endpoint"><span class="method delete">DELETE</span> /api/v1/admin/users/{userId} - 회원 탈퇴</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/assets - 종목 목록</div>
+    <div class="api-endpoint"><span class="method patch">PATCH</span> /api/v1/admin/assets/{assetId}/image - 이미지 수정</div>
+    <div class="api-endpoint"><span class="method patch">PATCH</span> /api/v1/admin/assets/{assetId}/dividend - 배당 수정</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/portfolios - 포트폴리오 목록</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/portfolios/{portfolioId} - 포트폴리오 상세</div>
+  </div>
+</body>
+</html>
