@@ -30,7 +30,7 @@ class UserControllerTest extends BaseIntegrationTest {
     private UserRepository userRepository;
 
     private String createAccessToken() {
-        return jwtTokenProvider.createAccessToken(TEST_USER_ID);
+        return jwtTokenProvider.createAccessToken(TEST_USER_ID, "USER");
     }
 
     @Test

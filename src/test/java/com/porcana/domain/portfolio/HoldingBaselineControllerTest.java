@@ -34,7 +34,7 @@ class HoldingBaselineControllerTest extends BaseIntegrationTest {
     private static final UUID TEST_ASSET_US_ID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab");
 
     private String createAccessToken() {
-        return jwtTokenProvider.createAccessToken(TEST_USER_ID);
+        return jwtTokenProvider.createAccessToken(TEST_USER_ID, "USER");
     }
 
     @Nested
