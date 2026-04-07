@@ -32,7 +32,7 @@ class PortfolioControllerTest extends BaseIntegrationTest {
     private static final UUID TEST_ASSET_US_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     private String createAccessToken() {
-        return jwtTokenProvider.createAccessToken(TEST_USER_ID);
+        return jwtTokenProvider.createAccessToken(TEST_USER_ID, "USER");
     }
 
     @Test
@@ -348,7 +348,7 @@ class PortfolioControllerTest extends BaseIntegrationTest {
         UUID testAssetKrId = UUID.fromString("88888888-8888-8888-8888-888888888888");
         UUID testAssetUsId = UUID.fromString("99999999-9999-9999-9999-999999999999");
 
-        String accessToken = jwtTokenProvider.createAccessToken(testUserId);
+        String accessToken = jwtTokenProvider.createAccessToken(testUserId, "USER");
 
         // 1. 비중 변경 전 상태 확인: weightUsed가 55/45로 변경되어 있어야 함
         given()
@@ -628,7 +628,7 @@ class PortfolioControllerTest extends BaseIntegrationTest {
         private static final UUID ASSET_7 = UUID.fromString("d7777777-7777-7777-7777-777777777777");
 
         private String createAccessToken() {
-            return jwtTokenProvider.createAccessToken(DIRECT_TEST_USER_ID);
+            return jwtTokenProvider.createAccessToken(DIRECT_TEST_USER_ID, "USER");
         }
 
         @Test

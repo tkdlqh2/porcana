@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
+public interface PortfolioRepository extends JpaRepository<Portfolio, UUID>, PortfolioRepositoryCustom {
 
     /**
      * Find all portfolios for a user (excluding deleted)
@@ -91,4 +91,23 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
      */
     @Query("SELECT p FROM Portfolio p WHERE p.deletedAt IS NOT NULL AND p.deletedAt < :cutoffDate")
     List<Portfolio> findDeletedPortfoliosOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate);
+
+    // ===== Admin API Support =====
+
+    /**
+     * Find all portfolios with pagination (excluding deleted)
+     * Used for admin portfolio list view
+     */
+    Page<Portfolio> findByDeletedAtIsNull(Pageable pageable);
+
+    /**
+     * Find all portfolios with pagination (including deleted) for admin
+     */
+    Page<Portfolio> findAll(Pageable pageable);
+
+    /**
+     * Count portfolios for a user (excluding deleted)
+     * Used for admin user detail view
+     */
+    long countByUserIdAndDeletedAtIsNull(UUID userId);
 }

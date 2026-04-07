@@ -51,7 +51,7 @@ class ArenaControllerTest extends BaseIntegrationTest {
         arenaSessionRepository.deleteAll();
 
         // Generate JWT token for test user
-        accessToken = jwtTokenProvider.createAccessToken(TEST_USER_ID);
+        accessToken = jwtTokenProvider.createAccessToken(TEST_USER_ID, "USER");
     }
 
     @Test

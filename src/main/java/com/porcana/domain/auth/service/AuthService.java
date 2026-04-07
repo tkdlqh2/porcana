@@ -49,7 +49,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        String accessToken = jwtTokenProvider.createAccessToken(savedUser.getId());
+        String accessToken = jwtTokenProvider.createAccessToken(savedUser.getId(), savedUser.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(savedUser.getId());
         UserResponse userResponse = UserResponse.from(savedUser);
 
@@ -68,7 +68,7 @@ public class AuthService {
             user = loginWithOAuth(command);
         }
 
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
         UserResponse userResponse = UserResponse.from(user);
 
@@ -173,7 +173,7 @@ public class AuthService {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId());
+        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole().name());
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         return new AuthResponse(newAccessToken, newRefreshToken, UserResponse.from(user));

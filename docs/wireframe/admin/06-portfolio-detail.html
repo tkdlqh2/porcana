@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>포트폴리오 상세 - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item active">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <a href="05-portfolio-list.html" class="nav-back">&larr; 포트폴리오 목록</a>
+
+      <div class="detail-header">
+        <div>
+          <div class="detail-title" style="display:flex;align-items:center;gap:12px;">
+            로로
+            <span style="color:#fbbf24;font-size:20px;">⭐</span>
+            <span class="badge badge-active">ACTIVE</span>
+          </div>
+          <div class="detail-subtitle">
+            소유자: <a href="03-user-detail.html" class="table-link">김투자</a> (kim@email.com)
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card">
+          <div class="stat-card-label">총 수익률</div>
+          <div class="stat-card-value return-positive">+3.67%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">평균 위험도</div>
+          <div class="stat-card-value">3.2</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">분산도</div>
+          <div class="stat-card-value" style="font-size:18px;">HIGH</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">보유 종목</div>
+          <div class="stat-card-value">10</div>
+        </div>
+      </div>
+
+      <!-- Detail Grid -->
+      <div class="detail-grid">
+        <!-- Portfolio Info -->
+        <div class="detail-section">
+          <div class="detail-section-title">
+            <span>📋</span> 포트폴리오 정보
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Portfolio ID</span>
+            <span class="detail-value" style="font-family:monospace;font-size:12px;">p1b2c3d4-e5f6-7890-abcd-ef1234567890</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">이름</span>
+            <span class="detail-value">로로</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">상태</span>
+            <span class="detail-value"><span class="badge badge-active">ACTIVE</span></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">메인 포트폴리오</span>
+            <span class="detail-value" style="color:#fbbf24;">예 ⭐</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">시작일</span>
+            <span class="detail-value">2024-01-15</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">생성일</span>
+            <span class="detail-value">2024-01-15 14:32:10</span>
+          </div>
+        </div>
+
+        <!-- Owner Info -->
+        <div class="detail-section">
+          <div class="detail-section-title">
+            <span>👤</span> 소유자 정보
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">User ID</span>
+            <span class="detail-value" style="font-family:monospace;font-size:12px;">a1b2c3d4-e5f6-7890-abcd-ef1234567890</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">닉네임</span>
+            <span class="detail-value"><a href="03-user-detail.html" class="table-link">김투자</a></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">이메일</span>
+            <span class="detail-value">kim@email.com</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">역할</span>
+            <span class="detail-value"><span class="badge badge-user">USER</span></span>
+          </div>
+          <div style="margin-top:16px;">
+            <a href="03-user-detail.html" class="btn btn-outline btn-sm">회원 상세 보기</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Distribution -->
+      <div class="card">
+        <div class="card-title">
+          <span>📊</span> 위험도 분포
+        </div>
+        <div style="display:flex;gap:24px;padding:20px 0;">
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:8px;">Level 1 (Low)</div>
+            <div style="height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="height:16px;background:#22c55e;border-radius:0 0 8px 8px;"></div>
+            </div>
+            <div style="margin-top:8px;font-weight:600;">10%</div>
+          </div>
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:8px;">Level 2</div>
+            <div style="height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="height:32px;background:#84cc16;border-radius:0 0 8px 8px;"></div>
+            </div>
+            <div style="margin-top:8px;font-weight:600;">20%</div>
+          </div>
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:8px;">Level 3</div>
+            <div style="height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="height:48px;background:#fbbf24;border-radius:0 0 8px 8px;"></div>
+            </div>
+            <div style="margin-top:8px;font-weight:600;">30%</div>
+          </div>
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:8px;">Level 4</div>
+            <div style="height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="height:40px;background:#f97316;border-radius:0 0 8px 8px;"></div>
+            </div>
+            <div style="margin-top:8px;font-weight:600;">25%</div>
+          </div>
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:13px;color:#888;margin-bottom:8px;">Level 5 (High)</div>
+            <div style="height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="height:24px;background:#ef4444;border-radius:0 0 8px 8px;"></div>
+            </div>
+            <div style="margin-top:8px;font-weight:600;">15%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Holdings -->
+      <div class="card">
+        <div class="card-title">
+          <span>📈</span> 보유 종목 (10)
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>종목</th>
+              <th>시장</th>
+              <th>타입</th>
+              <th>위험도</th>
+              <th>비중</th>
+              <th>수익률</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">A</div>
+                  <div>
+                    <div>Apple Inc.</div>
+                    <div style="font-size:12px;color:#666;">AAPL</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-us">US</span></td>
+              <td>STOCK</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td style="color:#22c55e;font-weight:600;">15.0%</td>
+              <td class="return-positive">+5.23%</td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">삼</div>
+                  <div>
+                    <div>삼성전자</div>
+                    <div style="font-size:12px;color:#666;">005930</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-kr">KR</span></td>
+              <td>STOCK</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td style="color:#22c55e;font-weight:600;">12.0%</td>
+              <td class="return-positive">+2.15%</td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">S</div>
+                  <div>
+                    <div>SPDR S&P 500 ETF</div>
+                    <div style="font-size:12px;color:#666;">SPY</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-us">US</span></td>
+              <td>ETF</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td style="color:#22c55e;font-weight:600;">20.0%</td>
+              <td class="return-positive">+4.67%</td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">N</div>
+                  <div>
+                    <div>NVIDIA Corporation</div>
+                    <div style="font-size:12px;color:#666;">NVDA</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-us">US</span></td>
+              <td>STOCK</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td style="color:#22c55e;font-weight:600;">8.0%</td>
+              <td class="return-positive">+12.34%</td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="asset-logo-sm">K</div>
+                  <div>
+                    <div>KODEX 200</div>
+                    <div style="font-size:12px;color:#666;">069500</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge badge-kr">KR</span></td>
+              <td>ETF</td>
+              <td>
+                <div style="display:flex;gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#22c55e;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#333;"></div>
+                </div>
+              </td>
+              <td style="color:#22c55e;font-weight:600;">15.0%</td>
+              <td class="return-negative">-1.23%</td>
+            </tr>
+            <tr>
+              <td colspan="6" style="text-align:center;color:#888;padding:20px;">
+                ... 외 5개 종목
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

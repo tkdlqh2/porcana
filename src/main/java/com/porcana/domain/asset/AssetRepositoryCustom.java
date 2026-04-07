@@ -14,4 +14,9 @@ public interface AssetRepositoryCustom {
      * 종목 라이브러리 검색 (동적 필터링 + 페이지네이션)
      */
     Page<Asset> searchLibrary(AssetLibrarySearchCondition condition, Pageable pageable);
+
+    /**
+     * Search assets by symbol or name (for admin - includes inactive)
+     */
+    Page<Asset> searchByKeyword(String keyword, Pageable pageable);
 }

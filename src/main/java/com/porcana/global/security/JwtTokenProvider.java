@@ -27,12 +27,16 @@ public class JwtTokenProvider {
         this.refreshTokenValidityInMilliseconds = refreshTokenValidity;
     }
 
-    public String createAccessToken(UUID userId) {
+    public String createAccessToken(UUID userId, String role) {
+        if (role == null || role.isBlank()) {
+            throw new IllegalArgumentException("role must not be null or blank");
+        }
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
 
         return Jwts.builder()
                 .subject(userId.toString())
+                .claim("role", role)
                 .issuedAt(now)
                 .expiration(validity)
                 .signWith(secretKey)
@@ -59,6 +63,20 @@ public class JwtTokenProvider {
                 .getPayload()
                 .getSubject();
         return UUID.fromString(userIdStr);
+    }
+
+    public String getRoleFromToken(String token) {
+        String role = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
+
+        if (role == null || role.isBlank()) {
+            throw new JwtException("Role claim is missing or empty in token");
+        }
+        return role;
     }
 
     public boolean validateToken(String token) {

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원 상세 - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item active">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <a href="02-user-list.html" class="nav-back">&larr; 회원 목록</a>
+
+      <div class="detail-header">
+        <div>
+          <div class="detail-title" style="display:flex;align-items:center;gap:12px;">
+            <div class="user-avatar" style="width:48px;height:48px;font-size:18px;">김</div>
+            김투자
+            <span class="badge badge-user">USER</span>
+          </div>
+          <div class="detail-subtitle">kim@email.com</div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button class="btn btn-outline">비밀번호 초기화</button>
+          <button class="btn btn-danger">회원 탈퇴</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-card">
+          <div class="stat-card-label">보유 포트폴리오</div>
+          <div class="stat-card-value">3</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">아레나 완료</div>
+          <div class="stat-card-value">5</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">가입일</div>
+          <div class="stat-card-value" style="font-size:18px;">2024-01-15</div>
+        </div>
+      </div>
+
+      <!-- Detail Grid -->
+      <div class="detail-grid">
+        <!-- User Info -->
+        <div class="detail-section">
+          <div class="detail-section-title">
+            <span>👤</span> 회원 정보
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">User ID</span>
+            <span class="detail-value" style="font-family:monospace;font-size:12px;">a1b2c3d4-e5f6-7890-abcd-ef1234567890</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">닉네임</span>
+            <span class="detail-value">김투자</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">이메일</span>
+            <span class="detail-value">kim@email.com</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">인증 제공자</span>
+            <span class="detail-value">EMAIL</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">역할</span>
+            <span class="detail-value"><span class="badge badge-user">USER</span></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">메인 포트폴리오</span>
+            <span class="detail-value"><a href="06-portfolio-detail.html" class="table-link">로로</a></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">가입일</span>
+            <span class="detail-value">2024-01-15 14:32:10</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">최근 수정일</span>
+            <span class="detail-value">2024-01-18 09:15:00</span>
+          </div>
+        </div>
+
+        <!-- Main Portfolio Info -->
+        <div class="detail-section">
+          <div class="detail-section-title">
+            <span>⭐</span> 메인 포트폴리오
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">이름</span>
+            <span class="detail-value">로로</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">상태</span>
+            <span class="detail-value"><span class="badge badge-active">ACTIVE</span></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">시작일</span>
+            <span class="detail-value">2024-01-15</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">총 수익률</span>
+            <span class="detail-value return-positive">+3.67%</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">보유 종목</span>
+            <span class="detail-value">10개</span>
+          </div>
+          <div style="margin-top:16px;">
+            <a href="06-portfolio-detail.html" class="btn btn-outline btn-sm">포트폴리오 상세 보기</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- User's Portfolios -->
+      <div class="card">
+        <div class="card-title">
+          <span>💼</span> 보유 포트폴리오 (3)
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th>상태</th>
+              <th>종목 수</th>
+              <th>수익률</th>
+              <th>생성일</th>
+              <th>메인</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="06-portfolio-detail.html" class="table-link">로로</a></td>
+              <td><span class="badge badge-active">ACTIVE</span></td>
+              <td>10</td>
+              <td class="return-positive">+3.67%</td>
+              <td>2024-01-15</td>
+              <td>⭐</td>
+            </tr>
+            <tr>
+              <td><a href="06-portfolio-detail.html" class="table-link">테크 포커스</a></td>
+              <td><span class="badge badge-active">ACTIVE</span></td>
+              <td>8</td>
+              <td class="return-negative">-1.24%</td>
+              <td>2024-01-16</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><a href="06-portfolio-detail.html" class="table-link">배당 성장</a></td>
+              <td><span class="badge badge-active">ACTIVE</span></td>
+              <td>12</td>
+              <td class="return-positive">+5.12%</td>
+              <td>2024-01-17</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Arena History -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎮</span> 아레나 이력 (5)
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>세션 ID</th>
+              <th>포트폴리오</th>
+              <th>투자 성향</th>
+              <th>선택 섹터</th>
+              <th>상태</th>
+              <th>완료일</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-family:monospace;font-size:12px;">sess-001</td>
+              <td>로로</td>
+              <td>BALANCED</td>
+              <td>IT, 헬스케어</td>
+              <td><span class="badge badge-active">COMPLETED</span></td>
+              <td>2024-01-15</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:12px;">sess-002</td>
+              <td>테크 포커스</td>
+              <td>AGGRESSIVE</td>
+              <td>IT</td>
+              <td><span class="badge badge-active">COMPLETED</span></td>
+              <td>2024-01-16</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:12px;">sess-003</td>
+              <td>배당 성장</td>
+              <td>SAFE</td>
+              <td>금융, 유틸리티, 필수소비재</td>
+              <td><span class="badge badge-active">COMPLETED</span></td>
+              <td>2024-01-17</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
