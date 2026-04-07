@@ -28,6 +28,9 @@ public class JwtTokenProvider {
     }
 
     public String createAccessToken(UUID userId, String role) {
+        if (role == null || role.isBlank()) {
+            throw new IllegalArgumentException("role must not be null or blank");
+        }
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
 
