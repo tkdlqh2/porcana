@@ -32,6 +32,10 @@ public class User {
     @Column(nullable = false)
     private AuthProvider provider;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role = UserRole.USER;
+
     @Setter
     @Column(name = "main_portfolio_id")
     private UUID mainPortfolioId;
@@ -48,11 +52,12 @@ public class User {
     private LocalDateTime deletedAt;
 
     @Builder
-    public User(String email, String password, String nickname, AuthProvider provider) {
+    public User(String email, String password, String nickname, AuthProvider provider, UserRole role) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.provider = provider;
+        this.role = role != null ? role : UserRole.USER;
     }
 
     public static User from(SignupCommand command, String encodedPassword) {
@@ -78,6 +83,10 @@ public class User {
 
     public boolean isDeleted() {
         return this.deletedAt != null;
+    }
+
+    public boolean isAdmin() {
+        return this.role == UserRole.ADMIN;
     }
 
     public enum AuthProvider {
