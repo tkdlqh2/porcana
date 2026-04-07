@@ -24,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -221,11 +223,20 @@ public class AdminService {
             ownerInfo = AdminPortfolioDetailResponse.OwnerInfo.fromGuestSession(portfolio.getGuestSessionId());
         }
 
-        // Get assets
+        // Get assets - batch load to avoid N+1 query
         List<PortfolioAsset> portfolioAssets = portfolioAssetRepository.findByPortfolioId(portfolioId);
+
+        // Collect all asset IDs and batch load
+        List<UUID> assetIds = portfolioAssets.stream()
+                .map(PortfolioAsset::getAssetId)
+                .toList();
+        Map<UUID, Asset> assetMap = assetRepository.findAllById(assetIds).stream()
+                .collect(Collectors.toMap(Asset::getId, asset -> asset));
+
+        // Map using pre-loaded assets (no additional queries)
         List<AdminPortfolioDetailResponse.AssetItem> assetItems = portfolioAssets.stream()
                 .map(pa -> {
-                    Asset asset = assetRepository.findById(pa.getAssetId()).orElse(null);
+                    Asset asset = assetMap.get(pa.getAssetId());
                     String symbol = asset != null ? asset.getSymbol() : "UNKNOWN";
                     String name = asset != null ? asset.getName() : "Unknown Asset";
                     return AdminPortfolioDetailResponse.AssetItem.from(pa, symbol, name);
