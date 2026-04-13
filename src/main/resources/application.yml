@@ -40,7 +40,10 @@ jwt:
 
 oauth:
   google:
-    client-id: ${GOOGLE_CLIENT_ID:}
+    client-ids:
+      - ${GOOGLE_IOS_CLIENT_ID:}
+      - ${GOOGLE_ANDROID_CLIENT_ID:}
+      - ${GOOGLE_WEB_CLIENT_ID:}
   apple:
     client-id: ${APPLE_CLIENT_ID:}
     team-id: ${APPLE_TEAM_ID:}
