@@ -17,6 +17,7 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * Google OAuth2 Provider implementation
@@ -30,8 +31,8 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${oauth.google.client-id:}")
-    private String clientId;
+    @Value("${oauth.google.client-ids:}")
+    private List<String> clientIds;
 
     private static final String JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
     private static final String GOOGLE_ISSUER = "https://accounts.google.com";
@@ -73,16 +74,21 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
                 throw new IllegalArgumentException("Invalid issuer: " + issuer);
             }
 
-            // Step 4: Verify audience (client ID)
+            // Step 4: Verify audience (client ID) - allow multiple client IDs for iOS/Android/Web
             Object audClaim = claims.get("aud");
+            List<String> validClientIds = clientIds.stream()
+                    .filter(id -> id != null && !id.isBlank())
+                    .toList();
+
             boolean audienceValid = false;
-            if (audClaim instanceof String) {
-                audienceValid = clientId.equals(audClaim);
-            } else if (audClaim instanceof java.util.Collection) {
-                audienceValid = ((java.util.Collection<?>) audClaim).contains(clientId);
+            if (audClaim instanceof String aud) {
+                audienceValid = validClientIds.contains(aud);
+            } else if (audClaim instanceof java.util.Collection<?> audList) {
+                audienceValid = audList.stream()
+                        .anyMatch(aud -> validClientIds.contains(aud));
             }
             if (!audienceValid) {
-                log.warn("Audience mismatch - expected: {}, actual: {}", clientId, audClaim);
+                log.warn("Audience mismatch - expected one of: {}, actual: {}", validClientIds, audClaim);
                 throw new IllegalArgumentException("Invalid audience");
             }
 
