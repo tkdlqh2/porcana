@@ -2,11 +2,11 @@ package com.porcana.domain.auth.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.porcana.config.OAuthProperties;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -30,9 +30,7 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    @Value("${oauth.google.client-ids:}")
-    private List<String> clientIds;
+    private final OAuthProperties oAuthProperties;
 
     private static final String JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
     private static final String GOOGLE_ISSUER = "https://accounts.google.com";
@@ -76,7 +74,7 @@ public class GoogleOAuth2Provider implements OAuth2Provider {
 
             // Step 4: Verify audience (client ID) - allow multiple client IDs for iOS/Android/Web
             Object audClaim = claims.get("aud");
-            List<String> validClientIds = clientIds.stream()
+            List<String> validClientIds = oAuthProperties.getGoogle().getClientIds().stream()
                     .filter(id -> id != null && !id.isBlank())
                     .toList();
 
