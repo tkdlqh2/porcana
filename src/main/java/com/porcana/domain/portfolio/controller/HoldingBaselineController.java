@@ -23,6 +23,17 @@ public class HoldingBaselineController {
 
     private final HoldingBaselineService holdingBaselineService;
 
+    @Operation(summary = "시드 금액 미리보기", description = "시드 금액으로 각 종목별 매수 수량을 계산하여 미리 확인합니다. 저장되지 않습니다.")
+    @GetMapping("/seed/preview")
+    public ResponseEntity<BaselineResponse> previewSeed(
+            @PathVariable UUID portfolioId,
+            @Valid @RequestBody SetSeedRequest request,
+            @CurrentUser UUID userId) {
+
+        BaselineResponse response = holdingBaselineService.previewSeed(portfolioId, userId, request);
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "시드 금액 설정", description = "포트폴리오에 시드 금액을 설정하고 각 종목별 매수 수량을 계산합니다.")
     @PutMapping("/seed")
     public ResponseEntity<BaselineResponse> setSeed(

@@ -16,17 +16,32 @@ INSERT INTO portfolios (id, user_id, name, status, created_at, updated_at)
 VALUES ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', '테스트 포트폴리오', 'DRAFT', NOW(), NOW());
 
 -- 테스트용 Asset 데이터 생성 (다양한 섹터와 리스크 레벨)
+-- 새로고침 테스트를 위해 충분한 자산 풀 확보
 INSERT INTO assets (id, market, symbol, name, type, sector, current_risk_level, active, as_of, created_at, updated_at)
 VALUES
-    -- IT 섹터
+    -- IT 섹터 (10개)
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'US', 'AAPL', 'Apple Inc.', 'STOCK', 'INFORMATION_TECHNOLOGY', 3, true, CURRENT_DATE, NOW(), NOW()),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab', 'US', 'MSFT', 'Microsoft Corp.', 'STOCK', 'INFORMATION_TECHNOLOGY', 2, true, CURRENT_DATE, NOW(), NOW()),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaac', 'US', 'NVDA', 'NVIDIA Corp.', 'STOCK', 'INFORMATION_TECHNOLOGY', 4, true, CURRENT_DATE, NOW(), NOW()),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaad', 'US', 'AMD', 'AMD Inc.', 'STOCK', 'INFORMATION_TECHNOLOGY', 4, true, CURRENT_DATE, NOW(), NOW()),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaae', 'US', 'INTC', 'Intel Corp.', 'STOCK', 'INFORMATION_TECHNOLOGY', 3, true, CURRENT_DATE, NOW(), NOW()),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaf', 'US', 'CRM', 'Salesforce Inc.', 'STOCK', 'INFORMATION_TECHNOLOGY', 3, true, CURRENT_DATE, NOW(), NOW()),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa10', 'US', 'ORCL', 'Oracle Corp.', 'STOCK', 'INFORMATION_TECHNOLOGY', 2, true, CURRENT_DATE, NOW(), NOW()),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', 'US', 'CSCO', 'Cisco Systems', 'STOCK', 'INFORMATION_TECHNOLOGY', 2, true, CURRENT_DATE, NOW(), NOW()),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa12', 'US', 'ADBE', 'Adobe Inc.', 'STOCK', 'INFORMATION_TECHNOLOGY', 3, true, CURRENT_DATE, NOW(), NOW()),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa13', 'US', 'IBM', 'IBM Corp.', 'STOCK', 'INFORMATION_TECHNOLOGY', 2, true, CURRENT_DATE, NOW(), NOW()),
 
-    -- Healthcare 섹터
+    -- Healthcare 섹터 (10개)
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'US', 'JNJ', 'Johnson & Johnson', 'STOCK', 'HEALTH_CARE', 2, true, CURRENT_DATE, NOW(), NOW()),
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbc', 'US', 'PFE', 'Pfizer Inc.', 'STOCK', 'HEALTH_CARE', 3, true, CURRENT_DATE, NOW(), NOW()),
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbd', 'US', 'UNH', 'UnitedHealth Group', 'STOCK', 'HEALTH_CARE', 2, true, CURRENT_DATE, NOW(), NOW()),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbe', 'US', 'ABBV', 'AbbVie Inc.', 'STOCK', 'HEALTH_CARE', 3, true, CURRENT_DATE, NOW(), NOW()),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbcf', 'US', 'MRK', 'Merck & Co.', 'STOCK', 'HEALTH_CARE', 2, true, CURRENT_DATE, NOW(), NOW()),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb100', 'US', 'LLY', 'Eli Lilly', 'STOCK', 'HEALTH_CARE', 3, true, CURRENT_DATE, NOW(), NOW()),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb101', 'US', 'TMO', 'Thermo Fisher', 'STOCK', 'HEALTH_CARE', 2, true, CURRENT_DATE, NOW(), NOW()),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb102', 'US', 'DHR', 'Danaher Corp.', 'STOCK', 'HEALTH_CARE', 2, true, CURRENT_DATE, NOW(), NOW()),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb103', 'US', 'BMY', 'Bristol-Myers', 'STOCK', 'HEALTH_CARE', 3, true, CURRENT_DATE, NOW(), NOW()),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb104', 'US', 'AMGN', 'Amgen Inc.', 'STOCK', 'HEALTH_CARE', 2, true, CURRENT_DATE, NOW(), NOW()),
 
     -- Financials 섹터
     ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'US', 'JPM', 'JPMorgan Chase', 'STOCK', 'FINANCIALS', 3, true, CURRENT_DATE, NOW(), NOW()),

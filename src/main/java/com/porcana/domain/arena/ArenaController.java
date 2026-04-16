@@ -80,7 +80,7 @@ public class ArenaController {
 
     @Operation(
             summary = "현재 라운드 조회",
-            description = "현재 진행 중인 라운드의 선택지를 조회합니다. Round 0은 투자성향+섹터 동시 선택, Round 1-10은 자산 선택입니다. 비회원도 사용 가능합니다.",
+            description = "현재 진행 중인 라운드의 선택지를 조회합니다. Round 0은 투자성향+섹터 동시 선택, Round 1-10은 자산 선택입니다. refresh=true로 호출하면 Round 1-10의 선택지를 새로 생성합니다. 비회원도 사용 가능합니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "조회 성공"),
                     @ApiResponse(responseCode = "400", description = "세션이 이미 완료됨", content = @Content),
@@ -90,12 +90,14 @@ public class ArenaController {
     @GetMapping("/sessions/{sessionId}/rounds/current")
     public ResponseEntity<RoundResponse> getCurrentRound(
             @Parameter(description = "세션 ID", required = true) @PathVariable UUID sessionId,
+            @Parameter(description = "true면 현재 라운드 선택지를 새로 생성 (Round 1-10만 가능)")
+            @RequestParam(defaultValue = "false") boolean refresh,
             HttpServletRequest request) {
 
         UUID userId = extractUserId();
         UUID guestSessionId = guestSessionExtractor.extractGuestSessionId(request);
 
-        RoundResponse response = arenaService.getCurrentRound(sessionId, userId, guestSessionId);
+        RoundResponse response = arenaService.getCurrentRound(sessionId, userId, guestSessionId, refresh);
         return ResponseEntity.ok(response);
     }
 

@@ -135,6 +135,14 @@ public class ArenaService {
      */
     @Transactional
     public RoundResponse getCurrentRound(UUID sessionId, UUID userId, UUID guestSessionId) {
+        return getCurrentRound(sessionId, userId, guestSessionId, false);
+    }
+
+    /**
+     * Get current round data with optional refresh (supports both user and guest)
+     */
+    @Transactional
+    public RoundResponse getCurrentRound(UUID sessionId, UUID userId, UUID guestSessionId, boolean refresh) {
         ArenaSession session = getSessionAndValidateOwnership(sessionId, userId, guestSessionId);
 
         if (session.getStatus() == SessionStatus.COMPLETED) {
@@ -143,12 +151,20 @@ public class ArenaService {
 
         int currentRound = session.getCurrentRound();
 
-        // Round 0: Pre Round (Risk Profile + Sector Selection)
+        // Round 0: Pre Round (Risk Profile + Sector Selection) - refresh not applicable
         if (currentRound == 0) {
+            if (refresh) {
+                throw new InvalidOperationException("Round 0에서는 새로고침을 사용할 수 없습니다");
+            }
             return buildPreRound(session);
         }
 
         // Rounds 1-10: Asset Selection
+        // If refresh requested, delete existing round to force new generation
+        if (refresh) {
+            roundRepository.deleteBySessionIdAndRoundNumber(session.getId(), currentRound);
+        }
+
         return buildAssetRound(session);
     }
 

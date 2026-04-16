@@ -1,6 +1,7 @@
 package com.porcana.domain.arena;
 
 import com.porcana.BaseIntegrationTest;
+import com.porcana.config.ArenaTestConfig;
 import com.porcana.domain.arena.dto.CreateSessionRequest;
 import com.porcana.domain.arena.dto.PickAssetRequest;
 import com.porcana.domain.arena.dto.PickPreferencesRequest;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.util.Arrays;
@@ -24,6 +26,7 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+@Import(ArenaTestConfig.class)
 @Sql(scripts = "/sql/arena-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class ArenaControllerTest extends BaseIntegrationTest {
 
@@ -343,6 +346,76 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .post("/arena/sessions/{sessionId}/rounds/current/pick-asset", sessionId)
         .then()
                 .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("라운드 선택지 새로고침 성공 - Round 1-10")
+    void refreshCurrentRound_success() {
+        String sessionId = createSessionAndPickPreferences();
+
+        // 첫 번째 호출 - 기존 선택지 조회
+        List<String> originalAssetIds = given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+        .then()
+                .statusCode(200)
+                .body("roundType", equalTo("ASSET"))
+                .body("assets", hasSize(3))
+                .extract()
+                .path("assets.assetId");
+
+        // refresh=true로 호출 - 새로운 선택지 생성
+        List<String> refreshedAssetIds = given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current?refresh=true", sessionId)
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("roundType", equalTo("ASSET"))
+                .body("assets", hasSize(3))
+                .body("assets.assetId", not(equalTo(originalAssetIds)))
+                .extract().path("assets.assetId");
+
+        // 세 번째 호출 (refresh=false) - 새로 생성된 선택지 유지 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+        .then()
+                .statusCode(200)
+                .body("roundType", equalTo("ASSET"))
+                .body("assets", hasSize(3))
+                .body("assets.assetId", containsInAnyOrder(refreshedAssetIds.toArray()));
+    }
+
+    @Test
+    @DisplayName("라운드 선택지 새로고침 실패 - Round 0에서는 불가")
+    void refreshCurrentRound_fail_round0() {
+        // Create session (starts at Round 0)
+        CreateSessionRequest createRequest = new CreateSessionRequest(TEST_PORTFOLIO_ID);
+
+        String sessionId = given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + accessToken)
+                .body(createRequest)
+        .when()
+                .post("/arena/sessions")
+        .then()
+                .statusCode(200)
+                .extract()
+                .path("sessionId");
+
+        // Round 0에서 refresh=true 호출 시 에러
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current?refresh=true", sessionId)
+        .then()
+                .log().all()
+                .statusCode(400)
+                .body("code", equalTo("INVALID_OPERATION"));
     }
 
     @Test
