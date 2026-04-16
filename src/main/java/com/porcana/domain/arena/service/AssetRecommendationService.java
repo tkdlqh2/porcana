@@ -29,6 +29,7 @@ public class AssetRecommendationService {
 
     private final AssetRepository assetRepository;
     private final ArenaRoundRepository roundRepository;
+    private final Random random;
 
     // Bucket sizes
     private static final int PREFERRED_BUCKET_SIZE = 80;
@@ -117,9 +118,14 @@ public class AssetRecommendationService {
      * Generate random UUID for PK range sampling
      */
     private UUID generateRandomId() {
-        // Simple random UUID generation
-        // In production, could cache min/max and generate within range
-        return UUID.randomUUID();
+        // Generate UUID using injected Random for testability
+        byte[] randomBytes = new byte[16];
+        random.nextBytes(randomBytes);
+        randomBytes[6] &= 0x0f;  // clear version
+        randomBytes[6] |= 0x40;  // set to version 4
+        randomBytes[8] &= 0x3f;  // clear variant
+        randomBytes[8] |= 0x80;  // set to IETF variant
+        return UUID.nameUUIDFromBytes(randomBytes);
     }
 
     /**
@@ -351,7 +357,7 @@ public class AssetRecommendationService {
      */
     private Asset sampleByWeight(List<Asset> candidates, Map<UUID, Double> weights) {
         double total = weights.values().stream().mapToDouble(Double::doubleValue).sum();
-        double r = Math.random() * total;
+        double r = random.nextDouble() * total;
         double acc = 0;
 
         for (Asset asset : candidates) {

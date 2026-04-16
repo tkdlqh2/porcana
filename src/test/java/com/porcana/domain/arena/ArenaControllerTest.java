@@ -1,6 +1,7 @@
 package com.porcana.domain.arena;
 
 import com.porcana.BaseIntegrationTest;
+import com.porcana.config.ArenaTestConfig;
 import com.porcana.domain.arena.dto.CreateSessionRequest;
 import com.porcana.domain.arena.dto.PickAssetRequest;
 import com.porcana.domain.arena.dto.PickPreferencesRequest;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.util.Arrays;
@@ -24,6 +26,7 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+@Import(ArenaTestConfig.class)
 @Sql(scripts = "/sql/arena-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class ArenaControllerTest extends BaseIntegrationTest {
 
@@ -363,7 +366,7 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .path("assets.assetId");
 
         // refresh=true로 호출 - 새로운 선택지 생성
-        given()
+        List<String> refreshedAssetIds = given()
                 .header("Authorization", "Bearer " + accessToken)
         .when()
                 .get("/arena/sessions/{sessionId}/rounds/current?refresh=true", sessionId)
@@ -372,7 +375,8 @@ class ArenaControllerTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .body("roundType", equalTo("ASSET"))
                 .body("assets", hasSize(3))
-                .body("round", equalTo(1));
+                .body("assets.assetId", not(equalTo(originalAssetIds)))
+                .extract().path("assets.assetId");
 
         // 세 번째 호출 (refresh=false) - 새로 생성된 선택지 유지 확인
         given()
@@ -382,7 +386,8 @@ class ArenaControllerTest extends BaseIntegrationTest {
         .then()
                 .statusCode(200)
                 .body("roundType", equalTo("ASSET"))
-                .body("assets", hasSize(3));
+                .body("assets", hasSize(3))
+                .body("assets.assetId", containsInAnyOrder(refreshedAssetIds.toArray()));
     }
 
     @Test
