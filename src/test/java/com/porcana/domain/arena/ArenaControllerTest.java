@@ -346,6 +346,74 @@ class ArenaControllerTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("라운드 선택지 새로고침 성공 - Round 1-10")
+    void refreshCurrentRound_success() {
+        String sessionId = createSessionAndPickPreferences();
+
+        // 첫 번째 호출 - 기존 선택지 조회
+        List<String> originalAssetIds = given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+        .then()
+                .statusCode(200)
+                .body("roundType", equalTo("ASSET"))
+                .body("assets", hasSize(3))
+                .extract()
+                .path("assets.assetId");
+
+        // refresh=true로 호출 - 새로운 선택지 생성
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current?refresh=true", sessionId)
+        .then()
+                .log().all()
+                .statusCode(200)
+                .body("roundType", equalTo("ASSET"))
+                .body("assets", hasSize(3))
+                .body("round", equalTo(1));
+
+        // 세 번째 호출 (refresh=false) - 새로 생성된 선택지 유지 확인
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current", sessionId)
+        .then()
+                .statusCode(200)
+                .body("roundType", equalTo("ASSET"))
+                .body("assets", hasSize(3));
+    }
+
+    @Test
+    @DisplayName("라운드 선택지 새로고침 실패 - Round 0에서는 불가")
+    void refreshCurrentRound_fail_round0() {
+        // Create session (starts at Round 0)
+        CreateSessionRequest createRequest = new CreateSessionRequest(TEST_PORTFOLIO_ID);
+
+        String sessionId = given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + accessToken)
+                .body(createRequest)
+        .when()
+                .post("/arena/sessions")
+        .then()
+                .statusCode(200)
+                .extract()
+                .path("sessionId");
+
+        // Round 0에서 refresh=true 호출 시 에러
+        given()
+                .header("Authorization", "Bearer " + accessToken)
+        .when()
+                .get("/arena/sessions/{sessionId}/rounds/current?refresh=true", sessionId)
+        .then()
+                .log().all()
+                .statusCode(400)
+                .body("code", equalTo("INVALID_OPERATION"));
+    }
+
+    @Test
     @DisplayName("전체 아레나 플로우 테스트")
     void fullArenaFlow_success() {
         // 1. Create session
