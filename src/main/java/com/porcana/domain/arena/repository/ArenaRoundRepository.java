@@ -35,4 +35,10 @@ public interface ArenaRoundRepository extends JpaRepository<ArenaRound, UUID> {
      * Returns the number of deleted rounds
      */
     int deleteBySessionId(UUID sessionId);
+
+    /**
+     * Delete a specific round by session ID and round number
+     * Used for refreshing current round options
+     */
+    void deleteBySessionIdAndRoundNumber(UUID sessionId, Integer roundNumber);
 }
