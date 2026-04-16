@@ -27,11 +27,10 @@ public class HoldingBaselineController {
     @GetMapping("/seed/preview")
     public ResponseEntity<BaselineResponse> previewSeed(
             @PathVariable UUID portfolioId,
-            @RequestParam BigDecimal seedMoney,
-            @RequestParam(defaultValue = "KRW") String baseCurrency,
+            @Valid @RequestBody SetSeedRequest request,
             @CurrentUser UUID userId) {
 
-        BaselineResponse response = holdingBaselineService.previewSeed(portfolioId, userId, seedMoney, baseCurrency);
+        BaselineResponse response = holdingBaselineService.previewSeed(portfolioId, userId, request);
         return ResponseEntity.ok(response);
     }
 

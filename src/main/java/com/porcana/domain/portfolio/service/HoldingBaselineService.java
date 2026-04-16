@@ -43,7 +43,7 @@ public class HoldingBaselineService {
      * 포트폴리오 비중과 현재가를 기반으로 각 종목별 수량 계산 결과만 반환
      */
     @Transactional(readOnly = true)
-    public BaselineResponse previewSeed(UUID portfolioId, UUID userId, BigDecimal seedMoney, String baseCurrency) {
+    public BaselineResponse previewSeed(UUID portfolioId, UUID userId, SetSeedRequest request) throws InvalidOperationException {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
                 .orElseThrow(() -> new IllegalArgumentException("포트폴리오를 찾을 수 없습니다: " + portfolioId));
 
@@ -61,7 +61,7 @@ public class HoldingBaselineService {
                 .collect(Collectors.toMap(Asset::getId, a -> a));
 
         BigDecimal usdKrw = getLatestExchangeRate();
-        PortfolioHoldingBaseline.Currency currency = parseCurrency(baseCurrency);
+        PortfolioHoldingBaseline.Currency currency = parseCurrency(request.baseCurrency());
         boolean isUsdBase = currency == PortfolioHoldingBaseline.Currency.USD;
 
         Map<UUID, BigDecimal> latestPrices = getLatestPricesBatch(assetIds);
@@ -71,11 +71,13 @@ public class HoldingBaselineService {
 
         for (PortfolioAsset pa : portfolioAssets) {
             Asset asset = assetMap.get(pa.getAssetId());
-            if (asset == null) continue;
+            if (asset == null) {
+                throw new IllegalStateException("포트폴리오 자산 정보를 찾을 수 없습니다: " + pa.getAssetId());
+            }
 
             BigDecimal currentPrice = latestPrices.get(asset.getId());
             if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
+                throw new IllegalStateException("최신 가격 정보가 없습니다: " + asset.getSymbol());
             }
 
             BigDecimal priceInBaseCurrency;
@@ -89,7 +91,7 @@ public class HoldingBaselineService {
                         : currentPrice;
             }
 
-            BigDecimal targetAmount = seedMoney.multiply(pa.getWeightPct()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            BigDecimal targetAmount = request.seedMoney().multiply(pa.getWeightPct()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             int quantity = targetAmount.divide(priceInBaseCurrency, 0, RoundingMode.DOWN).intValue();
             BigDecimal actualAmount = priceInBaseCurrency.multiply(BigDecimal.valueOf(quantity));
             totalInvested = totalInvested.add(actualAmount);
@@ -103,7 +105,7 @@ public class HoldingBaselineService {
             ));
         }
 
-        BigDecimal cashAmount = seedMoney.subtract(totalInvested);
+        BigDecimal cashAmount = request.seedMoney().subtract(totalInvested);
 
         // Preview용 임시 Baseline 생성 (저장하지 않음)
         PortfolioHoldingBaseline previewBaseline = PortfolioHoldingBaseline.create(
@@ -115,7 +117,7 @@ public class HoldingBaselineService {
                 "미리보기"
         );
 
-        return buildBaselineResponse(previewBaseline, calculatedItems, seedMoney);
+        return buildBaselineResponse(previewBaseline, calculatedItems, request.seedMoney());
     }
 
     /**
@@ -129,6 +131,11 @@ public class HoldingBaselineService {
 
         // 포트폴리오 소유자 확인
         validateOwnership(portfolio, userId);
+
+        // 이미 Baseline이 존재하면 예외 발생
+        if (baselineRepository.existsByPortfolioId(portfolioId)) {
+            throw new InvalidOperationException("이미 시드 금액이 설정되어 있습니다. 기존 설정을 수정하려면 다른 API를 사용해주세요.");
+        }
 
         // 포트폴리오 자산 조회
         List<PortfolioAsset> portfolioAssets = portfolioAssetRepository.findByPortfolioId(portfolioId);
@@ -206,11 +213,6 @@ public class HoldingBaselineService {
 
         // 잔여 현금
         BigDecimal cashAmount = seedMoney.subtract(totalInvested);
-
-        // 이미 Baseline이 존재하면 예외 발생
-        if (baselineRepository.existsByPortfolioId(portfolioId)) {
-            throw new InvalidOperationException("이미 시드 금액이 설정되어 있습니다. 기존 설정을 수정하려면 다른 API를 사용해주세요.");
-        }
 
         PortfolioHoldingBaseline baseline = PortfolioHoldingBaseline.create(
                 portfolioId,
