@@ -52,3 +52,6 @@ application-prod.yml
 # Claude Code
 .mcp.json
 .claude/settings.local.json
+
+# Admin Frontend (separate git repo)
+admin-frontend/
