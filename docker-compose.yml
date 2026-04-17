@@ -1,4 +1,13 @@
 services:
+  admin-frontend:
+    image: ghcr.io/tkdlqh2/porcana-admin:latest
+    container_name: porcana-admin-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
   api:
     image: ghcr.io/tkdlqh2/porcana-api:latest
     container_name: porcana-api
