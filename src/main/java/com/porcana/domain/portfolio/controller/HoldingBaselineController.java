@@ -7,7 +7,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/portfolios/{portfolioId}")
 @RequiredArgsConstructor
+@Validated
 public class HoldingBaselineController {
 
     private final HoldingBaselineService holdingBaselineService;
@@ -27,9 +31,11 @@ public class HoldingBaselineController {
     @GetMapping("/seed/preview")
     public ResponseEntity<BaselineResponse> previewSeed(
             @PathVariable UUID portfolioId,
-            @Valid @RequestBody SetSeedRequest request,
+            @RequestParam @NotNull(message = "시드 금액은 필수입니다") @DecimalMin(value = "0", inclusive = false, message = "시드 금액은 0보다 커야 합니다") BigDecimal seedMoney,
+            @RequestParam(required = false) String baseCurrency,
             @CurrentUser UUID userId) {
 
+        SetSeedRequest request = new SetSeedRequest(seedMoney, baseCurrency);
         BaselineResponse response = holdingBaselineService.previewSeed(portfolioId, userId, request);
         return ResponseEntity.ok(response);
     }
