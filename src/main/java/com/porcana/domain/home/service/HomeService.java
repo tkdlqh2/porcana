@@ -103,7 +103,6 @@ public class HomeService {
         }
 
         List<HomeResponse.ChartPoint> chartPoints = new ArrayList<>();
-        double cumulativeValue = 100.0;
 
         // Start with 100 at the first date
         Portfolio portfolio = portfolioRepository.findById(portfolioId).orElseThrow();
@@ -115,14 +114,14 @@ public class HomeService {
                     .build());
         }
 
-        // Calculate cumulative values
+        // returnTotal is cumulative return (%) from snapshot start date, not daily return
         for (PortfolioDailyReturn dailyReturn : returns) {
-            double dailyReturnValue = dailyReturn.getReturnTotal().doubleValue() / 100.0;
-            cumulativeValue *= (1.0 + dailyReturnValue);
+            double returnTotalPct = dailyReturn.getReturnTotal().doubleValue();
+            double value = 100.0 + returnTotalPct;
 
             chartPoints.add(HomeResponse.ChartPoint.builder()
                     .date(dailyReturn.getReturnDate())
-                    .value(cumulativeValue)
+                    .value(value)
                     .build());
         }
 
