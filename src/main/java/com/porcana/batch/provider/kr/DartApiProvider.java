@@ -107,7 +107,8 @@ public class DartApiProvider {
         log.info("Loading DART corp_code mapping from API...");
         Map<String, String> downloaded = downloadCorpCodeMap();
         if (downloaded.isEmpty()) {
-            throw new IllegalStateException("DART corp_code mapping is empty — keeping existing cache");
+            log.warn("DART corp_code mapping returned empty — keeping existing cache (size={})", corpCodeMap.size());
+            return;
         }
         corpCodeMap = downloaded;
         corpCodeMapUpdatedAt = today;
@@ -164,7 +165,7 @@ public class DartApiProvider {
             String stockCode = getTagValue("stock_code", item);
 
             // stock_code가 있는 항목만 (상장법인)
-            if (stockCode != null && !stockCode.isBlank()) {
+            if (stockCode != null && !stockCode.isBlank() && corpCode != null && !corpCode.isBlank()) {
                 map.put(stockCode.trim(), corpCode.trim());
             }
         }
@@ -243,6 +244,11 @@ public class DartApiProvider {
         }
 
         if (dividendYield == null || dividendYield.compareTo(BigDecimal.ZERO) <= 0) {
+            return DividendData.noDividend();
+        }
+
+        if (dividendYield.compareTo(BigDecimal.ONE) > 0) {
+            log.warn("Unrealistic dividend yield for {}: {} (>100%) — treating as no dividend", stockCode, dividendYield);
             return DividendData.noDividend();
         }
 

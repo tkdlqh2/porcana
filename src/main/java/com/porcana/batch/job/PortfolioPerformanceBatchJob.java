@@ -386,7 +386,7 @@ public class PortfolioPerformanceBatchJob {
             log.warn("Invalid price for asset {} (start={}, target={})",
                     asset.getSymbol(), startPrice, targetPrice);
             batchIssueCollector.recordAssetIssue(jobExecutionId, "calculatePortfolioPerformanceStep", asset,
-                    "INVALID_PRICE_ZERO", String.format("Invalid price detected (start=%s, target=%s)", startPrice, targetPrice));
+                    "INVALID_PRICE_NON_POSITIVE", String.format("Invalid price detected (start=%s, target=%s)", startPrice, targetPrice));
             return Optional.empty();
         }
 

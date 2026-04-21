@@ -64,8 +64,11 @@ public class AssetBatchDto {
         if (imageUrl != null && !imageUrl.isBlank()) {
             entity.setImageUrl(imageUrl);
         }
-        if (description != null && !description.isBlank()) {
-            entity.setDescription(description);
+        if (description != null) {
+            String normalizedDescription = description.trim();
+            if (!normalizedDescription.isEmpty()) {
+                entity.setDescription(normalizedDescription);
+            }
         }
         if (active) {
             entity.activate();
