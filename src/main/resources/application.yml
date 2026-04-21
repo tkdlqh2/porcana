@@ -59,6 +59,8 @@ batch:
     us:
       api-key: ${FMP_API_KEY:}
       base-url: https://financialmodelingprep.com
+    dart:
+      api-key: ${DART_API_KEY:}
     exchangerate:
       api-key: ${KOREAEXIM_API_KEY:}
   runner:
