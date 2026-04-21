@@ -6,20 +6,16 @@ Last updated: 2026-04-21
 
 자산 상세 데이터의 빈 구간을 메우고, 미국/한국 종목 모두에 대해 운영 가능한 설명, 이미지, 배당 업데이트 흐름을 만든다.
 
-## Current State
+## Completed (feat/asset-data-enrichment PR)
 
-- 미국 종목
-  - `FmpAssetProvider`가 `description`, `imageUrl`, 배당 데이터를 가져온다.
-  - 현재 유니버스는 사실상 `S&P 500 + NASDAQ 100` 중심이다.
-- 한국 종목
-  - `DataGoKrAssetProvider`가 종목 기본 정보와 가격을 가져온다.
-  - `DartApiProvider`가 배당 데이터를 가져온다.
-  - 설명과 이미지 수집 파이프라인은 없다.
-- 어드민
-  - 이미지와 배당은 수동 수정 가능하다.
-  - 250개 단위 운영에는 수동 보정만으로는 부족하다.
+- US 종목 `description`, `isActivelyTrading` 반영 (FMP 연동)
+- KR 상폐 종목 자동 deactivate (krAssetJob)
+- KR 종목 배당 데이터 수집 (DART API 연동)
+- Admin 배치 로그 (`AdminBatchJobRun`, `AdminBatchJobIssue`)
 
-## Work Breakdown
+---
+
+## Remaining Work
 
 ### 1. US Universe Expansion
 
@@ -35,30 +31,14 @@ Last updated: 2026-04-21
 - 단기: 코드에서 `AMEX` 입력 경로를 먼저 열고 기존 흐름과 호환되게 유지한다.
 - 중기: CSV 수동 관리 대신 FMP 거래소 기반 동기화로 전환 검토.
 
-### 2. KR Dividend Updates
-
-목표:
-- 한국 종목 배당 데이터는 DART 기반으로 계속 업데이트한다.
-
-작업:
-- `KrDividendUpdateRunner`를 운영 배치에 연결할지 결정한다.
-- 실패/스킵 로그 기준을 정리한다.
-- 연 1회 배당 중심이라는 KR 시장 특성을 UI 문구와 맞춘다.
-
-메모:
-- 현재 코드상 DART 연동은 이미 들어와 있다.
-- 우선순위는 "신규 개발"보다 "실행 경로와 운영 기준 정리" 쪽이다.
-
-### 3. KR Description Strategy
+### 2. KR Description Strategy
 
 목표:
 - 한국 종목별 설명을 빈 값이 아니라 읽을 만한 텍스트로 채운다.
 
 권장 전략:
 - 1차 소스: 종목 메타데이터 기반 템플릿 설명
-  - 회사명
-  - 시장(KOSPI/KOSDAQ)
-  - 섹터
+  - 회사명, 시장(KOSPI/KOSDAQ), 섹터
   - 시가총액/대표 제품/사업 키워드가 확보되면 포함
 - 2차 소스: AI 보강
   - 입력: 회사명, 종목코드, 섹터, 최근 배당 여부, ETF 여부, 주요 지수 편입 여부
@@ -71,7 +51,7 @@ Last updated: 2026-04-21
 - 미국처럼 FMP `description` 번역만 기대하는 방식
   - 한국 종목은 원천 설명 자체가 빈약하거나 일관되지 않을 가능성이 높다.
 
-### 4. KR Image Strategy
+### 3. KR Image Strategy
 
 목표:
 - 한국 종목 이미지 부재를 자동 보완한다.
@@ -95,59 +75,29 @@ Last updated: 2026-04-21
 - 네이버/증권사 페이지 직접 크롤링은 robots, 차단, URL 구조 변경 리스크가 크다.
 - 운영용이면 "수집 전용 스크립트 + 결과 검수 + 캐시 저장"이 런타임 직접 크롤링보다 낫다.
 
-### 5. Description Beyond Plain Text
+### 4. Description Beyond Plain Text
 
 목표:
 - 설명 텍스트만으로 부족한 종목 정보를 보완한다.
 
 추가 후보:
-- 한 줄 투자 포지션
-  - 예: `반도체 대형주`, `배당형 ETF`, `미국 소비재 방어주`
-- 핵심 포인트 3개
-  - 사업/섹터
-  - 배당 성향
-  - 편입 지수 또는 자산 성격
-- AI 요약 카드
-  - "이 종목은 어떤 역할인가?"
-  - "포트폴리오에 넣는 이유는 무엇인가?"
-  - "주의할 점은 무엇인가?"
+- 한 줄 투자 포지션 (예: `반도체 대형주`, `배당형 ETF`, `미국 소비재 방어주`)
+- 핵심 포인트 3개: 사업/섹터, 배당 성향, 편입 지수 또는 자산 성격
+- AI 요약 카드: "이 종목은 어떤 역할인가?", "포트폴리오에 넣는 이유", "주의할 점"
 
 권장 방식:
 - 구조화 데이터와 생성 텍스트를 분리한다.
 - `description` 하나에 모든 걸 우겨 넣지 말고, 장기적으로는 아래 필드를 검토한다.
-  - `summary`
-  - `bullPoints`
-  - `riskNotes`
-  - `businessTags`
+  - `summary`, `bullPoints`, `riskNotes`, `businessTags`
 
-### 6. Operations Priority
+---
 
-1. AMEX 추가
-2. 한국 종목 설명 생성 파이프라인
-3. 한국 종목 이미지 수집 파이프라인
-4. DART 배당 업데이트 운영 연결
-5. AI 요약 카드 같은 확장 필드
+## Execution Order (Next PR)
 
-## Recommended Execution Order
-
-### Phase A
-
-- AMEX 입력 경로 추가
-- 계획 문서와 운영 기준 정리
-
-### Phase B
-
-- 한국 종목 설명 생성 배치 추가
-- 설명 생성 규칙과 fallback 설계
-
-### Phase C
-
-- 한국 종목 이미지 수집기 추가
-- 캐시/검수 정책 확정
-
-### Phase D
-
-- 자산 상세 응답을 단순 설명에서 구조화 카드로 확장
+1. US Universe Expansion (AMEX 입력 경로 추가)
+2. KR 종목 설명 생성 배치 (템플릿 → AI 보강)
+3. KR 종목 이미지 수집기 (캐시/검수 정책 포함)
+4. 자산 상세 응답 구조화 카드 확장
 
 ## Open Questions
 
