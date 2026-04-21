@@ -14,8 +14,8 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Batch job execution listener that sends Discord notifications
- * Monitors all batch jobs and sends notifications on success/failure
+ * Batch job execution listener that records batch execution results to AdminBatchLog
+ * Monitors all batch jobs and persists execution summary and error details
  */
 @Slf4j
 @Component

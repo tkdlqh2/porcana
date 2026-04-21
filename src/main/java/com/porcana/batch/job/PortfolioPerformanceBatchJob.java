@@ -248,8 +248,6 @@ public class PortfolioPerformanceBatchJob {
             Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate, jobExecutionId);
             if (resultOpt.isEmpty()) {
                 log.warn("Failed to calculate return for asset {} ({})", asset.getSymbol(), asset.getId());
-                batchIssueCollector.recordAssetIssue(jobExecutionId, "calculatePortfolioPerformanceStep", asset,
-                        "ASSET_RETURN_CALCULATION_FAILED", "Portfolio performance asset return calculation failed");
                 return Optional.empty();
             }
 

@@ -51,6 +51,7 @@ public class AssetBatchDto {
                 .active(active)
                 .asOf(asOf)
                 .imageUrl(imageUrl)
+                .description(description)
                 .build();
     }
 

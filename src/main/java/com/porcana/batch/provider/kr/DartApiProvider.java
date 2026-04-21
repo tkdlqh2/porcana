@@ -14,6 +14,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
@@ -104,7 +105,11 @@ public class DartApiProvider {
         }
 
         log.info("Loading DART corp_code mapping from API...");
-        corpCodeMap = downloadCorpCodeMap();
+        Map<String, String> downloaded = downloadCorpCodeMap();
+        if (downloaded.isEmpty()) {
+            throw new IllegalStateException("DART corp_code mapping is empty — keeping existing cache");
+        }
+        corpCodeMap = downloaded;
         corpCodeMapUpdatedAt = today;
         log.info("Loaded {} corp_code entries from DART", corpCodeMap.size());
     }
@@ -145,9 +150,12 @@ public class DartApiProvider {
     private Map<String, String> parseCorpCodeXml(byte[] xmlBytes) throws Exception {
         Map<String, String> map = new HashMap<>();
 
-        Document doc = DocumentBuilderFactory.newInstance()
-                .newDocumentBuilder()
-                .parse(new ByteArrayInputStream(xmlBytes));
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        Document doc = factory.newDocumentBuilder().parse(new ByteArrayInputStream(xmlBytes));
 
         NodeList items = doc.getElementsByTagName("list");
         for (int i = 0; i < items.getLength(); i++) {
@@ -183,9 +191,13 @@ public class DartApiProvider {
         try {
             AlotMatterResponse response = restTemplate.getForObject(url, AlotMatterResponse.class);
 
-            if (response == null || !"000".equals(response.getStatus()) || response.getList() == null) {
-                log.debug("No alotMatter data for stock {} (corp_code: {}): status={}",
+            if (response == null || !"000".equals(response.getStatus())) {
+                log.warn("DART API error for stock {} (corp_code: {}): status={}",
                         stockCode, corpCode, response != null ? response.getStatus() : "null");
+                return null;
+            }
+            if (response.getList() == null) {
+                log.debug("No alotMatter data for stock {} (corp_code: {})", stockCode, corpCode);
                 return DividendData.noDividend();
             }
 

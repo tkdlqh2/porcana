@@ -52,7 +52,12 @@ public class BatchIssueCollector {
         }
 
         List<CollectedIssue> issues = issuesByExecution.remove(jobExecutionId);
-        return issues == null ? List.of() : List.copyOf(issues);
+        if (issues == null) {
+            return List.of();
+        }
+        synchronized (issues) {
+            return List.copyOf(issues);
+        }
     }
 
     @Getter
