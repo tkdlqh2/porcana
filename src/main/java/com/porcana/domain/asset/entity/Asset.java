@@ -69,6 +69,9 @@ public class Asset {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     // 배당 관련 필드
     @Column(name = "dividend_available")
     private Boolean dividendAvailable;
@@ -105,7 +108,7 @@ public class Asset {
     @Builder
     public Asset(Market market, String symbol, String name, AssetType type, Sector sector,
                  AssetClass assetClass, List<UniverseTag> universeTags, Boolean active,
-                 String imageUrl, Boolean dividendAvailable, BigDecimal dividendYield,
+                 String imageUrl, String description, Boolean dividendAvailable, BigDecimal dividendYield,
                  DividendFrequency dividendFrequency, DividendCategory dividendCategory,
                  DividendDataStatus dividendDataStatus, LocalDate lastDividendDate,
                  LocalDate asOf) {
@@ -118,6 +121,7 @@ public class Asset {
         this.universeTags = universeTags != null ? universeTags : new ArrayList<>();
         this.active = active != null ? active : false;
         this.imageUrl = imageUrl;
+        this.description = description;
         this.dividendAvailable = dividendAvailable;
         this.dividendYield = dividendYield;
         this.dividendFrequency = dividendFrequency;
@@ -162,6 +166,10 @@ public class Asset {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     /**

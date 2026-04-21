@@ -170,9 +170,10 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                     .type(profile.isEtf() ? Asset.AssetType.ETF : Asset.AssetType.STOCK)
                     .sector(sector)
                     .universeTags(universeTags)
-                    .active(true) // All fetched assets are active
+                    .active(Boolean.TRUE.equals(profile.getIsActivelyTrading()))
                     .asOf(asOf)
                     .imageUrl(profile.getImage())
+                    .description(profile.getDescription())
                     .build();
 
         } catch (Exception e) {

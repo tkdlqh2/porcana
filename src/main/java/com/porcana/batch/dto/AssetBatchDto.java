@@ -34,6 +34,7 @@ public class AssetBatchDto {
 
     private final LocalDate asOf;
     private final String imageUrl;
+    private final String description;
 
     /**
      * Convert to Asset entity for persistence
@@ -61,6 +62,9 @@ public class AssetBatchDto {
         entity.updateAsOf(asOf);
         if (imageUrl != null && !imageUrl.isBlank()) {
             entity.setImageUrl(imageUrl);
+        }
+        if (description != null && !description.isBlank()) {
+            entity.setDescription(description);
         }
         if (active) {
             entity.activate();
