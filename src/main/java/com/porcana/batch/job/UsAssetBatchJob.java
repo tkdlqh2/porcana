@@ -29,7 +29,7 @@ import java.util.Map;
  * Spring Batch job for fetching US market assets
  *
  * Steps:
- * 1. Fetch S&P 500 constituents from FMP API (already tagged with SP500)
+ * 1. Fetch configured US stock universes from FMP API
  */
 @Slf4j
 @Configuration
@@ -53,18 +53,18 @@ public class UsAssetBatchJob {
     }
 
     /**
-     * Step 1: Fetch S&P 500 constituents from FMP
-     * Assets are already tagged with SP500 and marked as active by the provider
+     * Step 1: Fetch configured US stock universes from FMP
+     * Assets are already tagged and marked as active by the provider
      */
     @Bean
     public Step fetchUsAssetsStep() {
         return new StepBuilder("fetchUsAssetsStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    log.info("Starting S&P 500 fetch from FMP");
+                    log.info("Starting US stock universe fetch from FMP");
 
                     try {
                         List<AssetBatchDto> assets = fmpProvider.fetchAssets();
-                        log.info("Fetched {} S&P 500 constituents from FMP", assets.size());
+                        log.info("Fetched {} US stock assets from FMP", assets.size());
 
                         int created = 0;
                         int updated = 0;
@@ -88,11 +88,11 @@ public class UsAssetBatchJob {
                             }
                         }
 
-                        log.info("S&P 500 upsert complete: {} created, {} updated",
+                        log.info("US stock universe upsert complete: {} created, {} updated",
                                 created, updated);
 
                     } catch (Exception e) {
-                        log.error("Failed to fetch S&P 500 constituents", e);
+                        log.error("Failed to fetch US stock universe", e);
                         throw new RuntimeException("US asset fetch failed", e);
                     }
 

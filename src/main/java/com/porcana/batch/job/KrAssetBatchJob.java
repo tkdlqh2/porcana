@@ -24,6 +24,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,14 +55,19 @@ public class KrAssetBatchJob {
         return new JobBuilder("krAssetJob", jobRepository)
                 .listener(batchNotificationListener)
                 .start(fetchKrAssetsStep())
+                .next(deactivateDelistedKrAssetsStep())
                 .next(tagKospi200Step())
                 .next(tagKosdaq150Step())
                 .next(fetchKrHistoricalPricesStep())
                 .build();
     }
 
+    private static final String FETCHED_KR_SYMBOLS_KEY = "fetchedKrSymbols";
+    private static final int MIN_FETCHED_SYMBOLS_THRESHOLD = 10;
+
     /**
      * Step 1: Fetch all Korean stocks from data.go.kr
+     * Saves fetched symbol set to JobExecutionContext for deactivate step
      */
     @Bean
     public Step fetchKrAssetsStep() {
@@ -75,8 +81,10 @@ public class KrAssetBatchJob {
 
                         int created = 0;
                         int updated = 0;
+                        Set<String> fetchedSymbols = new HashSet<>();
 
                         for (AssetBatchDto dto : assets) {
+                            fetchedSymbols.add(dto.getSymbol());
                             boolean exists = assetRepository.existsBySymbolAndMarket(
                                     dto.getSymbol(), dto.getMarket());
 
@@ -95,6 +103,13 @@ public class KrAssetBatchJob {
                             }
                         }
 
+                        // Save fetched symbols to JobExecutionContext for deactivate step
+                        chunkContext.getStepContext()
+                                .getStepExecution()
+                                .getJobExecution()
+                                .getExecutionContext()
+                                .put(FETCHED_KR_SYMBOLS_KEY, fetchedSymbols);
+
                         log.info("Korean assets upsert complete: {} created, {} updated",
                                 created, updated);
 
@@ -103,6 +118,49 @@ public class KrAssetBatchJob {
                         throw new RuntimeException("Korean asset fetch failed", e);
                     }
 
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    /**
+     * Step 2: Deactivate KR assets that are no longer listed on data.go.kr
+     * Compares fetched symbols from previous step with active KR assets in DB
+     */
+    @Bean
+    public Step deactivateDelistedKrAssetsStep() {
+        return new StepBuilder("deactivateDelistedKrAssetsStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    log.info("Starting deactivation of delisted KR assets");
+
+                    @SuppressWarnings("unchecked")
+                    Set<String> fetchedSymbols = (Set<String>) chunkContext.getStepContext()
+                            .getStepExecution()
+                            .getJobExecution()
+                            .getExecutionContext()
+                            .get(FETCHED_KR_SYMBOLS_KEY);
+
+                    if (fetchedSymbols == null || fetchedSymbols.size() < MIN_FETCHED_SYMBOLS_THRESHOLD) {
+                        log.warn("Fetched symbols too few ({}). Skipping deactivation to avoid data loss.",
+                                fetchedSymbols == null ? 0 : fetchedSymbols.size());
+                        return RepeatStatus.FINISHED;
+                    }
+
+                    List<Asset> activeKrAssets = assetRepository.findByMarketAndActiveTrue(Asset.Market.KR);
+                    log.info("Active KR assets in DB: {}, Fetched from data.go.kr: {}",
+                            activeKrAssets.size(), fetchedSymbols.size());
+
+                    int deactivated = 0;
+                    for (Asset asset : activeKrAssets) {
+                        if (!fetchedSymbols.contains(asset.getSymbol())) {
+                            asset.deactivate();
+                            assetRepository.save(asset);
+                            deactivated++;
+                            log.info("Deactivated delisted KR asset: {} ({})", asset.getSymbol(), asset.getName());
+                        }
+                    }
+
+                    log.info("KR deactivation complete: {} assets deactivated", deactivated);
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();

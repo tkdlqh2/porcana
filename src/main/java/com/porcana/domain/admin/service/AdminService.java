@@ -4,6 +4,9 @@ import com.porcana.domain.admin.dto.request.CreateAdminRequest;
 import com.porcana.domain.admin.dto.request.UpdateAssetDividendRequest;
 import com.porcana.domain.admin.dto.request.UpdateAssetImageRequest;
 import com.porcana.domain.admin.dto.response.*;
+import com.porcana.domain.admin.entity.AdminBatchJobRun;
+import com.porcana.domain.admin.repository.AdminBatchJobIssueRepository;
+import com.porcana.domain.admin.repository.AdminBatchJobRunRepository;
 import com.porcana.domain.arena.repository.ArenaSessionRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
@@ -17,12 +20,15 @@ import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,6 +44,8 @@ public class AdminService {
     private final PortfolioAssetRepository portfolioAssetRepository;
     private final ArenaSessionRepository arenaSessionRepository;
     private final AssetRepository assetRepository;
+    private final AdminBatchJobRunRepository adminBatchJobRunRepository;
+    private final AdminBatchJobIssueRepository adminBatchJobIssueRepository;
     private final PasswordEncoder passwordEncoder;
 
     // ========================================
@@ -244,5 +252,33 @@ public class AdminService {
                 .toList();
 
         return AdminPortfolioDetailResponse.from(portfolio, ownerInfo, assetItems);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminBatchRunListResponse getBatchRuns(Pageable pageable) {
+        Page<AdminBatchJobRun> runs = adminBatchJobRunRepository.findAll(pageable);
+        return AdminBatchRunListResponse.from(runs);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminBatchRunDetailResponse getBatchRunDetail(UUID runId) {
+        AdminBatchJobRun run = adminBatchJobRunRepository.findById(runId)
+                .orElseThrow(() -> new IllegalArgumentException("Batch run not found: " + runId));
+
+        return AdminBatchRunDetailResponse.from(
+                run,
+                adminBatchJobIssueRepository.findByBatchJobRunIdOrderByCreatedAtDesc(runId)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AdminTodayBatchIssueListResponse getTodayBatchIssues() {
+        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+
+        return AdminTodayBatchIssueListResponse.from(
+                adminBatchJobIssueRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(
+                        start, end, PageRequest.of(0, 300))
+        );
     }
 }

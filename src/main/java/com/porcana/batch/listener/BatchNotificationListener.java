@@ -1,6 +1,6 @@
 package com.porcana.batch.listener;
 
-import com.porcana.global.notification.DiscordNotificationService;
+import com.porcana.batch.service.AdminBatchLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
@@ -14,15 +14,15 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Batch job execution listener that sends Discord notifications
- * Monitors all batch jobs and sends notifications on success/failure
+ * Batch job execution listener that records batch execution results to AdminBatchLog
+ * Monitors all batch jobs and persists execution summary and error details
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class BatchNotificationListener implements JobExecutionListener {
 
-    private final DiscordNotificationService discordNotificationService;
+    private final AdminBatchLogService adminBatchLogService;
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
@@ -54,7 +54,7 @@ public class BatchNotificationListener implements JobExecutionListener {
      */
     private void handleSuccess(JobExecution jobExecution, String jobName, long durationMs) {
         String summary = buildSuccessSummary(jobExecution);
-        discordNotificationService.sendBatchSuccess(jobName, durationMs, summary);
+        adminBatchLogService.record(jobExecution, summary, null);
     }
 
     /**
@@ -62,7 +62,7 @@ public class BatchNotificationListener implements JobExecutionListener {
      */
     private void handleFailure(JobExecution jobExecution, String jobName, long durationMs) {
         String errorMessage = buildErrorMessage(jobExecution);
-        discordNotificationService.sendBatchFailure(jobName, durationMs, errorMessage);
+        adminBatchLogService.record(jobExecution, buildSuccessSummary(jobExecution), errorMessage);
     }
 
     /**
@@ -73,7 +73,7 @@ public class BatchNotificationListener implements JobExecutionListener {
         if (!jobExecution.getAllFailureExceptions().isEmpty()) {
             message += "\nExceptions occurred during execution";
         }
-        discordNotificationService.sendBatchWarning(jobName, message);
+        adminBatchLogService.record(jobExecution, buildSuccessSummary(jobExecution), message);
     }
 
     /**

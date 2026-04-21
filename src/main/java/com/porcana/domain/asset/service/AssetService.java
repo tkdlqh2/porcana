@@ -56,7 +56,7 @@ public class AssetService {
                 .sector(asset.getSector() != null ? asset.getSector().name() : null)
                 .currency(asset.getMarket() == Asset.Market.KR ? "KRW" : "USD")
                 .imageUrl(asset.getImageUrl())
-                .description(null) // TODO: Add description field to Asset entity
+                .description(asset.getDescription())
                 .currentRiskLevel(asset.getCurrentRiskLevel())
                 .personality(AssetPersonalityResponse.from(personality))
                 .build();

@@ -44,6 +44,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
     private static final String RATIOS_TTM_ENDPOINT = "/stable/ratios-ttm";
     private static final String SP500_CSV = "batch/s&p500.csv";
     private static final String NASDAQ100_CSV = "batch/nasdaq100.csv";
+    private static final String AMEX_CSV = "batch/amex.csv";
 
     // 배당 수익률 임계값 (소수 기준)
     private static final BigDecimal HIGH_DIVIDEND_THRESHOLD = new BigDecimal("0.04");  // 4% 이상 = 고배당
@@ -75,14 +76,16 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             // Read symbol lists from CSV files
             Set<String> sp500Symbols = readSymbolsFromCsv(SP500_CSV);
             Set<String> nasdaq100Symbols = readSymbolsFromCsv(NASDAQ100_CSV);
+            Set<String> amexSymbols = readSymbolsFromCsv(AMEX_CSV);
 
-            log.info("Found {} S&P 500 symbols and {} NASDAQ 100 symbols",
-                    sp500Symbols.size(), nasdaq100Symbols.size());
+            log.info("Found {} S&P 500 symbols, {} NASDAQ 100 symbols, and {} AMEX symbols",
+                    sp500Symbols.size(), nasdaq100Symbols.size(), amexSymbols.size());
 
             // Get all unique symbols
             Set<String> allSymbols = new HashSet<>();
             allSymbols.addAll(sp500Symbols);
             allSymbols.addAll(nasdaq100Symbols);
+            allSymbols.addAll(amexSymbols);
 
             log.info("Total unique symbols: {}", allSymbols.size());
 
@@ -97,7 +100,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                 try {
                     log.info("Fetching asset {}/{}: {}", count, total, symbol);
 
-                    AssetBatchDto asset = fetchAssetBySymbol(symbol, sp500Symbols, nasdaq100Symbols, asOf);
+                    AssetBatchDto asset = fetchAssetBySymbol(symbol, sp500Symbols, nasdaq100Symbols, amexSymbols, asOf);
                     if (asset != null) {
                         assets.add(asset);
                         log.info("Successfully fetched: {} - {}", symbol, asset.getName());
@@ -134,7 +137,8 @@ public class FmpAssetProvider implements UsAssetDataProvider {
      * Fetch asset data for a single symbol from FMP API
      */
     private AssetBatchDto fetchAssetBySymbol(String symbol, Set<String> sp500Symbols,
-                                             Set<String> nasdaq100Symbols, LocalDate asOf) {
+                                             Set<String> nasdaq100Symbols, Set<String> amexSymbols,
+                                             LocalDate asOf) {
         String url = String.format("%s%s?symbol=%s&apikey=%s", baseUrl, PROFILE_ENDPOINT, symbol, apiKey);
 
         try {
@@ -155,6 +159,9 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             if (nasdaq100Symbols.contains(symbol)) {
                 universeTags.add(UniverseTag.NASDAQ100);
             }
+            if (amexSymbols.contains(symbol)) {
+                universeTags.add(UniverseTag.AMEX);
+            }
 
             // Convert FMP sector name to GICS Sector enum
             Sector sector = Sector.fromFmpName(profile.getSector());
@@ -170,9 +177,10 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                     .type(profile.isEtf() ? Asset.AssetType.ETF : Asset.AssetType.STOCK)
                     .sector(sector)
                     .universeTags(universeTags)
-                    .active(true) // All fetched assets are active
+                    .active(Boolean.TRUE.equals(profile.getIsActivelyTrading()))
                     .asOf(asOf)
                     .imageUrl(profile.getImage())
+                    .description(profile.getDescription())
                     .build();
 
         } catch (Exception e) {

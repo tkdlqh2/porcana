@@ -1,6 +1,7 @@
 package com.porcana.batch.job;
 
 import com.porcana.batch.listener.BatchNotificationListener;
+import com.porcana.batch.support.BatchIssueCollector;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
@@ -58,6 +59,7 @@ public class PortfolioPerformanceBatchJob {
     private final PortfolioDailyReturnRepository dailyReturnRepository;
     private final SnapshotAssetDailyReturnRepository assetDailyReturnRepository;
     private final BatchNotificationListener batchNotificationListener;
+    private final BatchIssueCollector batchIssueCollector;
 
     private static final int CHUNK_SIZE = 10;
 
@@ -80,7 +82,7 @@ public class PortfolioPerformanceBatchJob {
         return new StepBuilder("calculatePortfolioPerformanceStep", jobRepository)
                 .<Portfolio, PortfolioPerformanceResult>chunk(CHUNK_SIZE, transactionManager)
                 .reader(portfolioReader())
-                .processor(portfolioPerformanceProcessor(null))
+                .processor(portfolioPerformanceProcessor(null, null))
                 .writer(portfolioPerformanceWriter())
                 .build();
     }
@@ -107,7 +109,8 @@ public class PortfolioPerformanceBatchJob {
     @Bean
     @StepScope
     public ItemProcessor<Portfolio, PortfolioPerformanceResult> portfolioPerformanceProcessor(
-            @Value("#{jobParameters['timestamp'] ?: T(System).currentTimeMillis()}") Long timestamp) {
+            @Value("#{jobParameters['timestamp'] ?: T(System).currentTimeMillis()}") Long timestamp,
+            @Value("#{stepExecution.jobExecution.id}") Long jobExecutionId) {
 
         // If timestamp is null, use current time
         long effectiveTimestamp = (timestamp != null) ? timestamp : System.currentTimeMillis();
@@ -142,7 +145,7 @@ public class PortfolioPerformanceBatchJob {
             }
 
             // Calculate performance
-            Optional<PortfolioPerformanceResult> resultOpt = calculatePerformance(portfolio, targetDate);
+            Optional<PortfolioPerformanceResult> resultOpt = calculatePerformance(portfolio, targetDate, jobExecutionId);
 
             if (resultOpt.isEmpty()) {
                 log.warn("Failed to calculate performance for portfolio {}: insufficient data", portfolio.getId());
@@ -190,7 +193,8 @@ public class PortfolioPerformanceBatchJob {
      * @param targetDate 계산 날짜
      * @return 계산 결과
      */
-    private Optional<PortfolioPerformanceResult> calculatePerformance(Portfolio portfolio, LocalDate targetDate) {
+    private Optional<PortfolioPerformanceResult> calculatePerformance(Portfolio portfolio, LocalDate targetDate,
+                                                                     Long jobExecutionId) {
         // Find applicable snapshot (effectiveDate <= targetDate)
         Optional<PortfolioSnapshot> snapshotOpt = snapshotRepository
                 .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
@@ -241,7 +245,7 @@ public class PortfolioPerformanceBatchJob {
             Asset asset = assetMap.get(snapshotAsset.getAssetId());
 
             // Calculate asset return
-            Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate);
+            Optional<AssetReturnResult> resultOpt = calculateAssetReturn(asset, snapshotDate, targetDate, jobExecutionId);
             if (resultOpt.isEmpty()) {
                 log.warn("Failed to calculate return for asset {} ({})", asset.getSymbol(), asset.getId());
                 return Optional.empty();
@@ -354,11 +358,14 @@ public class PortfolioPerformanceBatchJob {
      * @param targetDate  목표 날짜
      * @return 자산 수익률 결과
      */
-    private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate) {
+    private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate,
+                                                             Long jobExecutionId) {
         // Get start price
         Optional<AssetPrice> startPriceOpt = findClosestPrice(asset, startDate);
         if (startPriceOpt.isEmpty()) {
             log.warn("No start price found for asset {} on {}", asset.getSymbol(), startDate);
+            batchIssueCollector.recordAssetIssue(jobExecutionId, "calculatePortfolioPerformanceStep", asset,
+                    "NO_START_PRICE", "No start price found for portfolio performance calculation");
             return Optional.empty();
         }
 
@@ -366,6 +373,8 @@ public class PortfolioPerformanceBatchJob {
         Optional<AssetPrice> targetPriceOpt = findClosestPrice(asset, targetDate);
         if (targetPriceOpt.isEmpty()) {
             log.warn("No target price found for asset {} on {}", asset.getSymbol(), targetDate);
+            batchIssueCollector.recordAssetIssue(jobExecutionId, "calculatePortfolioPerformanceStep", asset,
+                    "NO_TARGET_PRICE", "No target price found for portfolio performance calculation");
             return Optional.empty();
         }
 
@@ -376,6 +385,8 @@ public class PortfolioPerformanceBatchJob {
         if (startPrice.compareTo(BigDecimal.ZERO) <= 0 || targetPrice.compareTo(BigDecimal.ZERO) <= 0) {
             log.warn("Invalid price for asset {} (start={}, target={})",
                     asset.getSymbol(), startPrice, targetPrice);
+            batchIssueCollector.recordAssetIssue(jobExecutionId, "calculatePortfolioPerformanceStep", asset,
+                    "INVALID_PRICE_NON_POSITIVE", String.format("Invalid price detected (start=%s, target=%s)", startPrice, targetPrice));
             return Optional.empty();
         }
 
@@ -391,6 +402,8 @@ public class PortfolioPerformanceBatchJob {
             Optional<BigDecimal> fxReturnOpt = calculateFxReturn(startDate, targetDate);
             if (fxReturnOpt.isEmpty()) {
                 log.warn("Failed to calculate FX return for {}", asset.getSymbol());
+                batchIssueCollector.recordAssetIssue(jobExecutionId, "calculatePortfolioPerformanceStep", asset,
+                        "FX_RETURN_FAILED", "Failed to calculate FX return");
                 return Optional.empty();
             }
             fxReturn = fxReturnOpt.get();
