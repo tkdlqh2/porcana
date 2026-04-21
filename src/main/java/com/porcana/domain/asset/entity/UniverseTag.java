@@ -8,6 +8,7 @@ public enum UniverseTag {
     // US Market
     SP500("S&P 500"),
     NASDAQ100("NASDAQ 100"),
+    AMEX("AMEX"),
     DOW30("Dow Jones 30"),
 
     // KR Market

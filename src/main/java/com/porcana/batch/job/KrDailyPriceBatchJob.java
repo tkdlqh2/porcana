@@ -2,6 +2,7 @@ package com.porcana.batch.job;
 
 import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.kr.DataGoKrAssetProvider;
+import com.porcana.batch.support.BatchIssueCollector;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
@@ -35,6 +36,7 @@ public class KrDailyPriceBatchJob {
     private final AssetRepository assetRepository;
     private final AssetPriceRepository assetPriceRepository;
     private final BatchNotificationListener batchNotificationListener;
+    private final BatchIssueCollector batchIssueCollector;
 
     @Bean
     public Job krDailyPriceJob() {
@@ -52,6 +54,8 @@ public class KrDailyPriceBatchJob {
         return new StepBuilder("updateKrDailyPricesStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     log.info("Starting daily price update for Korean market");
+                    Long jobExecutionId = chunkContext.getStepContext().getStepExecution().getJobExecution().getId();
+                    String stepName = chunkContext.getStepContext().getStepName();
 
                     // Find all active Korean assets
                     List<Asset> activeAssets = assetRepository.findByMarketAndActiveTrue(Asset.Market.KR);
@@ -71,6 +75,16 @@ public class KrDailyPriceBatchJob {
 
                             if (latestPrice == null) {
                                 log.warn("No daily price data for symbol: {}", asset.getSymbol());
+                                batchIssueCollector.recordAssetIssue(jobExecutionId, stepName, asset,
+                                        "NO_DAILY_PRICE", "No daily price data returned from data.go.kr");
+                                totalFailed++;
+                                continue;
+                            }
+
+                            if (latestPrice.getPrice() == null || latestPrice.getPrice().signum() <= 0) {
+                                log.warn("Invalid daily price for symbol {}: {}", asset.getSymbol(), latestPrice.getPrice());
+                                batchIssueCollector.recordAssetIssue(jobExecutionId, stepName, asset,
+                                        "INVALID_DAILY_PRICE", "Daily price was zero, negative, or missing");
                                 totalFailed++;
                                 continue;
                             }
@@ -96,6 +110,8 @@ public class KrDailyPriceBatchJob {
 
                         } catch (Exception e) {
                             log.error("Failed to update price for symbol: {}", asset.getSymbol(), e);
+                            batchIssueCollector.recordAssetIssue(jobExecutionId, stepName, asset,
+                                    "PRICE_UPDATE_FAILED", e.getMessage() != null ? e.getMessage() : "Unknown error");
                             totalFailed++;
                         }
 

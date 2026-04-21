@@ -129,4 +129,24 @@ public class AdminController {
         AdminPortfolioDetailResponse response = adminService.getPortfolioDetail(portfolioId);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "배치 실행 로그 목록", description = "어드민에서 배치 실행 로그를 조회합니다.")
+    @GetMapping("/batch-runs")
+    public ResponseEntity<AdminBatchRunListResponse> getBatchRuns(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(adminService.getBatchRuns(pageable));
+    }
+
+    @Operation(summary = "배치 실행 로그 상세", description = "배치 실행 로그와 이상 종목 목록을 조회합니다.")
+    @GetMapping("/batch-runs/{runId}")
+    public ResponseEntity<AdminBatchRunDetailResponse> getBatchRunDetail(
+            @PathVariable UUID runId) {
+        return ResponseEntity.ok(adminService.getBatchRunDetail(runId));
+    }
+
+    @Operation(summary = "오늘 배치 이상 종목 목록", description = "오늘 생성된 배치 이상 종목 목록을 조회합니다.")
+    @GetMapping("/batch-runs/today-issues")
+    public ResponseEntity<AdminTodayBatchIssueListResponse> getTodayBatchIssues() {
+        return ResponseEntity.ok(adminService.getTodayBatchIssues());
+    }
 }
