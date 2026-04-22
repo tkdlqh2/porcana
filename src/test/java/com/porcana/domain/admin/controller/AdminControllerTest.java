@@ -121,4 +121,19 @@ class AdminControllerTest extends BaseIntegrationTest {
                 .body("points", hasSize(2))
                 .body("points[0].close", equalTo(10050.0f));
     }
+
+    @Test
+    @DisplayName("관리자 종목 목록 type 필터 조회")
+    void getAssets_filterByType() {
+        given()
+                .header("Authorization", "Bearer " + createAdminAccessToken())
+                .queryParam("type", "ETF")
+        .when()
+                .get("/admin/assets")
+        .then()
+                .statusCode(200)
+                .body("assets", hasSize(1))
+                .body("assets[0].assetId", equalTo("f2222222-2222-2222-2222-222222222222"))
+                .body("assets[0].type", equalTo("ETF"));
+    }
 }

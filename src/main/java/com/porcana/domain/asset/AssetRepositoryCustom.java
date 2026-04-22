@@ -19,4 +19,9 @@ public interface AssetRepositoryCustom {
      * Search assets by symbol or name (for admin - includes inactive)
      */
     Page<Asset> searchByKeyword(String keyword, Pageable pageable);
+
+    /**
+     * Search assets for admin with optional keyword, market, and type filters
+     */
+    Page<Asset> searchForAdmin(String keyword, Asset.Market market, Asset.AssetType type, Pageable pageable);
 }

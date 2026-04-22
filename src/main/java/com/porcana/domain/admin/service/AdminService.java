@@ -151,17 +151,13 @@ public class AdminService {
      * Get paginated asset list with optional filters
      */
     @Transactional(readOnly = true)
-    public AdminAssetListResponse getAssets(Pageable pageable, String keyword, Asset.Market market) {
-        Page<Asset> assets;
-
-        if (StringUtils.hasText(keyword)) {
-            assets = assetRepository.searchByKeyword(keyword, pageable);
-        } else if (market != null) {
-            assets = assetRepository.findByMarket(market, pageable);
-        } else {
-            assets = assetRepository.findAll(pageable);
-        }
-
+    public AdminAssetListResponse getAssets(
+            Pageable pageable,
+            String keyword,
+            Asset.Market market,
+            Asset.AssetType type
+    ) {
+        Page<Asset> assets = assetRepository.searchForAdmin(keyword, market, type, pageable);
         return AdminAssetListResponse.from(assets);
     }
 

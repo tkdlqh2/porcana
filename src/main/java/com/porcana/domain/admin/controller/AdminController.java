@@ -92,8 +92,9 @@ public class AdminController {
     public ResponseEntity<AdminAssetListResponse> getAssets(
             @PageableDefault(size = 20, sort = "symbol", direction = Sort.Direction.ASC) Pageable pageable,
             @Parameter(description = "심볼 또는 이름 검색어") @RequestParam(required = false) String keyword,
-            @Parameter(description = "시장 필터 (KR, US)") @RequestParam(required = false) Asset.Market market) {
-        AdminAssetListResponse response = adminService.getAssets(pageable, keyword, market);
+            @Parameter(description = "시장 필터 (KR, US)") @RequestParam(required = false) Asset.Market market,
+            @Parameter(description = "종목 타입 필터 (STOCK, ETF)") @RequestParam(required = false) Asset.AssetType type) {
+        AdminAssetListResponse response = adminService.getAssets(pageable, keyword, market, type);
         return ResponseEntity.ok(response);
     }
 

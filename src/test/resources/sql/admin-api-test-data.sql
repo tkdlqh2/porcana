@@ -41,7 +41,7 @@ VALUES
 INSERT INTO assets (id, symbol, name, market, type, sector, current_risk_level, active, image_url, description, created_at, updated_at, as_of)
 VALUES
     ('f1111111-1111-1111-1111-111111111111', 'ADMIN_KR', 'Admin KR Asset', 'KR', 'STOCK', 'INFORMATION_TECHNOLOGY', 3, true, 'https://example.com/kr.png', 'KR admin asset description', NOW(), NOW(), NOW()),
-    ('f2222222-2222-2222-2222-222222222222', 'ADMIN_US', 'Admin US Asset', 'US', 'STOCK', 'HEALTH_CARE', 4, true, 'https://example.com/us.png', 'US admin asset description', NOW(), NOW(), NOW());
+    ('f2222222-2222-2222-2222-222222222222', 'ADMIN_US', 'Admin US Asset', 'US', 'ETF', 'HEALTH_CARE', 4, true, 'https://example.com/us.png', 'US admin asset description', NOW(), NOW(), NOW());
 
 INSERT INTO asset_prices (id, asset_id, price_date, open_price, high_price, low_price, close_price, volume, created_at, updated_at)
 VALUES
