@@ -29,6 +29,7 @@ public record BaselineResponse(
             UUID assetId,
             String symbol,
             String name,
+            String imageUrl,
             String market,
             BigDecimal quantity,
             BigDecimal avgPrice,
