@@ -133,6 +133,34 @@ public class AssetRepositoryCustomImpl implements AssetRepositoryCustom {
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 
+    @Override
+    public Page<Asset> searchForAdmin(String keyword, Asset.Market market, Asset.AssetType type, Pageable pageable) {
+        QAsset asset = QAsset.asset;
+
+        List<Asset> content = queryFactory
+                .selectFrom(asset)
+                .where(
+                        keywordContainsForAdmin(keyword),
+                        marketEq(market),
+                        typeEq(type)
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .orderBy(asset.symbol.asc())
+                .fetch();
+
+        JPAQuery<Long> countQuery = queryFactory
+                .select(asset.count())
+                .from(asset)
+                .where(
+                        keywordContainsForAdmin(keyword),
+                        marketEq(market),
+                        typeEq(type)
+                );
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
     private BooleanExpression keywordContainsForAdmin(String keyword) {
         if (!StringUtils.hasText(keyword)) {
             return null;

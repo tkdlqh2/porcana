@@ -1,6 +1,7 @@
 package com.porcana.domain.portfolio.repository;
 
 import com.porcana.domain.portfolio.entity.Portfolio;
+import com.porcana.domain.portfolio.entity.PortfolioStatus;
 import com.porcana.domain.portfolio.entity.QPortfolio;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -12,6 +13,7 @@ import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Portfolio Repository Custom Implementation using QueryDSL
@@ -47,6 +49,60 @@ public class PortfolioRepositoryCustomImpl implements PortfolioRepositoryCustom 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 
+    @Override
+    public Page<Portfolio> searchByNameAndStatuses(String keyword, Set<PortfolioStatus> statuses, Pageable pageable) {
+        QPortfolio portfolio = QPortfolio.portfolio;
+
+        List<Portfolio> content = queryFactory
+                .selectFrom(portfolio)
+                .where(
+                        deletedAtIsNull(),
+                        nameContains(keyword),
+                        statusIn(statuses)
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .orderBy(portfolio.createdAt.desc())
+                .fetch();
+
+        JPAQuery<Long> countQuery = queryFactory
+                .select(portfolio.count())
+                .from(portfolio)
+                .where(
+                        deletedAtIsNull(),
+                        nameContains(keyword),
+                        statusIn(statuses)
+                );
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    @Override
+    public Page<Portfolio> findByStatuses(Set<PortfolioStatus> statuses, Pageable pageable) {
+        QPortfolio portfolio = QPortfolio.portfolio;
+
+        List<Portfolio> content = queryFactory
+                .selectFrom(portfolio)
+                .where(
+                        deletedAtIsNull(),
+                        statusIn(statuses)
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .orderBy(portfolio.createdAt.desc())
+                .fetch();
+
+        JPAQuery<Long> countQuery = queryFactory
+                .select(portfolio.count())
+                .from(portfolio)
+                .where(
+                        deletedAtIsNull(),
+                        statusIn(statuses)
+                );
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
     private BooleanExpression deletedAtIsNull() {
         return QPortfolio.portfolio.deletedAt.isNull();
     }
@@ -56,5 +112,12 @@ public class PortfolioRepositoryCustomImpl implements PortfolioRepositoryCustom 
             return null;
         }
         return QPortfolio.portfolio.name.lower().contains(keyword.toLowerCase());
+    }
+
+    private BooleanExpression statusIn(Set<PortfolioStatus> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return null;
+        }
+        return QPortfolio.portfolio.status.in(statuses);
     }
 }

@@ -9,11 +9,17 @@ import com.porcana.domain.admin.repository.AdminBatchJobIssueRepository;
 import com.porcana.domain.admin.repository.AdminBatchJobRunRepository;
 import com.porcana.domain.arena.repository.ArenaSessionRepository;
 import com.porcana.domain.asset.AssetRepository;
+import com.porcana.domain.asset.dto.AssetChartResponse;
+import com.porcana.domain.asset.dto.AssetDetailResponse;
 import com.porcana.domain.asset.entity.Asset;
+import com.porcana.domain.asset.service.AssetService;
+import com.porcana.domain.portfolio.dto.PortfolioPerformanceResponse;
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.entity.PortfolioAsset;
+import com.porcana.domain.portfolio.entity.PortfolioStatus;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
+import com.porcana.domain.portfolio.service.PortfolioService;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.entity.UserRole;
 import com.porcana.domain.user.repository.UserRepository;
@@ -31,6 +37,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -44,9 +51,14 @@ public class AdminService {
     private final PortfolioAssetRepository portfolioAssetRepository;
     private final ArenaSessionRepository arenaSessionRepository;
     private final AssetRepository assetRepository;
+    private final AssetService assetService;
+    private final PortfolioService portfolioService;
     private final AdminBatchJobRunRepository adminBatchJobRunRepository;
     private final AdminBatchJobIssueRepository adminBatchJobIssueRepository;
     private final PasswordEncoder passwordEncoder;
+
+    private static final Set<PortfolioStatus> ADMIN_VISIBLE_PORTFOLIO_STATUSES =
+            Set.of(PortfolioStatus.ACTIVE, PortfolioStatus.FINISHED);
 
     // ========================================
     // Admin Management
@@ -139,18 +151,24 @@ public class AdminService {
      * Get paginated asset list with optional filters
      */
     @Transactional(readOnly = true)
-    public AdminAssetListResponse getAssets(Pageable pageable, String keyword, Asset.Market market) {
-        Page<Asset> assets;
-
-        if (StringUtils.hasText(keyword)) {
-            assets = assetRepository.searchByKeyword(keyword, pageable);
-        } else if (market != null) {
-            assets = assetRepository.findByMarket(market, pageable);
-        } else {
-            assets = assetRepository.findAll(pageable);
-        }
-
+    public AdminAssetListResponse getAssets(
+            Pageable pageable,
+            String keyword,
+            Asset.Market market,
+            Asset.AssetType type
+    ) {
+        Page<Asset> assets = assetRepository.searchForAdmin(keyword, market, type, pageable);
         return AdminAssetListResponse.from(assets);
+    }
+
+    @Transactional(readOnly = true)
+    public AssetDetailResponse getAssetDetail(UUID assetId) {
+        return assetService.getAsset(assetId);
+    }
+
+    @Transactional(readOnly = true)
+    public AssetChartResponse getAssetChart(UUID assetId, String range) {
+        return assetService.getAssetChart(assetId, range);
     }
 
     /**
@@ -193,13 +211,15 @@ public class AdminService {
      * Get paginated portfolio list with optional search
      */
     @Transactional(readOnly = true)
-    public AdminPortfolioListResponse getPortfolios(Pageable pageable, String keyword) {
+    public AdminPortfolioListResponse getPortfolios(Pageable pageable, String keyword, PortfolioStatus status) {
         Page<Portfolio> portfolios;
+        validateAdminPortfolioStatus(status);
+        Set<PortfolioStatus> statuses = status == null ? ADMIN_VISIBLE_PORTFOLIO_STATUSES : Set.of(status);
 
         if (StringUtils.hasText(keyword)) {
-            portfolios = portfolioRepository.searchByName(keyword, pageable);
+            portfolios = portfolioRepository.searchByNameAndStatuses(keyword, statuses, pageable);
         } else {
-            portfolios = portfolioRepository.findByDeletedAtIsNull(pageable);
+            portfolios = portfolioRepository.findByStatuses(statuses, pageable);
         }
 
         return AdminPortfolioListResponse.from(portfolios);
@@ -255,6 +275,11 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
+    public PortfolioPerformanceResponse getPortfolioPerformance(UUID portfolioId, String range) {
+        return portfolioService.getAdminPortfolioPerformance(portfolioId, range);
+    }
+
+    @Transactional(readOnly = true)
     public AdminBatchRunListResponse getBatchRuns(Pageable pageable) {
         Page<AdminBatchJobRun> runs = adminBatchJobRunRepository.findAll(pageable);
         return AdminBatchRunListResponse.from(runs);
@@ -280,5 +305,18 @@ public class AdminService {
                 adminBatchJobIssueRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(
                         start, end, PageRequest.of(0, 300))
         );
+    }
+
+    private void validateAdminPortfolioStatus(PortfolioStatus status) {
+        if (status == null) {
+            return;
+        }
+
+        if (!ADMIN_VISIBLE_PORTFOLIO_STATUSES.contains(status)) {
+            throw new IllegalArgumentException(
+                    "Unsupported admin portfolio status filter: " + status +
+                            ". Allowed values: " + ADMIN_VISIBLE_PORTFOLIO_STATUSES
+            );
+        }
     }
 }
