@@ -1,5 +1,6 @@
 package com.porcana.global.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -146,6 +147,19 @@ public class GlobalExceptionHandler {
                 "VALIDATION_FAILED",
                 "입력값 검증에 실패했습니다",
                 fieldErrors
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex) {
+        log.warn("Constraint violation failed: {}", ex.getMessage());
+
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_FAILED",
+                ex.getMessage(),
+                null
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }

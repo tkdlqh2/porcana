@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -31,6 +32,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -47,6 +49,7 @@ import java.util.UUID;
 @SecurityRequirement(name = "JWT")
 @PreAuthorize("hasRole('ADMIN')")
 @RestController
+@Validated
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
 public class AdminController {
@@ -108,7 +111,9 @@ public class AdminController {
     @GetMapping("/assets/{assetId}/chart")
     public ResponseEntity<AssetChartResponse> getAssetChart(
             @PathVariable UUID assetId,
-            @RequestParam String range) {
+            @RequestParam
+            @Pattern(regexp = "1M|3M|1Y", message = "range must be one of 1M, 3M, 1Y")
+            String range) {
         return ResponseEntity.ok(adminService.getAssetChart(assetId, range));
     }
 
@@ -151,7 +156,9 @@ public class AdminController {
     @GetMapping("/portfolios/{portfolioId}/performance")
     public ResponseEntity<PortfolioPerformanceResponse> getPortfolioPerformance(
             @PathVariable UUID portfolioId,
-            @RequestParam String range) {
+            @RequestParam
+            @Pattern(regexp = "1M|3M|1Y", message = "range must be one of 1M, 3M, 1Y")
+            String range) {
         return ResponseEntity.ok(adminService.getPortfolioPerformance(portfolioId, range));
     }
 

@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 @Sql(scripts = "/sql/admin-api-test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class AdminControllerTest extends BaseIntegrationTest {
+    private static final String ADMIN_BASE_PATH = "/api/v1/admin";
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -36,9 +37,10 @@ class AdminControllerTest extends BaseIntegrationTest {
     @DisplayName("관리자 포트폴리오 목록 기본 조회 시 DRAFT 제외")
     void getPortfolios_defaultExcludesDraft() {
         given()
+                .basePath(ADMIN_BASE_PATH)
                 .header("Authorization", "Bearer " + createAdminAccessToken())
         .when()
-                .get("/admin/portfolios")
+                .get("/portfolios")
         .then()
                 .statusCode(200)
                 .body("portfolios", hasSize(2))
@@ -50,10 +52,11 @@ class AdminControllerTest extends BaseIntegrationTest {
     @DisplayName("관리자 포트폴리오 목록 상태 필터 ACTIVE")
     void getPortfolios_filterByActive() {
         given()
+                .basePath(ADMIN_BASE_PATH)
                 .header("Authorization", "Bearer " + createAdminAccessToken())
                 .queryParam("status", "ACTIVE")
         .when()
-                .get("/admin/portfolios")
+                .get("/portfolios")
         .then()
                 .statusCode(200)
                 .body("portfolios", hasSize(1))
@@ -65,10 +68,11 @@ class AdminControllerTest extends BaseIntegrationTest {
     @DisplayName("관리자 포트폴리오 목록 상태 필터 DRAFT 거부")
     void getPortfolios_rejectsDraftFilter() {
         given()
+                .basePath(ADMIN_BASE_PATH)
                 .header("Authorization", "Bearer " + createAdminAccessToken())
                 .queryParam("status", "DRAFT")
         .when()
-                .get("/admin/portfolios")
+                .get("/portfolios")
         .then()
                 .statusCode(400);
     }
@@ -77,10 +81,11 @@ class AdminControllerTest extends BaseIntegrationTest {
     @DisplayName("관리자 포트폴리오 수익률 차트 조회")
     void getPortfolioPerformance_admin() {
         given()
+                .basePath(ADMIN_BASE_PATH)
                 .header("Authorization", "Bearer " + createAdminAccessToken())
                 .queryParam("range", "1M")
         .when()
-                .get("/admin/portfolios/{portfolioId}/performance", ACTIVE_PORTFOLIO_ID)
+                .get("/portfolios/{portfolioId}/performance", ACTIVE_PORTFOLIO_ID)
         .then()
                 .statusCode(200)
                 .body("portfolioId", equalTo(ACTIVE_PORTFOLIO_ID.toString()))
@@ -93,9 +98,10 @@ class AdminControllerTest extends BaseIntegrationTest {
     @DisplayName("관리자 종목 상세 조회")
     void getAssetDetail_admin() {
         given()
+                .basePath(ADMIN_BASE_PATH)
                 .header("Authorization", "Bearer " + createAdminAccessToken())
         .when()
-                .get("/admin/assets/{assetId}", KR_ASSET_ID)
+                .get("/assets/{assetId}", KR_ASSET_ID)
         .then()
                 .statusCode(200)
                 .body("assetId", equalTo(KR_ASSET_ID.toString()))
@@ -110,10 +116,11 @@ class AdminControllerTest extends BaseIntegrationTest {
     @DisplayName("관리자 종목 차트 조회")
     void getAssetChart_admin() {
         given()
+                .basePath(ADMIN_BASE_PATH)
                 .header("Authorization", "Bearer " + createAdminAccessToken())
                 .queryParam("range", "1M")
         .when()
-                .get("/admin/assets/{assetId}/chart", KR_ASSET_ID)
+                .get("/assets/{assetId}/chart", KR_ASSET_ID)
         .then()
                 .statusCode(200)
                 .body("assetId", equalTo(KR_ASSET_ID.toString()))
@@ -126,14 +133,42 @@ class AdminControllerTest extends BaseIntegrationTest {
     @DisplayName("관리자 종목 목록 type 필터 조회")
     void getAssets_filterByType() {
         given()
+                .basePath(ADMIN_BASE_PATH)
                 .header("Authorization", "Bearer " + createAdminAccessToken())
                 .queryParam("type", "ETF")
         .when()
-                .get("/admin/assets")
+                .get("/assets")
         .then()
                 .statusCode(200)
                 .body("assets", hasSize(1))
                 .body("assets[0].assetId", equalTo("f2222222-2222-2222-2222-222222222222"))
                 .body("assets[0].type", equalTo("ETF"));
+    }
+
+    @Test
+    @DisplayName("관리자 포트폴리오 수익률 차트 조회 시 DRAFT 거부")
+    void getPortfolioPerformance_rejectsDraftPortfolio() {
+        given()
+                .basePath(ADMIN_BASE_PATH)
+                .header("Authorization", "Bearer " + createAdminAccessToken())
+                .queryParam("range", "1M")
+        .when()
+                .get("/portfolios/{portfolioId}/performance",
+                        UUID.fromString("c7490f7e-8596-41ff-abb0-ff06894928f2"))
+        .then()
+                .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("관리자 종목 차트 조회 시 잘못된 range 거부")
+    void getAssetChart_rejectsInvalidRange() {
+        given()
+                .basePath(ADMIN_BASE_PATH)
+                .header("Authorization", "Bearer " + createAdminAccessToken())
+                .queryParam("range", "6M")
+        .when()
+                .get("/assets/{assetId}/chart", KR_ASSET_ID)
+        .then()
+                .statusCode(400);
     }
 }

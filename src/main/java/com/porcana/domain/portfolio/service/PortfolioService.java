@@ -35,6 +35,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PortfolioService {
+    private static final EnumSet<PortfolioStatus> ADMIN_VISIBLE_PORTFOLIO_STATUSES =
+            EnumSet.of(PortfolioStatus.ACTIVE, PortfolioStatus.FINISHED);
 
     private final PortfolioRepository portfolioRepository;
     private final PortfolioAssetRepository portfolioAssetRepository;
@@ -291,6 +293,12 @@ public class PortfolioService {
     public PortfolioPerformanceResponse getAdminPortfolioPerformance(UUID portfolioId, String range) {
         Portfolio portfolio = portfolioRepository.findByIdAndDeletedAtIsNull(portfolioId)
                 .orElseThrow(() -> new IllegalArgumentException("Portfolio not found"));
+
+        if (!ADMIN_VISIBLE_PORTFOLIO_STATUSES.contains(portfolio.getStatus())) {
+            throw new IllegalArgumentException(
+                    "Admin portfolio performance supports only ACTIVE or FINISHED portfolios: " + portfolioId
+            );
+        }
 
         return buildPortfolioPerformance(portfolio, range);
     }

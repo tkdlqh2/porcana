@@ -313,7 +313,10 @@ public class AdminService {
         }
 
         if (!ADMIN_VISIBLE_PORTFOLIO_STATUSES.contains(status)) {
-            throw new IllegalArgumentException("Admin portfolio status filter supports only ACTIVE or FINISHED");
+            throw new IllegalArgumentException(
+                    "Unsupported admin portfolio status filter: " + status +
+                            ". Allowed values: " + ADMIN_VISIBLE_PORTFOLIO_STATUSES
+            );
         }
     }
 }
