@@ -154,6 +154,20 @@
     </div>
   </div>
 
+  <div class="section">
+    <div class="section-title">시스템</div>
+    <div class="grid">
+      <a href="07-batch-list.html" class="card">
+        <div class="card-title">7. 배치 로그 목록</div>
+        <div class="card-desc">배치 작업 실행 이력, 오늘의 이슈 현황</div>
+      </a>
+      <a href="08-batch-detail.html" class="card">
+        <div class="card-title">8. 배치 로그 상세</div>
+        <div class="card-desc">실행 상세 정보, 이슈 목록, 에러 메시지</div>
+      </a>
+    </div>
+  </div>
+
   <div class="api-ref">
     <div class="api-ref-title">Admin API Endpoints (참고)</div>
     <div class="api-endpoint"><span class="method post">POST</span> /api/v1/admin/admins - 관리자 생성</div>
@@ -165,6 +179,9 @@
     <div class="api-endpoint"><span class="method patch">PATCH</span> /api/v1/admin/assets/{assetId}/dividend - 배당 수정</div>
     <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/portfolios - 포트폴리오 목록</div>
     <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/portfolios/{portfolioId} - 포트폴리오 상세</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/batch-runs - 배치 실행 목록</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/batch-runs/{runId} - 배치 실행 상세</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/batch-runs/today-issues - 오늘의 이슈</div>
   </div>
 </body>
 </html>

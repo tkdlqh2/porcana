@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batch Detail - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+  <style>
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #888;
+      text-decoration: none;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .back-link:hover { color: #fff; }
+    .run-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .run-header .job-name {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .run-header .execution-id {
+      font-size: 14px;
+      color: #888;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .info-card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .info-card-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .info-card-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .error-box-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ef4444;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .error-box-message {
+      font-family: monospace;
+      font-size: 13px;
+      color: #f87171;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .issue-severity {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .issue-severity.error { background: #ef4444; color: #fff; }
+    .issue-severity.warning { background: #f59e0b; color: #000; }
+    .issue-severity.info { background: #3b82f6; color: #fff; }
+    .asset-link {
+      color: #8b5cf6;
+      text-decoration: none;
+    }
+    .asset-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="07-batch-list.html" class="sidebar-item active">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <a href="07-batch-list.html" class="back-link">
+        ← 배치 로그 목록
+      </a>
+
+      <div class="run-header">
+        <div>
+          <div class="job-name">krDailyPriceJob</div>
+          <div class="execution-id">Execution #1231</div>
+        </div>
+        <span class="badge" style="background:#f59e0b;color:#000;font-size:14px;padding:6px 12px;">COMPLETED_WITH_ISSUES</span>
+      </div>
+
+      <!-- Info Grid -->
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-label">시작 시간</div>
+          <div class="info-card-value">2024-01-15 07:00:00</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">종료 시간</div>
+          <div class="info-card-value">2024-01-15 07:02:34</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">소요 시간</div>
+          <div class="info-card-value">2분 34초</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">이슈 수</div>
+          <div class="info-card-value" style="color:#f59e0b;">1건</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">요약</div>
+          <div class="info-card-value" style="font-size:14px;">2,100 assets updated</div>
+        </div>
+      </div>
+
+      <!-- Issues List -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚠️</span> 이슈 목록 (1건)
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>심각도</th>
+              <th>Step</th>
+              <th>종목</th>
+              <th>코드</th>
+              <th>메시지</th>
+              <th>시간</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="issue-severity warning">WARNING</span></td>
+              <td>priceCollectStep</td>
+              <td>
+                <a href="04-asset-list.html" class="asset-link">삼성전자</a>
+                <div style="font-size:11px;color:#666;">005930</div>
+              </td>
+              <td style="font-family:monospace;font-size:12px;">PRICE_MISSING</td>
+              <td style="font-size:13px;color:#888;">가격 데이터 누락, 이전 값 사용</td>
+              <td style="font-size:12px;color:#666;">07:02:15</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Example with Error -->
+      <div style="margin-top:40px;padding-top:40px;border-top:1px solid #333;">
+        <h3 style="color:#888;font-size:14px;margin-bottom:16px;">예시: FAILED 상태</h3>
+
+        <div class="run-header">
+          <div>
+            <div class="job-name">krAssetJob</div>
+            <div class="execution-id">Execution #1229</div>
+          </div>
+          <span class="badge badge-danger" style="font-size:14px;padding:6px 12px;">FAILED</span>
+        </div>
+
+        <div class="error-box">
+          <div class="error-box-title">
+            <span>❌</span> 에러 메시지
+          </div>
+          <div class="error-box-message">org.springframework.web.client.HttpClientErrorException$TooManyRequests: 429 Too Many Requests: "{"error":"rate_limit_exceeded","message":"API rate limit exceeded. Please retry after 60 seconds."}"
+
+at org.springframework.web.client.HttpClientErrorException.create(HttpClientErrorException.java:137)
+at org.springframework.web.client.DefaultResponseErrorHandler.handleError(DefaultResponseErrorHandler.java:184)
+...</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>⚠️</span> 이슈 목록 (1건)
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>심각도</th>
+                <th>Step</th>
+                <th>종목</th>
+                <th>코드</th>
+                <th>메시지</th>
+                <th>시간</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="issue-severity error">ERROR</span></td>
+                <td>assetSyncStep</td>
+                <td>-</td>
+                <td style="font-family:monospace;font-size:12px;">API_ERROR</td>
+                <td style="font-size:13px;color:#888;">API rate limit exceeded</td>
+                <td style="font-size:12px;color:#666;">02:01:05</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

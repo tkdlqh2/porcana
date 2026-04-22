@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batch Logs - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+  <style>
+    .today-issues {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .today-issues-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .issue-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #111;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .issue-item:last-child { margin-bottom: 0; }
+    .issue-severity {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .issue-severity.error { background: #ef4444; color: #fff; }
+    .issue-severity.warning { background: #f59e0b; color: #000; }
+    .issue-severity.info { background: #3b82f6; color: #fff; }
+    .issue-content {
+      flex: 1;
+    }
+    .issue-job {
+      font-size: 13px;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+    .issue-message {
+      font-size: 12px;
+      color: #888;
+    }
+    .issue-time {
+      font-size: 12px;
+      color: #666;
+    }
+    .no-issues {
+      text-align: center;
+      padding: 24px;
+      color: #22c55e;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>P</span> Porcana Admin
+      </div>
+
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item">
+          <span class="sidebar-icon">📊</span>
+          대시보드
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">관리</div>
+        <a href="02-user-list.html" class="sidebar-item">
+          <span class="sidebar-icon">👥</span>
+          회원 관리
+        </a>
+        <a href="04-asset-list.html" class="sidebar-item">
+          <span class="sidebar-icon">📈</span>
+          종목 관리
+        </a>
+        <a href="05-portfolio-list.html" class="sidebar-item">
+          <span class="sidebar-icon">💼</span>
+          포트폴리오
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">시스템</div>
+        <a href="#" class="sidebar-item">
+          <span class="sidebar-icon">⚙️</span>
+          설정
+        </a>
+        <a href="07-batch-list.html" class="sidebar-item active">
+          <span class="sidebar-icon">📋</span>
+          배치 로그
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">배치 로그</div>
+          <div class="page-subtitle">배치 작업 실행 이력 및 이슈를 확인합니다.</div>
+        </div>
+      </div>
+
+      <!-- Today's Issues -->
+      <div class="today-issues">
+        <div class="today-issues-title">
+          <span>⚠️</span> 오늘의 이슈 (3건)
+        </div>
+        <div class="issue-item">
+          <span class="issue-severity warning">WARNING</span>
+          <div class="issue-content">
+            <div class="issue-job">krDailyPriceJob > priceCollectStep</div>
+            <div class="issue-message">삼성전자(005930) - 가격 데이터 누락, 이전 값 사용</div>
+          </div>
+          <div class="issue-time">07:02</div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-severity error">ERROR</span>
+          <div class="issue-content">
+            <div class="issue-job">usDailyPriceJob > priceCollectStep</div>
+            <div class="issue-message">AAPL - API 호출 실패 (timeout)</div>
+          </div>
+          <div class="issue-time">07:08</div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-severity info">INFO</span>
+          <div class="issue-content">
+            <div class="issue-job">portfolioPerformanceJob > performanceCalcStep</div>
+            <div class="issue-message">Portfolio#123 - 가격 데이터 부족으로 수익률 계산 스킵</div>
+          </div>
+          <div class="issue-time">07:35</div>
+        </div>
+      </div>
+
+      <!-- Batch Run History -->
+      <div class="card">
+        <div class="card-title">
+          <span>📋</span> 실행 이력
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>작업명</th>
+              <th>상태</th>
+              <th>시작 시간</th>
+              <th>소요 시간</th>
+              <th>이슈</th>
+              <th>요약</th>
+              <th>액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <a href="08-batch-detail.html" class="table-link">portfolioPerformanceJob</a>
+                <div style="font-size:11px;color:#666;">Execution #1234</div>
+              </td>
+              <td><span class="badge badge-active">COMPLETED</span></td>
+              <td>2024-01-15 07:30</td>
+              <td>5분 48초</td>
+              <td>
+                <span style="color:#f59e0b;">1</span>
+              </td>
+              <td style="font-size:12px;color:#888;">856 portfolios processed</td>
+              <td>
+                <a href="08-batch-detail.html" class="btn btn-secondary btn-sm">상세</a>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="08-batch-detail.html" class="table-link">exchangeRateJob</a>
+                <div style="font-size:11px;color:#666;">Execution #1233</div>
+              </td>
+              <td><span class="badge badge-active">COMPLETED</span></td>
+              <td>2024-01-15 07:15</td>
+              <td>12초</td>
+              <td>-</td>
+              <td style="font-size:12px;color:#888;">USD/KRW: 1,320.50</td>
+              <td>
+                <a href="08-batch-detail.html" class="btn btn-secondary btn-sm">상세</a>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="08-batch-detail.html" class="table-link">usDailyPriceJob</a>
+                <div style="font-size:11px;color:#666;">Execution #1232</div>
+              </td>
+              <td><span class="badge" style="background:#f59e0b;color:#000;">COMPLETED_WITH_ISSUES</span></td>
+              <td>2024-01-15 07:05</td>
+              <td>3분 12초</td>
+              <td>
+                <span style="color:#ef4444;">1</span>
+              </td>
+              <td style="font-size:12px;color:#888;">1,320 assets updated</td>
+              <td>
+                <a href="08-batch-detail.html" class="btn btn-secondary btn-sm">상세</a>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="08-batch-detail.html" class="table-link">krDailyPriceJob</a>
+                <div style="font-size:11px;color:#666;">Execution #1231</div>
+              </td>
+              <td><span class="badge" style="background:#f59e0b;color:#000;">COMPLETED_WITH_ISSUES</span></td>
+              <td>2024-01-15 07:00</td>
+              <td>2분 34초</td>
+              <td>
+                <span style="color:#f59e0b;">1</span>
+              </td>
+              <td style="font-size:12px;color:#888;">2,100 assets updated</td>
+              <td>
+                <a href="08-batch-detail.html" class="btn btn-secondary btn-sm">상세</a>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="08-batch-detail.html" class="table-link">assetRiskJob</a>
+                <div style="font-size:11px;color:#666;">Execution #1230</div>
+              </td>
+              <td><span class="badge badge-active">COMPLETED</span></td>
+              <td>2024-01-14 03:00</td>
+              <td>15분 22초</td>
+              <td>-</td>
+              <td style="font-size:12px;color:#888;">3,421 assets calculated</td>
+              <td>
+                <a href="08-batch-detail.html" class="btn btn-secondary btn-sm">상세</a>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="08-batch-detail.html" class="table-link">krAssetJob</a>
+                <div style="font-size:11px;color:#666;">Execution #1229</div>
+              </td>
+              <td><span class="badge badge-danger">FAILED</span></td>
+              <td>2024-01-14 02:00</td>
+              <td>1분 05초</td>
+              <td>
+                <span style="color:#ef4444;">1</span>
+              </td>
+              <td style="font-size:12px;color:#ef4444;">API rate limit exceeded</td>
+              <td>
+                <a href="08-batch-detail.html" class="btn btn-secondary btn-sm">상세</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <button class="page-btn" disabled>&laquo;</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <span style="color:#666;">...</span>
+          <button class="page-btn">10</button>
+          <button class="page-btn">&raquo;</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
