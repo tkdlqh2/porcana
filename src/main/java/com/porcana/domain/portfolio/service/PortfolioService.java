@@ -282,12 +282,25 @@ public class PortfolioService {
      */
     public PortfolioPerformanceResponse getPortfolioPerformance(UUID portfolioId, UUID userId, UUID guestSessionId, String range) {
         Portfolio portfolio = findPortfolioWithOwnership(portfolioId, userId, guestSessionId);
+        return buildPortfolioPerformance(portfolio, range);
+    }
 
+    /**
+     * Get portfolio performance for admin (no ownership check)
+     */
+    public PortfolioPerformanceResponse getAdminPortfolioPerformance(UUID portfolioId, String range) {
+        Portfolio portfolio = portfolioRepository.findByIdAndDeletedAtIsNull(portfolioId)
+                .orElseThrow(() -> new IllegalArgumentException("Portfolio not found"));
+
+        return buildPortfolioPerformance(portfolio, range);
+    }
+
+    private PortfolioPerformanceResponse buildPortfolioPerformance(Portfolio portfolio, String range) {
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = calculateStartDate(endDate, range);
 
         List<PortfolioDailyReturn> returns = portfolioDailyReturnRepository
-                .findByPortfolioIdAndReturnDateBetweenOrderByReturnDateAsc(portfolioId, startDate, endDate);
+                .findByPortfolioIdAndReturnDateBetweenOrderByReturnDateAsc(portfolio.getId(), startDate, endDate);
 
         List<PortfolioPerformanceResponse.PerformancePoint> points = new ArrayList<>();
 
