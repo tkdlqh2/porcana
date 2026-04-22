@@ -66,6 +66,10 @@ batch:
   runner:
     recalculate-weight-used:
       enabled: ${RECALCULATE_WEIGHT_USED_ENABLED:false}  # Enable to recalculate existing weightUsed data
+    portfolio-performance-backfill:
+      enabled: ${PORTFOLIO_PERFORMANCE_BACKFILL_ENABLED:false}  # Enable to backfill missing portfolio daily returns
+    portfolio-return-rebuild:
+      enabled: ${PORTFOLIO_RETURN_REBUILD_ENABLED:false}  # Enable to rebuild incorrect portfolio return history
     ohlc-backfill:
       enabled: ${OHLC_BACKFILL_ENABLED:false}  # Enable to backfill OHLC data from 2025-01-13
 

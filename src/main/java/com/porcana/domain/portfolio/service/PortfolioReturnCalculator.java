@@ -7,6 +7,7 @@ import com.porcana.domain.portfolio.repository.SnapshotAssetDailyReturnRepositor
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -15,10 +16,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * 포트폴리오 및 자산별 수익률 계산을 담당하는 컴포넌트
- * HomeService와 PortfolioService에서 공통으로 사용
- */
 @Component
 @RequiredArgsConstructor
 public class PortfolioReturnCalculator {
@@ -27,11 +24,8 @@ public class PortfolioReturnCalculator {
     private final SnapshotAssetDailyReturnRepository snapshotAssetDailyReturnRepository;
 
     /**
-     * 포트폴리오 전체 누적 수익률 계산
-     * 각 스냅샷 기간의 마지막 수익률만 사용하여 복리 계산
-     *
-     * @param portfolioId 포트폴리오 ID
-     * @return 누적 수익률 (%)
+     * Calculate compounded portfolio return across snapshots.
+     * Each snapshot stores returns relative to its own effective date.
      */
     public Double calculateTotalReturn(UUID portfolioId) {
         List<PortfolioDailyReturn> returns = portfolioDailyReturnRepository
@@ -41,21 +35,18 @@ public class PortfolioReturnCalculator {
             return 0.0;
         }
 
-        // 스냅샷별로 그룹핑하여 각 스냅샷의 마지막 날짜 수익률만 추출
         Map<UUID, Optional<PortfolioDailyReturn>> lastBySnapshot = returns.stream()
                 .collect(Collectors.groupingBy(
                         PortfolioDailyReturn::getSnapshotId,
                         Collectors.maxBy(Comparator.comparing(PortfolioDailyReturn::getReturnDate))
                 ));
 
-        // 스냅샷 기간별 수익률을 날짜순으로 정렬
         List<PortfolioDailyReturn> periodReturns = lastBySnapshot.values().stream()
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .sorted(Comparator.comparing(PortfolioDailyReturn::getReturnDate))
-                .collect(Collectors.toList());
+                .toList();
 
-        // 스냅샷 기간별 수익률만 복리 계산: (1 + r1) * (1 + r2) * ... - 1
         double cumulativeReturn = 1.0;
         for (PortfolioDailyReturn periodReturn : periodReturns) {
             double periodReturnValue = periodReturn.getReturnTotal().doubleValue() / 100.0;
@@ -66,62 +57,66 @@ public class PortfolioReturnCalculator {
     }
 
     /**
-     * 자산별 누적 수익률 계산
-     * 각 스냅샷 기간의 마지막 수익률만 사용하여 복리 계산
-     *
-     * @param portfolioId 포트폴리오 ID
-     * @param assetIds    자산 ID 목록
-     * @return 자산 ID -> 누적 수익률(%) 맵
+     * Build a continuous chart series from snapshot-based cumulative returns.
+     * Snapshot changes should not reset the portfolio chart.
+     */
+    public List<PortfolioValuePoint> calculatePortfolioValueSeries(List<PortfolioDailyReturn> returns, double baseValue) {
+        if (returns.isEmpty()) {
+            return List.of();
+        }
+
+        List<PortfolioDailyReturn> sortedReturns = returns.stream()
+                .sorted(Comparator.comparing(PortfolioDailyReturn::getReturnDate))
+                .toList();
+
+        double carriedMultiplier = 1.0;
+        UUID currentSnapshotId = null;
+        double lastSnapshotMultiplier = 1.0;
+
+        java.util.ArrayList<PortfolioValuePoint> points = new java.util.ArrayList<>(sortedReturns.size());
+        for (PortfolioDailyReturn dailyReturn : sortedReturns) {
+            if (currentSnapshotId != null && !currentSnapshotId.equals(dailyReturn.getSnapshotId())) {
+                carriedMultiplier *= lastSnapshotMultiplier;
+            }
+
+            currentSnapshotId = dailyReturn.getSnapshotId();
+            lastSnapshotMultiplier = 1.0 + dailyReturn.getReturnTotal().doubleValue() / 100.0;
+
+            points.add(new PortfolioValuePoint(
+                    dailyReturn.getReturnDate(),
+                    baseValue * carriedMultiplier * lastSnapshotMultiplier
+            ));
+        }
+
+        return points;
+    }
+
+    /**
+     * Current asset return should reflect the latest snapshot only.
+     * After rebalancing, per-asset return resets to the new snapshot baseline.
      */
     public Map<UUID, Double> calculateAssetReturns(UUID portfolioId, Set<UUID> assetIds) {
-        // 해당 포트폴리오의 모든 자산별 일일 수익률 조회
         List<SnapshotAssetDailyReturn> assetReturns = snapshotAssetDailyReturnRepository
                 .findByPortfolioIdOrderByReturnDateAsc(portfolioId);
 
         if (assetReturns.isEmpty()) {
-            // 데이터가 없으면 모두 0.0으로 반환
             return assetIds.stream()
                     .collect(Collectors.toMap(assetId -> assetId, assetId -> 0.0));
         }
 
-        // 자산별로 그룹핑
         Map<UUID, List<SnapshotAssetDailyReturn>> assetReturnsByAsset = assetReturns.stream()
-                .filter(ar -> assetIds.contains(ar.getAssetId()))
+                .filter(assetReturn -> assetIds.contains(assetReturn.getAssetId()))
                 .collect(Collectors.groupingBy(SnapshotAssetDailyReturn::getAssetId));
 
-        // 각 자산별로 누적 수익률 계산
         return assetIds.stream()
                 .collect(Collectors.toMap(
                         assetId -> assetId,
-                        assetId -> {
-                            List<SnapshotAssetDailyReturn> dailyReturns = assetReturnsByAsset.get(assetId);
-                            if (dailyReturns == null || dailyReturns.isEmpty()) {
-                                return 0.0;
-                            }
-
-                            // 스냅샷별로 그룹핑하여 각 스냅샷의 마지막 날짜 수익률만 추출
-                            Map<UUID, Optional<SnapshotAssetDailyReturn>> lastBySnapshot = dailyReturns.stream()
-                                    .collect(Collectors.groupingBy(
-                                            SnapshotAssetDailyReturn::getSnapshotId,
-                                            Collectors.maxBy(Comparator.comparing(SnapshotAssetDailyReturn::getReturnDate))
-                                    ));
-
-                            // 스냅샷 기간별 수익률을 날짜순으로 정렬
-                            List<SnapshotAssetDailyReturn> periodReturns = lastBySnapshot.values().stream()
-                                    .filter(Optional::isPresent)
-                                    .map(Optional::get)
-                                    .sorted(Comparator.comparing(SnapshotAssetDailyReturn::getReturnDate))
-                                    .collect(Collectors.toList());
-
-                            // 스냅샷 기간별 수익률만 복리 계산: (1 + r1) * (1 + r2) * ... - 1
-                            double cumulativeReturn = 1.0;
-                            for (SnapshotAssetDailyReturn periodReturn : periodReturns) {
-                                double periodReturnValue = periodReturn.getAssetReturnTotal().doubleValue() / 100.0;
-                                cumulativeReturn *= (1.0 + periodReturnValue);
-                            }
-
-                            return (cumulativeReturn - 1.0) * 100.0;
-                        }
+                        assetId -> assetReturnsByAsset.getOrDefault(assetId, List.of()).stream()
+                                .max(Comparator.comparing(SnapshotAssetDailyReturn::getReturnDate))
+                                .map(snapshotAssetDailyReturn -> snapshotAssetDailyReturn.getAssetReturnTotal().doubleValue())
+                                .orElse(0.0)
                 ));
     }
+
+    public record PortfolioValuePoint(LocalDate date, double value) {}
 }
