@@ -114,14 +114,11 @@ public class HomeService {
                     .build());
         }
 
-        // returnTotal is cumulative return (%) from snapshot start date, not daily return
-        for (PortfolioDailyReturn dailyReturn : returns) {
-            double returnTotalPct = dailyReturn.getReturnTotal().doubleValue();
-            double value = 100.0 + returnTotalPct;
-
+        for (PortfolioReturnCalculator.PortfolioValuePoint point :
+                portfolioReturnCalculator.calculatePortfolioValueSeries(returns, 100.0)) {
             chartPoints.add(HomeResponse.ChartPoint.builder()
-                    .date(dailyReturn.getReturnDate())
-                    .value(value)
+                    .date(point.date())
+                    .value(point.value())
                     .build());
         }
 

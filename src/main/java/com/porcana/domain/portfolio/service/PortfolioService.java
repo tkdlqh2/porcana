@@ -324,21 +324,15 @@ public class PortfolioService {
                 .value(100.0)
                 .build());
 
-        // Add performance points
-        // returnTotal is cumulative return (%) from snapshot start date, not daily return
-        for (PortfolioDailyReturn dailyReturn : returns) {
-            if (dailyReturn.getReturnDate().isBefore(initialDate) ||
-                dailyReturn.getReturnDate().isEqual(initialDate)) {
+        for (PortfolioReturnCalculator.PortfolioValuePoint point :
+                portfolioReturnCalculator.calculatePortfolioValueSeries(returns, 100.0)) {
+            if (point.date().isBefore(initialDate) || point.date().isEqual(initialDate)) {
                 continue;
             }
-            // returnTotal is already cumulative return in percentage
-            // e.g., returnTotal = 2.5 means 2.5% cumulative return
-            double returnTotalPct = dailyReturn.getReturnTotal().doubleValue();
-            double value = 100.0 + returnTotalPct;
 
             points.add(PortfolioPerformanceResponse.PerformancePoint.builder()
-                    .date(dailyReturn.getReturnDate())
-                    .value(value)
+                    .date(point.date())
+                    .value(point.value())
                     .build());
         }
 

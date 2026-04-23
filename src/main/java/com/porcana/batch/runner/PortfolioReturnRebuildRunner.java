@@ -12,18 +12,19 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 @Component
 @ConditionalOnProperty(
-        prefix = "batch.runner.portfolio-performance-backfill",
+        prefix = "batch.runner.portfolio-return-rebuild",
         name = "enabled",
         havingValue = "true",
         matchIfMissing = false
 )
 @RequiredArgsConstructor
-public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
+public class PortfolioReturnRebuildRunner implements ApplicationRunner {
 
     private final PortfolioRepository portfolioRepository;
     private final PortfolioPerformanceBackfillService portfolioPerformanceBackfillService;
@@ -31,39 +32,40 @@ public class PortfolioPerformanceBackfillRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         log.info("========================================");
-        log.info("Starting Portfolio Performance Backfill");
+        log.info("Starting Portfolio Return Rebuild Runner");
         log.info("========================================");
 
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        List<Portfolio> portfolios = portfolioRepository.findByStatusAndDeletedAtIsNull(PortfolioStatus.ACTIVE);
-        log.info("Found {} active portfolios to backfill", portfolios.size());
+        List<Portfolio> portfolios = new ArrayList<>();
+        portfolios.addAll(portfolioRepository.findByStatusAndDeletedAtIsNull(PortfolioStatus.ACTIVE));
+        portfolios.addAll(portfolioRepository.findByStatusAndDeletedAtIsNull(PortfolioStatus.FINISHED));
+
+        log.info("Found {} portfolios to rebuild", portfolios.size());
 
         int successPortfolios = 0;
         int failedPortfolios = 0;
         int totalDaysInserted = 0;
-        int totalDaysSkipped = 0;
 
         for (int i = 0; i < portfolios.size(); i++) {
             Portfolio portfolio = portfolios.get(i);
-            log.info("[{}/{}] Processing portfolio {} (started: {})",
-                    i + 1, portfolios.size(), portfolio.getId(), portfolio.getStartedAt());
+            log.info("[{}/{}] Rebuilding portfolio {} (status: {}, started: {})",
+                    i + 1, portfolios.size(), portfolio.getId(), portfolio.getStatus(), portfolio.getStartedAt());
 
             try {
-                int[] result = portfolioPerformanceBackfillService.backfillPortfolio(portfolio, yesterday);
+                int[] result = portfolioPerformanceBackfillService.rebuildPortfolio(portfolio, yesterday);
                 totalDaysInserted += result[0];
-                totalDaysSkipped += result[1];
                 successPortfolios++;
-                log.info("  Completed: {} days inserted, {} days skipped", result[0], result[1]);
+                log.info("  Rebuilt: {} days inserted after purge", result[0]);
             } catch (Exception e) {
-                log.error("  Failed to backfill portfolio {}: {}", portfolio.getId(), e.getMessage(), e);
                 failedPortfolios++;
+                log.error("  Failed to rebuild portfolio {}: {}", portfolio.getId(), e.getMessage(), e);
             }
         }
 
         log.info("========================================");
-        log.info("Portfolio Performance Backfill completed");
+        log.info("Portfolio Return Rebuild completed");
         log.info("Portfolios: {} success, {} failed", successPortfolios, failedPortfolios);
-        log.info("Days: {} inserted, {} skipped", totalDaysInserted, totalDaysSkipped);
+        log.info("Days rebuilt: {}", totalDaysInserted);
         log.info("========================================");
     }
 }
