@@ -17,12 +17,14 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,8 +33,10 @@ import java.util.UUID;
  *
  * Responsibility: "Is each symbol still actively trading?"
  * - Step 1: For every US STOCK in DB, call FMP profile → update active flag and metadata
- * - Step 2: For active stocks with no price history, backfill historical prices (covers newly activated symbols)
- * - Step 3: Finish ACTIVE portfolios that contain newly-deactivated assets
+ *           Chunk-oriented (size 50) so each chunk commits independently — avoids a single
+ *           long-running transaction over potentially 1000+ symbols.
+ * - Step 2: For active stocks with no price history, backfill historical prices
+ * - Step 3: Finish ACTIVE portfolios that contain any inactive asset
  *
  * Symbol discovery (which stocks to add) is handled by UsUniverseSyncJob (monthly).
  * ETF status is handled by UsEtfBatchJob (separate job, CSV-driven).
@@ -44,7 +48,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UsAssetBatchJob {
 
-    private static final String DEACTIVATED_IDS_KEY = "deactivatedAssetIds";
+    private static final int STATUS_CHECK_CHUNK_SIZE = 50;
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
@@ -67,88 +71,71 @@ public class UsAssetBatchJob {
 
     // -------------------------------------------------------------------------
     // Step 1: Check active status for every US stock via FMP profile API
+    //
+    // Chunk-oriented (50 per chunk) so transactions commit incrementally.
+    // Each chunk: read 50 stocks → call FMP per stock → saveAll(chunk).
+    // Individual FMP failures are skipped (up to 100 total) so one bad symbol
+    // does not abort the entire step.
     // -------------------------------------------------------------------------
 
     @Bean
     public Step checkUsAssetStatusStep() {
         return new StepBuilder("checkUsAssetStatusStep", jobRepository)
-                .tasklet((contribution, chunkContext) -> {
-                    log.info("Starting US asset status check via FMP");
-
-                    List<Asset> stocks = assetRepository.findByMarketAndType(Asset.Market.US, Asset.AssetType.STOCK);
-                    log.info("Found {} US stocks to check", stocks.size());
-
-                    List<UUID> deactivatedIds = new ArrayList<>();
-                    List<Asset> changedAssets = new ArrayList<>();
-                    int activated = 0;
-                    int deactivated = 0;
-                    int unchanged = 0;
-                    int failed = 0;
-
-                    for (Asset asset : stocks) {
-                        try {
-                            FmpAssetProvider.ProfileUpdateData profile =
-                                    fmpProvider.fetchProfileUpdateData(asset.getSymbol());
-
-                            if (profile == null) {
-                                log.warn("No FMP profile found for {}. Keeping current status.", asset.getSymbol());
-                                failed++;
-                                Thread.sleep(150);
-                                continue;
-                            }
-
-                            boolean wasActive = Boolean.TRUE.equals(asset.getActive());
-                            boolean isNowActive = profile.activelyTrading();
-
-                            if (isNowActive && !wasActive) {
-                                asset.activate();
-                                activated++;
-                            } else if (!isNowActive && wasActive) {
-                                asset.deactivate();
-                                deactivatedIds.add(asset.getId());
-                                deactivated++;
-                                log.info("Deactivated: {} (FMP reports no longer actively trading)", asset.getSymbol());
-                            } else {
-                                unchanged++;
-                            }
-
-                            // Update profile metadata
-                            if (profile.imageUrl() != null && !profile.imageUrl().isBlank()) {
-                                asset.setImageUrl(profile.imageUrl());
-                            }
-                            if (profile.description() != null && !profile.description().isBlank()) {
-                                asset.setDescription(profile.description());
-                            }
-
-                            changedAssets.add(asset);
-                            Thread.sleep(150);
-
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            log.warn("Status check interrupted at symbol: {}", asset.getSymbol());
-                            break;
-                        } catch (Exception e) {
-                            log.warn("Failed to check status for {}: {}", asset.getSymbol(), e.getMessage());
-                            failed++;
-                        }
-                    }
-
-                    assetRepository.saveAll(changedAssets);
-
-                    // Share deactivated IDs with step 3 via job execution context (stored as String for safe serialization)
-                    List<String> deactivatedIdStrings = deactivatedIds.stream()
-                            .map(UUID::toString)
-                            .toList();
-                    chunkContext.getStepContext().getStepExecution()
-                            .getJobExecution().getExecutionContext()
-                            .put(DEACTIVATED_IDS_KEY, new ArrayList<>(deactivatedIdStrings));
-
-                    log.info("US asset status check complete: {} activated, {} deactivated, {} unchanged, {} failed",
-                            activated, deactivated, unchanged, failed);
-
-                    return RepeatStatus.FINISHED;
-                }, transactionManager)
+                .<Asset, Asset>chunk(STATUS_CHECK_CHUNK_SIZE, transactionManager)
+                .reader(usAssetStatusReader())
+                .processor(usAssetStatusProcessor())
+                .writer(usAssetStatusWriter())
+                .faultTolerant()
+                .skip(Exception.class)
+                .noSkip(InterruptedException.class)
+                .skipLimit(100)
                 .build();
+    }
+
+    @Bean
+    public ListItemReader<Asset> usAssetStatusReader() {
+        List<Asset> stocks = assetRepository.findByMarketAndType(Asset.Market.US, Asset.AssetType.STOCK);
+        log.info("Loaded {} US stocks for status check", stocks.size());
+        return new ListItemReader<>(stocks);
+    }
+
+    @Bean
+    public ItemProcessor<Asset, Asset> usAssetStatusProcessor() {
+        return asset -> {
+            FmpAssetProvider.ProfileUpdateData profile = fmpProvider.fetchProfileUpdateData(asset.getSymbol());
+
+            if (profile == null) {
+                log.warn("No FMP profile for {}. Keeping current status.", asset.getSymbol());
+                Thread.sleep(150);
+                return asset;
+            }
+
+            boolean wasActive = Boolean.TRUE.equals(asset.getActive());
+            boolean isNowActive = profile.activelyTrading();
+
+            if (isNowActive && !wasActive) {
+                asset.activate();
+                log.info("Activated: {}", asset.getSymbol());
+            } else if (!isNowActive && wasActive) {
+                asset.deactivate();
+                log.info("Deactivated: {} (FMP reports no longer actively trading)", asset.getSymbol());
+            }
+
+            if (profile.imageUrl() != null && !profile.imageUrl().isBlank()) {
+                asset.setImageUrl(profile.imageUrl());
+            }
+            if (profile.description() != null && !profile.description().isBlank()) {
+                asset.setDescription(profile.description());
+            }
+
+            Thread.sleep(150);
+            return asset;
+        };
+    }
+
+    @Bean
+    public ItemWriter<Asset> usAssetStatusWriter() {
+        return chunk -> assetRepository.saveAll(chunk.getItems());
     }
 
     // -------------------------------------------------------------------------
@@ -205,8 +192,8 @@ public class UsAssetBatchJob {
     // -------------------------------------------------------------------------
     // Step 3: Finish ACTIVE portfolios that contain any inactive asset
     //
-    // Uses ALL currently inactive US stocks (not just newly deactivated ones),
-    // so portfolios that slipped through in previous runs are also caught.
+    // Queries ALL currently inactive US stocks (not just this run's newly
+    // deactivated ones) so portfolios missed in previous runs are also caught.
     // -------------------------------------------------------------------------
 
     @Bean
@@ -214,15 +201,6 @@ public class UsAssetBatchJob {
         return new StepBuilder("finishPortfoliosWithDeactivatedAssetsStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
 
-                    @SuppressWarnings("unchecked")
-                    List<String> newlyDeactivatedStrings = (List<String>) chunkContext.getStepContext()
-                            .getStepExecution().getJobExecution().getExecutionContext()
-                            .get(DEACTIVATED_IDS_KEY);
-
-                    int newlyDeactivatedCount = newlyDeactivatedStrings == null ? 0 : newlyDeactivatedStrings.size();
-
-                    // Use all currently inactive US stocks, not just this run's newly deactivated ones.
-                    // This ensures portfolios affected by previous-run deactivations are also caught.
                     List<UUID> allInactiveIds = assetRepository
                             .findByMarketAndType(Asset.Market.US, Asset.AssetType.STOCK)
                             .stream()
@@ -235,8 +213,7 @@ public class UsAssetBatchJob {
                         return RepeatStatus.FINISHED;
                     }
 
-                    log.info("Checking portfolios against {} inactive assets ({} newly deactivated this run)",
-                            allInactiveIds.size(), newlyDeactivatedCount);
+                    log.info("Checking portfolios against {} inactive US assets", allInactiveIds.size());
 
                     List<UUID> affectedPortfolioIds =
                             portfolioAssetRepository.findPortfolioIdsByAssetIdIn(allInactiveIds);
