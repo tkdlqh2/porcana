@@ -82,13 +82,20 @@ public class PortfolioService {
         }
 
         final UUID finalMainPortfolioId = mainPortfolioId;
+        Set<UUID> portfolioIds = portfolios.stream()
+                .map(Portfolio::getId)
+                .collect(Collectors.toSet());
+        Set<UUID> baselinePortfolioIds = portfolioIds.isEmpty()
+                ? Collections.emptySet()
+                : new HashSet<>(holdingBaselineRepository.findPortfolioIdsByPortfolioIdIn(portfolioIds.stream().toList()));
 
         return portfolios.stream()
                 .map(portfolio -> {
                     Double totalReturnPct = calculateTotalReturn(portfolio.getId());
                     boolean isMain = portfolio.getId().equals(finalMainPortfolioId);
+                    boolean hasBaseline = baselinePortfolioIds.contains(portfolio.getId());
                     List<PortfolioListResponse.TopAsset> topAssets = getTopAssets(portfolio.getId());
-                    return PortfolioListResponse.from(portfolio, isMain, totalReturnPct, topAssets);
+                    return PortfolioListResponse.from(portfolio, isMain, totalReturnPct, hasBaseline, topAssets);
                 })
                 .collect(Collectors.toList());
     }
