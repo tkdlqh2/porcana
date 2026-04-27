@@ -2,6 +2,7 @@ package com.porcana.domain.arena.dto;
 
 import com.porcana.domain.arena.entity.RiskProfile;
 import com.porcana.domain.arena.entity.RoundType;
+import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.Sector;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,8 +18,14 @@ public class PreRoundResponse implements RoundResponse {
     private RoundType roundType;  // Always PRE_ROUND
     private List<RiskProfileOption> riskProfileOptions;
     private List<SectorOption> sectorOptions;
+    private List<MarketOption> marketOptions;
+    private List<AssetTypeOption> assetTypeOptions;
     private Integer minSectorSelection;
     private Integer maxSectorSelection;
+    private Integer minMarketSelection;
+    private Integer maxMarketSelection;
+    private Integer minAssetTypeSelection;
+    private Integer maxAssetTypeSelection;
 
     @Getter
     @Builder
@@ -32,6 +39,22 @@ public class PreRoundResponse implements RoundResponse {
     @Builder
     public static class SectorOption {
         private Sector value;
+        private String displayName;
+        private Integer assetCount;
+    }
+
+    @Getter
+    @Builder
+    public static class MarketOption {
+        private Asset.Market value;
+        private String displayName;
+        private Integer assetCount;
+    }
+
+    @Getter
+    @Builder
+    public static class AssetTypeOption {
+        private Asset.AssetType value;
         private String displayName;
         private Integer assetCount;
     }

@@ -2,6 +2,7 @@ package com.porcana.domain.arena.dto;
 
 import com.porcana.domain.arena.entity.RiskProfile;
 import com.porcana.domain.arena.entity.SessionStatus;
+import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.Sector;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,5 +20,7 @@ public class SessionResponse {
     private Integer totalRounds;
     private RiskProfile riskProfile;
     private List<Sector> selectedSectors;
+    private List<Asset.Market> selectedMarkets;
+    private List<Asset.AssetType> selectedAssetTypes;
     private List<UUID> selectedAssetIds;
 }
