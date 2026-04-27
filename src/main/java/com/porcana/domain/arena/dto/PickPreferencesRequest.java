@@ -1,10 +1,12 @@
 package com.porcana.domain.arena.dto;
 
 import com.porcana.domain.arena.entity.RiskProfile;
+import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.Sector;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.Collections;
 import java.util.List;
 
 public record PickPreferencesRequest(
@@ -13,6 +15,20 @@ public record PickPreferencesRequest(
 
         @NotNull(message = "Sectors list cannot be null")
         @Size(max = 3, message = "Must select 0-3 sectors")
-        List<@NotNull Sector> sectors
+        List<@NotNull Sector> sectors,
+
+        @Size(max = 2, message = "Must select 0-2 markets")
+        List<Asset.Market> markets,
+
+        @Size(max = 2, message = "Must select 0-2 asset types")
+        List<Asset.AssetType> assetTypes
 ) {
+    public PickPreferencesRequest(RiskProfile riskProfile, List<Sector> sectors) {
+        this(riskProfile, sectors, Collections.emptyList(), Collections.emptyList());
+    }
+
+    public PickPreferencesRequest {
+        markets = markets == null ? Collections.emptyList() : markets;
+        assetTypes = assetTypes == null ? Collections.emptyList() : assetTypes;
+    }
 }

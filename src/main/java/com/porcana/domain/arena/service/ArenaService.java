@@ -119,6 +119,8 @@ public class ArenaService {
                 .totalRounds(session.getTotalRounds())
                 .riskProfile(session.getRiskProfile())
                 .selectedSectors(session.getSelectedSectors())
+                .selectedMarkets(session.getSelectedMarkets())
+                .selectedAssetTypes(session.getSelectedAssetTypes())
                 .selectedAssetIds(selectedAssetIds)
                 .build();
     }
@@ -198,6 +200,9 @@ public class ArenaService {
             throw new IllegalArgumentException("Duplicate sectors are not allowed");
         }
 
+        validateNoDuplicates(command.getMarkets(), "Duplicate markets are not allowed");
+        validateNoDuplicates(command.getAssetTypes(), "Duplicate asset types are not allowed");
+
         // Validate each sector has enough assets (at least 3 for one round)
         java.util.Map<Sector, Integer> sectorCounts = recommendationService.getActiveAssetCountsBySector();
         for (Sector sector : command.getSectors()) {
@@ -212,6 +217,8 @@ public class ArenaService {
         // Save selections
         session.setRiskProfile(command.getRiskProfile());
         session.setSelectedSectors(command.getSectors());
+        session.setSelectedMarkets(command.getMarkets());
+        session.setSelectedAssetTypes(command.getAssetTypes());
         session.setCurrentRound(1);  // Move to Round 1 (first asset selection)
         sessionRepository.save(session);
 
@@ -221,7 +228,9 @@ public class ArenaService {
                 .currentRound(1)
                 .picked(java.util.Map.of(
                         "riskProfile", command.getRiskProfile(),
-                        "sectors", command.getSectors()
+                        "sectors", command.getSectors(),
+                        "markets", command.getMarkets(),
+                        "assetTypes", command.getAssetTypes()
                 ))
                 .build();
     }
@@ -326,15 +335,50 @@ public class ArenaService {
             }
         }
 
+        java.util.Map<Asset.Market, Integer> marketCounts = recommendationService.getActiveAssetCountsByMarket();
+        List<PreRoundResponse.MarketOption> marketOptions = new ArrayList<>();
+        for (Asset.Market market : Asset.Market.values()) {
+            marketOptions.add(PreRoundResponse.MarketOption.builder()
+                    .value(market)
+                    .displayName(market.name())
+                    .assetCount(marketCounts.getOrDefault(market, 0))
+                    .build());
+        }
+
+        java.util.Map<Asset.AssetType, Integer> assetTypeCounts = recommendationService.getActiveAssetCountsByType();
+        List<PreRoundResponse.AssetTypeOption> assetTypeOptions = new ArrayList<>();
+        for (Asset.AssetType assetType : Asset.AssetType.values()) {
+            assetTypeOptions.add(PreRoundResponse.AssetTypeOption.builder()
+                    .value(assetType)
+                    .displayName(assetType.name())
+                    .assetCount(assetTypeCounts.getOrDefault(assetType, 0))
+                    .build());
+        }
+
         return PreRoundResponse.builder()
                 .sessionId(session.getId())
                 .round(0)
                 .roundType(RoundType.PRE_ROUND)
                 .riskProfileOptions(riskProfileOptions)
                 .sectorOptions(sectorOptions)
+                .marketOptions(marketOptions)
+                .assetTypeOptions(assetTypeOptions)
                 .minSectorSelection(0)
                 .maxSectorSelection(3)
+                .minMarketSelection(0)
+                .maxMarketSelection(2)
+                .minAssetTypeSelection(0)
+                .maxAssetTypeSelection(2)
                 .build();
+    }
+
+    private <T> void validateNoDuplicates(List<T> values, String message) {
+        if (values == null || values.isEmpty()) {
+            return;
+        }
+        if (values.stream().distinct().count() != values.size()) {
+            throw new IllegalArgumentException(message);
+        }
     }
 
     /**

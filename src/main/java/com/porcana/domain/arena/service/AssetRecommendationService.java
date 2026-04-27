@@ -41,6 +41,10 @@ public class AssetRecommendationService {
     private static final int NORMAL_COUNT = ENTRY_COUNT - WILD_COUNT;
     private static final int MAX_RETRY = 5;
     private static final double MIN_WEIGHT = 0.0001;
+    private static final double SCARCITY_EXPONENT = 0.65;
+    private static final double SCARCITY_BOOST_CAP = 2.5;
+    private static final double PREFERENCE_MATCH_BOOST = 1.35;
+    private static final double PREFERENCE_MISMATCH_PENALTY = 0.85;
 
     /**
      * Generate round options (3 assets) using bucket sampling
@@ -49,6 +53,8 @@ public class AssetRecommendationService {
     public List<Asset> generateRoundOptions(ArenaSession session, int roundNo) {
         RiskProfile riskProfile = session.getRiskProfile();
         List<Sector> preferredSectors = session.getSelectedSectors();
+        Set<Asset.Market> preferredMarkets = new HashSet<>(session.getSelectedMarkets());
+        Set<Asset.AssetType> preferredAssetTypes = new HashSet<>(session.getSelectedAssetTypes());
         Set<UUID> deckAssetIds = getDeckAssetIds(session.getId());
         Set<UUID> shownAssetIds = getShownAssetIds(session.getId());
         Set<UUID> excludeIds = new HashSet<>();
@@ -72,7 +78,15 @@ public class AssetRecommendationService {
         normalPool.addAll(nonPreferredCandidates);
 
         for (int i = 0; i < NORMAL_COUNT && !normalPool.isEmpty(); i++) {
-            Asset next = weightedPickOne(normalPool, riskProfile, new HashSet<>(preferredSectors), picked, true);
+            Asset next = weightedPickOne(
+                    normalPool,
+                    riskProfile,
+                    new HashSet<>(preferredSectors),
+                    preferredMarkets,
+                    preferredAssetTypes,
+                    picked,
+                    true
+            );
             picked.add(next);
             normalPool.remove(next);
             wildCandidates.remove(next);
@@ -80,7 +94,15 @@ public class AssetRecommendationService {
 
         // 2) Wild pick: ignore sector preference, diversity only
         if (picked.size() < 3 && !wildCandidates.isEmpty()) {
-            Asset wild = weightedPickOne(wildCandidates, riskProfile, new HashSet<>(preferredSectors), picked, false);
+            Asset wild = weightedPickOne(
+                    wildCandidates,
+                    riskProfile,
+                    new HashSet<>(preferredSectors),
+                    preferredMarkets,
+                    preferredAssetTypes,
+                    picked,
+                    false
+            );
             picked.add(wild);
             wildCandidates.remove(wild);
         }
@@ -88,7 +110,13 @@ public class AssetRecommendationService {
         // Fallback: if not enough picked, relax constraints
         if (picked.size() < 3) {
             log.warn("Not enough candidates. Relaxing shown constraint. SessionId: {}", session.getId());
-            picked = rerollWithRelaxation(preferredSectors, deckAssetIds, riskProfile);
+            picked = rerollWithRelaxation(
+                    preferredSectors,
+                    preferredMarkets,
+                    preferredAssetTypes,
+                    deckAssetIds,
+                    riskProfile
+            );
         }
 
         // Throw exception if still not enough assets after relaxation
@@ -102,7 +130,13 @@ public class AssetRecommendationService {
         int retry = 0;
         while (retry < MAX_RETRY && !isDiverseEnough(picked)) {
             log.debug("Diversity check failed. Retrying... Attempt: {}/{}", retry + 1, MAX_RETRY);
-            picked = rerollWithRelaxation(preferredSectors, deckAssetIds, riskProfile);
+            picked = rerollWithRelaxation(
+                    preferredSectors,
+                    preferredMarkets,
+                    preferredAssetTypes,
+                    deckAssetIds,
+                    riskProfile
+            );
             retry++;
         }
 
@@ -217,9 +251,11 @@ public class AssetRecommendationService {
      * Weighted pick with diversity penalty
      */
     private Asset weightedPickOne(List<Asset> candidates, RiskProfile riskProfile,
-                                   Set<Sector> preferredSectors, List<Asset> alreadyPicked,
+                                   Set<Sector> preferredSectors, Set<Asset.Market> preferredMarkets,
+                                   Set<Asset.AssetType> preferredAssetTypes, List<Asset> alreadyPicked,
                                    boolean useSectorPreference) {
         Map<UUID, Double> weights = new HashMap<>();
+        CandidateDistribution distribution = CandidateDistribution.from(candidates);
 
         for (Asset asset : candidates) {
             double w = 1.0;
@@ -229,7 +265,8 @@ public class AssetRecommendationService {
                 w *= sectorWeight(preferredSectors, asset.getSector());
             }
 
-            w *= typeWeight(asset.getType());
+            w *= marketWeight(asset.getMarket(), preferredMarkets, distribution);
+            w *= typeWeight(asset.getType(), preferredAssetTypes, distribution);
 
             // Extra boost for ETF in wild picks to ensure at least some ETFs appear
             if (!useSectorPreference && asset.getType() == Asset.AssetType.ETF) {
@@ -283,17 +320,45 @@ public class AssetRecommendationService {
         return preferredSectors.contains(sector) ? 1.5 : 1.0;
     }
 
-    /**
-     * Type weight (strong preference for ETF to ensure diversity)
-     */
-    private double typeWeight(Asset.AssetType assetType) {
+    private double marketWeight(Asset.Market market, Set<Asset.Market> preferredMarkets,
+                                CandidateDistribution distribution) {
+        if (market == null) {
+            return 1.0;
+        }
+
+        double weight = scarcityBoost(distribution.marketCounts().get(market), distribution.maxMarketCount());
+
+        if (preferredMarkets != null && !preferredMarkets.isEmpty()) {
+            weight *= preferredMarkets.contains(market) ? PREFERENCE_MATCH_BOOST : PREFERENCE_MISMATCH_PENALTY;
+        }
+
+        return weight;
+    }
+
+    private double typeWeight(Asset.AssetType assetType, Set<Asset.AssetType> preferredAssetTypes,
+                              CandidateDistribution distribution) {
         if (assetType == null) {
             return 1.0;
         }
-        // ETF gets 2.5x boost to ensure they appear in recommendations
-        // This compensates for ETFs having no sector (which would give them 1.0 sector weight
-        // while stocks in preferred sectors get 1.5x sector weight)
-        return assetType == Asset.AssetType.ETF ? 2.5 : 1.0;
+
+        double weight = scarcityBoost(distribution.typeCounts().get(assetType), distribution.maxTypeCount());
+
+        if (preferredAssetTypes != null && !preferredAssetTypes.isEmpty()) {
+            weight *= preferredAssetTypes.contains(assetType)
+                    ? PREFERENCE_MATCH_BOOST
+                    : PREFERENCE_MISMATCH_PENALTY;
+        }
+
+        return weight;
+    }
+
+    private double scarcityBoost(Long count, long maxCount) {
+        if (count == null || count <= 0 || maxCount <= 0) {
+            return 1.0;
+        }
+
+        double ratio = (double) maxCount / count;
+        return Math.min(Math.pow(ratio, SCARCITY_EXPONENT), SCARCITY_BOOST_CAP);
     }
 
     /**
@@ -384,8 +449,9 @@ public class AssetRecommendationService {
     /**
      * Reroll with relaxed constraints (ignore shown constraint)
      */
-    private List<Asset> rerollWithRelaxation(List<Sector> preferredSectors, Set<UUID> deckAssetIds,
-                                              RiskProfile riskProfile) {
+    private List<Asset> rerollWithRelaxation(List<Sector> preferredSectors, Set<Asset.Market> preferredMarkets,
+                                             Set<Asset.AssetType> preferredAssetTypes, Set<UUID> deckAssetIds,
+                                             RiskProfile riskProfile) {
         // Relax shown constraint - only exclude deck assets
         UUID randId = generateRandomId();
         List<Asset> preferredCandidates = samplePreferredBucket(preferredSectors, randId, deckAssetIds);
@@ -399,14 +465,30 @@ public class AssetRecommendationService {
 
         // Try to pick 2 normal + 1 wild
         while (picked.size() < NORMAL_COUNT && !normalPool.isEmpty()) {
-            Asset next = weightedPickOne(normalPool, riskProfile, new HashSet<>(preferredSectors), picked, true);
+            Asset next = weightedPickOne(
+                    normalPool,
+                    riskProfile,
+                    new HashSet<>(preferredSectors),
+                    preferredMarkets,
+                    preferredAssetTypes,
+                    picked,
+                    true
+            );
             picked.add(next);
             normalPool.remove(next);
             wildCandidates.remove(next);
         }
 
         if (picked.size() < 3 && !wildCandidates.isEmpty()) {
-            Asset wild = weightedPickOne(wildCandidates, riskProfile, new HashSet<>(preferredSectors), picked, false);
+            Asset wild = weightedPickOne(
+                    wildCandidates,
+                    riskProfile,
+                    new HashSet<>(preferredSectors),
+                    preferredMarkets,
+                    preferredAssetTypes,
+                    picked,
+                    false
+            );
             picked.add(wild);
         }
 
@@ -463,5 +545,48 @@ public class AssetRecommendationService {
             result.put(count.getSector(), (int) count.getCount());
         }
         return result;
+    }
+
+    public Map<Asset.Market, Integer> getActiveAssetCountsByMarket() {
+        List<AssetRepository.MarketCount> counts = assetRepository.countActiveByMarket();
+        Map<Asset.Market, Integer> result = new EnumMap<>(Asset.Market.class);
+        for (AssetRepository.MarketCount count : counts) {
+            result.put(count.getMarket(), (int) count.getCount());
+        }
+        return result;
+    }
+
+    public Map<Asset.AssetType, Integer> getActiveAssetCountsByType() {
+        List<AssetRepository.AssetTypeCount> counts = assetRepository.countActiveByType();
+        Map<Asset.AssetType, Integer> result = new EnumMap<>(Asset.AssetType.class);
+        for (AssetRepository.AssetTypeCount count : counts) {
+            result.put(count.getType(), (int) count.getCount());
+        }
+        return result;
+    }
+
+    private record CandidateDistribution(
+            EnumMap<Asset.Market, Long> marketCounts,
+            EnumMap<Asset.AssetType, Long> typeCounts,
+            long maxMarketCount,
+            long maxTypeCount
+    ) {
+        private static CandidateDistribution from(List<Asset> candidates) {
+            EnumMap<Asset.Market, Long> marketCounts = new EnumMap<>(Asset.Market.class);
+            EnumMap<Asset.AssetType, Long> typeCounts = new EnumMap<>(Asset.AssetType.class);
+
+            for (Asset asset : candidates) {
+                if (asset.getMarket() != null) {
+                    marketCounts.merge(asset.getMarket(), 1L, Long::sum);
+                }
+                if (asset.getType() != null) {
+                    typeCounts.merge(asset.getType(), 1L, Long::sum);
+                }
+            }
+
+            long maxMarketCount = marketCounts.values().stream().mapToLong(Long::longValue).max().orElse(0L);
+            long maxTypeCount = typeCounts.values().stream().mapToLong(Long::longValue).max().orElse(0L);
+            return new CandidateDistribution(marketCounts, typeCounts, maxMarketCount, maxTypeCount);
+        }
     }
 }

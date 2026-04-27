@@ -1,5 +1,6 @@
 package com.porcana.domain.arena.entity;
 
+import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.Sector;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -10,7 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -67,7 +68,25 @@ public class ArenaSession {
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "sector", length = 50)
-    private List<Sector> selectedSectors = new ArrayList<>();
+    private List<Sector> selectedSectors = Collections.emptyList();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "arena_session_markets",
+            joinColumns = @JoinColumn(name = "session_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "market", length = 10)
+    private List<Asset.Market> selectedMarkets = Collections.emptyList();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "arena_session_asset_types",
+            joinColumns = @JoinColumn(name = "session_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "asset_type", length = 10)
+    private List<Asset.AssetType> selectedAssetTypes = Collections.emptyList();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -83,7 +102,8 @@ public class ArenaSession {
     @Builder(access = AccessLevel.PRIVATE)
     private ArenaSession(UUID portfolioId, UUID userId, UUID guestSessionId, SessionStatus status,
                         Integer currentRound, Integer totalRounds, RiskProfile riskProfile,
-                        List<Sector> selectedSectors) {
+                        List<Sector> selectedSectors, List<Asset.Market> selectedMarkets,
+                        List<Asset.AssetType> selectedAssetTypes) {
         // Validate XOR: exactly one of userId or guestSessionId must be set
         if ((userId == null && guestSessionId == null) || (userId != null && guestSessionId != null)) {
             throw new IllegalArgumentException("Exactly one of userId or guestSessionId must be set");
@@ -96,7 +116,9 @@ public class ArenaSession {
         this.currentRound = currentRound != null ? currentRound : 0;  // 0부터 시작 (0=Pre Round)
         this.totalRounds = totalRounds != null ? totalRounds : 11;  // Pre Round(0) + Asset Rounds(1-10)
         this.riskProfile = riskProfile;
-        this.selectedSectors = selectedSectors != null ? selectedSectors : new ArrayList<>();
+        this.selectedSectors = selectedSectors != null ? selectedSectors : Collections.emptyList();
+        this.selectedMarkets = selectedMarkets != null ? selectedMarkets : Collections.emptyList();
+        this.selectedAssetTypes = selectedAssetTypes != null ? selectedAssetTypes : Collections.emptyList();
     }
 
     /**
@@ -167,7 +189,15 @@ public class ArenaSession {
     }
 
     public void setSelectedSectors(List<Sector> selectedSectors) {
-        this.selectedSectors = selectedSectors != null ? selectedSectors : new ArrayList<>();
+        this.selectedSectors = selectedSectors != null ? selectedSectors : Collections.emptyList();
+    }
+
+    public void setSelectedMarkets(List<Asset.Market> selectedMarkets) {
+        this.selectedMarkets = selectedMarkets != null ? selectedMarkets : Collections.emptyList();
+    }
+
+    public void setSelectedAssetTypes(List<Asset.AssetType> selectedAssetTypes) {
+        this.selectedAssetTypes = selectedAssetTypes != null ? selectedAssetTypes : Collections.emptyList();
     }
 
     public void setCurrentRound(Integer currentRound) {

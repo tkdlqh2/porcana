@@ -106,8 +106,30 @@ public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetReposi
            "GROUP BY a.sector")
     List<SectorCount> countActiveBySector();
 
+    @Query("SELECT a.market AS market, COUNT(a) AS count " +
+           "FROM Asset a " +
+           "WHERE a.active = true " +
+           "GROUP BY a.market")
+    List<MarketCount> countActiveByMarket();
+
+    @Query("SELECT a.type AS type, COUNT(a) AS count " +
+           "FROM Asset a " +
+           "WHERE a.active = true " +
+           "GROUP BY a.type")
+    List<AssetTypeCount> countActiveByType();
+
     interface SectorCount {
         Sector getSector();
+        long getCount();
+    }
+
+    interface MarketCount {
+        Asset.Market getMarket();
+        long getCount();
+    }
+
+    interface AssetTypeCount {
+        Asset.AssetType getType();
         long getCount();
     }
 
