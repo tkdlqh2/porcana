@@ -7,6 +7,7 @@ import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
 import com.porcana.domain.portfolio.entity.Portfolio;
+import com.porcana.domain.portfolio.entity.PortfolioStatus;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import lombok.RequiredArgsConstructor;
@@ -202,7 +203,10 @@ public class UsAssetBatchJob {
     }
 
     // -------------------------------------------------------------------------
-    // Step 3: Finish ACTIVE portfolios that contain newly deactivated assets
+    // Step 3: Finish ACTIVE portfolios that contain any inactive asset
+    //
+    // Uses ALL currently inactive US stocks (not just newly deactivated ones),
+    // so portfolios that slipped through in previous runs are also caught.
     // -------------------------------------------------------------------------
 
     @Bean
@@ -211,39 +215,47 @@ public class UsAssetBatchJob {
                 .tasklet((contribution, chunkContext) -> {
 
                     @SuppressWarnings("unchecked")
-                    List<String> deactivatedIdStrings = (List<String>) chunkContext.getStepContext()
+                    List<String> newlyDeactivatedStrings = (List<String>) chunkContext.getStepContext()
                             .getStepExecution().getJobExecution().getExecutionContext()
                             .get(DEACTIVATED_IDS_KEY);
 
-                    if (deactivatedIdStrings == null || deactivatedIdStrings.isEmpty()) {
-                        log.info("No assets were deactivated this run. Portfolio finish step skipped.");
+                    int newlyDeactivatedCount = newlyDeactivatedStrings == null ? 0 : newlyDeactivatedStrings.size();
+
+                    // Use all currently inactive US stocks, not just this run's newly deactivated ones.
+                    // This ensures portfolios affected by previous-run deactivations are also caught.
+                    List<UUID> allInactiveIds = assetRepository
+                            .findByMarketAndType(Asset.Market.US, Asset.AssetType.STOCK)
+                            .stream()
+                            .filter(a -> !Boolean.TRUE.equals(a.getActive()))
+                            .map(Asset::getId)
+                            .toList();
+
+                    if (allInactiveIds.isEmpty()) {
+                        log.info("No inactive US assets found. Portfolio finish step skipped.");
                         return RepeatStatus.FINISHED;
                     }
 
-                    List<UUID> deactivatedIds = deactivatedIdStrings.stream()
-                            .map(UUID::fromString)
-                            .toList();
-
-                    log.info("Checking portfolios affected by {} deactivated assets", deactivatedIds.size());
+                    log.info("Checking portfolios against {} inactive assets ({} newly deactivated this run)",
+                            allInactiveIds.size(), newlyDeactivatedCount);
 
                     List<UUID> affectedPortfolioIds =
-                            portfolioAssetRepository.findPortfolioIdsByAssetIdIn(deactivatedIds);
+                            portfolioAssetRepository.findPortfolioIdsByAssetIdIn(allInactiveIds);
 
                     if (affectedPortfolioIds.isEmpty()) {
-                        log.info("No active portfolios affected by deactivated assets.");
+                        log.info("No active portfolios affected by inactive assets.");
                         return RepeatStatus.FINISHED;
                     }
 
                     List<Portfolio> portfoliosToFinish =
-                            portfolioRepository.findActiveByIdIn(affectedPortfolioIds);
+                            portfolioRepository.findActiveByIdIn(affectedPortfolioIds, PortfolioStatus.ACTIVE);
 
                     for (Portfolio portfolio : portfoliosToFinish) {
                         portfolio.finish();
                         portfolioRepository.save(portfolio);
-                        log.info("Finished portfolio {} (contains deactivated asset)", portfolio.getId());
+                        log.info("Finished portfolio {} (contains inactive asset)", portfolio.getId());
                     }
 
-                    log.info("Finished {} portfolios due to deactivated assets", portfoliosToFinish.size());
+                    log.info("Finished {} portfolios due to inactive assets", portfoliosToFinish.size());
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)

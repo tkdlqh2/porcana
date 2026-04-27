@@ -73,7 +73,7 @@ public class BatchScheduler {
      * Runs on the 1st Sunday of each month at 01:00 KST (before the weekly status check at 02:00).
      * Adds newly listed constituents (inactive) and updates universe tags.
      */
-//    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
+//    @Scheduled(cron = "0 0 1 ? * SUN#1", zone = "Asia/Seoul") // 1st Sunday of each month, 01:00 KST
     public void runUsUniverseSyncBatch() {
         try {
             log.info("Starting scheduled US universe sync job");
