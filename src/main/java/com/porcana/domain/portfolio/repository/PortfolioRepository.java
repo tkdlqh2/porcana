@@ -92,6 +92,13 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID>, Por
     @Query("SELECT p FROM Portfolio p WHERE p.deletedAt IS NOT NULL AND p.deletedAt < :cutoffDate")
     List<Portfolio> findDeletedPortfoliosOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate);
 
+    /**
+     * Find portfolios by ID list filtered by status (excluding deleted).
+     * Used by the asset status check job to finish portfolios containing deactivated assets.
+     */
+    @Query("SELECT p FROM Portfolio p WHERE p.id IN :ids AND p.status = :status AND p.deletedAt IS NULL")
+    List<Portfolio> findActiveByIdIn(@Param("ids") List<UUID> ids, @Param("status") PortfolioStatus status);
+
     // ===== Admin API Support =====
 
     /**

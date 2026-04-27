@@ -59,6 +59,14 @@ public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetReposi
     List<Asset> findByMarketAndType(Asset.Market market, Asset.AssetType type);
 
     /**
+     * Find inactive asset IDs by market and type.
+     * Used by batch jobs that only need affected asset IDs.
+     */
+    @Query("SELECT a.id FROM Asset a WHERE a.market = :market AND a.type = :type AND a.active = false")
+    List<UUID> findIdsByMarketAndTypeAndActiveFalse(@Param("market") Asset.Market market,
+                                                    @Param("type") Asset.AssetType type);
+
+    /**
      * Find all active assets
      * Used for risk calculation
      */

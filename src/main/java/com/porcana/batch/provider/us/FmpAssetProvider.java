@@ -45,6 +45,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
     private static final String SP500_CSV = "batch/s&p500.csv";
     private static final String NASDAQ100_CSV = "batch/nasdaq100.csv";
     private static final String AMEX_CSV = "batch/amex.csv";
+    private static final String DOW30_CSV = "batch/dowjones.csv";
 
     // 배당 수익률 임계값 (소수 기준)
     private static final BigDecimal HIGH_DIVIDEND_THRESHOLD = new BigDecimal("0.04");  // 4% 이상 = 고배당
@@ -77,15 +78,17 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             Set<String> sp500Symbols = readSymbolsFromCsv(SP500_CSV);
             Set<String> nasdaq100Symbols = readSymbolsFromCsv(NASDAQ100_CSV);
             Set<String> amexSymbols = readSymbolsFromCsv(AMEX_CSV);
+            Set<String> dow30Symbols = readSymbolsFromCsv(DOW30_CSV);
 
-            log.info("Found {} S&P 500 symbols, {} NASDAQ 100 symbols, and {} AMEX symbols",
-                    sp500Symbols.size(), nasdaq100Symbols.size(), amexSymbols.size());
+            log.info("Found {} S&P 500 symbols, {} NASDAQ 100 symbols, {} AMEX symbols, {} Dow Jones 30 symbols",
+                    sp500Symbols.size(), nasdaq100Symbols.size(), amexSymbols.size(), dow30Symbols.size());
 
             // Get all unique symbols
             Set<String> allSymbols = new HashSet<>();
             allSymbols.addAll(sp500Symbols);
             allSymbols.addAll(nasdaq100Symbols);
             allSymbols.addAll(amexSymbols);
+            allSymbols.addAll(dow30Symbols);
 
             log.info("Total unique symbols: {}", allSymbols.size());
 
@@ -100,7 +103,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
                 try {
                     log.info("Fetching asset {}/{}: {}", count, total, symbol);
 
-                    AssetBatchDto asset = fetchAssetBySymbol(symbol, sp500Symbols, nasdaq100Symbols, amexSymbols, asOf);
+                    AssetBatchDto asset = fetchAssetBySymbol(symbol, sp500Symbols, nasdaq100Symbols, amexSymbols, dow30Symbols, asOf);
                     if (asset != null) {
                         assets.add(asset);
                         log.info("Successfully fetched: {} - {}", symbol, asset.getName());
@@ -138,7 +141,7 @@ public class FmpAssetProvider implements UsAssetDataProvider {
      */
     private AssetBatchDto fetchAssetBySymbol(String symbol, Set<String> sp500Symbols,
                                              Set<String> nasdaq100Symbols, Set<String> amexSymbols,
-                                             LocalDate asOf) {
+                                             Set<String> dow30Symbols, LocalDate asOf) {
         String url = String.format("%s%s?symbol=%s&apikey=%s", baseUrl, PROFILE_ENDPOINT, symbol, apiKey);
 
         try {
@@ -161,6 +164,9 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             }
             if (amexSymbols.contains(symbol)) {
                 universeTags.add(UniverseTag.AMEX);
+            }
+            if (dow30Symbols.contains(symbol)) {
+                universeTags.add(UniverseTag.DOW30);
             }
 
             // Convert FMP sector name to GICS Sector enum
@@ -385,6 +391,32 @@ public class FmpAssetProvider implements UsAssetDataProvider {
             return null;
         }
     }
+
+    /**
+     * Lightweight profile fetch used by the weekly asset status check job.
+     * Returns only the fields needed to update an existing asset's status and metadata.
+     * Returns null if the symbol is not found or the API is unavailable.
+     */
+    public ProfileUpdateData fetchProfileUpdateData(String symbol) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("FMP API key not configured. Skipping profile fetch for {}", symbol);
+            return null;
+        }
+
+        FmpProfile profile = fetchProfile(symbol);
+        if (profile == null) return null;
+
+        return new ProfileUpdateData(
+                Boolean.TRUE.equals(profile.getIsActivelyTrading()),
+                profile.getImage(),
+                profile.getDescription()
+        );
+    }
+
+    /**
+     * Result of a lightweight profile fetch for the status check job.
+     */
+    public record ProfileUpdateData(boolean activelyTrading, String imageUrl, String description) {}
 
     @Override
     public String getProviderName() {

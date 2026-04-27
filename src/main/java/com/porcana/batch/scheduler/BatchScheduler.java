@@ -33,6 +33,7 @@ public class BatchScheduler {
 
     private final JobLauncher jobLauncher;
     private final Job krAssetJob;
+    private final Job usUniverseSyncJob;
     private final Job usAssetJob;
     private final Job krEtfJob;
     private final Job usEtfJob;
@@ -68,8 +69,28 @@ public class BatchScheduler {
     }
 
     /**
-     * Execute US asset batch job every 30 minutes
-     * Uncomment @Scheduled annotation to enable
+     * Synchronize US stock universe from Wikipedia constituent lists.
+     * Runs on the 1st Sunday of each month at 01:00 KST (before the weekly status check at 02:00).
+     * Adds newly listed constituents (inactive) and updates universe tags.
+     */
+//    @Scheduled(cron = "0 0 1 ? * SUN#1", zone = "Asia/Seoul") // 1st Sunday of each month, 01:00 KST
+    public void runUsUniverseSyncBatch() {
+        try {
+            log.info("Starting scheduled US universe sync job");
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addLong("timestamp", System.currentTimeMillis())
+                    .toJobParameters();
+            jobLauncher.run(usUniverseSyncJob, jobParameters);
+            log.info("US universe sync job completed successfully");
+        } catch (Exception e) {
+            log.error("Failed to execute US universe sync job", e);
+        }
+    }
+
+    /**
+     * Check active status for all US stocks via FMP API and finish portfolios with deactivated assets.
+     * Runs every Sunday at 02:00 KST.
+     * On the 1st Sunday, runs after usUniverseSyncJob (01:00 KST) to activate newly added symbols.
      */
 //    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
     public void runUsAssetBatch() {

@@ -35,6 +35,7 @@ public class BatchConfig {
 
     private final JobLauncher jobLauncher;
     private final Job krAssetJob;
+    private final Job usUniverseSyncJob;
     private final Job usAssetJob;
     private final Job krEtfJob;
     private final Job usEtfJob;
@@ -49,6 +50,7 @@ public class BatchConfig {
     public BatchConfig(
             JobLauncher jobLauncher,
             @Qualifier("krAssetJob") Job krAssetJob,
+            @Qualifier("usUniverseSyncJob") Job usUniverseSyncJob,
             @Qualifier("usAssetJob") Job usAssetJob,
             @Qualifier("krEtfJob") Job krEtfJob,
             @Qualifier("usEtfJob") Job usEtfJob,
@@ -62,6 +64,7 @@ public class BatchConfig {
     ) {
         this.jobLauncher = jobLauncher;
         this.krAssetJob = krAssetJob;
+        this.usUniverseSyncJob = usUniverseSyncJob;
         this.usAssetJob = usAssetJob;
         this.krEtfJob = krEtfJob;
         this.usEtfJob = usEtfJob;
@@ -72,6 +75,26 @@ public class BatchConfig {
         this.exchangeRateJob = exchangeRateJob;
         this.assetRiskJob = assetRiskJob;
         this.portfolioPerformanceJob = portfolioPerformanceJob;
+    }
+
+    /**
+     * US universe sync - runs on the 1st Sunday of each month at 01:00 KST.
+     * Fetches S&P 500 / NASDAQ 100 constituent lists from Wikipedia, and Dow 30 from CSV,
+     * then adds newly listed symbols (inactive) to the DB.
+     * Runs 1 hour before the weekly status check (02:00) so new symbols get activated same day.
+     */
+    @Scheduled(cron = "0 0 1 ? * SUN#1", zone = "Asia/Seoul")
+    public void runMonthlyUsUniverseSync() {
+        log.info("Starting monthly US universe sync from Wikipedia");
+        try {
+            JobParameters params = new JobParametersBuilder()
+                    .addLong("time", System.currentTimeMillis())
+                    .toJobParameters();
+            jobLauncher.run(usUniverseSyncJob, params);
+            log.info("US universe sync completed");
+        } catch (Exception e) {
+            log.error("Failed to run US universe sync", e);
+        }
     }
 
     /**
