@@ -4,6 +4,7 @@ import com.porcana.batch.dto.AssetBatchDto;
 import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.kr.DataGoKrAssetProvider;
 import com.porcana.batch.provider.kr.UniverseTaggingProvider;
+import com.porcana.batch.service.KrAssetDescriptionGenerator;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
@@ -48,6 +49,7 @@ public class KrAssetBatchJob {
     private final UniverseTaggingProvider taggingProvider;
     private final AssetRepository assetRepository;
     private final AssetPriceRepository assetPriceRepository;
+    private final KrAssetDescriptionGenerator krAssetDescriptionGenerator;
     private final BatchNotificationListener batchNotificationListener;
 
     @Bean
@@ -58,6 +60,7 @@ public class KrAssetBatchJob {
                 .next(deactivateDelistedKrAssetsStep())
                 .next(tagKospi200Step())
                 .next(tagKosdaq150Step())
+                .next(enrichKrDescriptionsStep())
                 .next(fetchKrHistoricalPricesStep())
                 .build();
     }
@@ -225,7 +228,38 @@ public class KrAssetBatchJob {
     }
 
     /**
-     * Step 4: Fetch historical prices for recently created assets
+     * Step 4: Generate template descriptions for KR assets that do not have one yet
+     */
+    @Bean
+    public Step enrichKrDescriptionsStep() {
+        return new StepBuilder("enrichKrDescriptionsStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    log.info("Starting KR asset description enrichment");
+
+                    List<Asset> activeKrAssets = assetRepository.findByMarketAndActiveTrue(Asset.Market.KR);
+                    int updated = 0;
+
+                    for (Asset asset : activeKrAssets) {
+                        if (asset.getDescription() != null && !asset.getDescription().isBlank()) {
+                            continue;
+                        }
+
+                        asset.setDescription(krAssetDescriptionGenerator.generate(asset));
+                        updated++;
+                    }
+
+                    if (updated > 0) {
+                        assetRepository.saveAll(activeKrAssets);
+                    }
+
+                    log.info("KR asset description enrichment complete: {} assets updated", updated);
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    /**
+     * Step 5: Fetch historical prices for recently created assets
      * Fetches prices for assets created within the last 24 hours
      */
     @Bean
