@@ -1,16 +1,49 @@
 symbol, name, asset_class
-SPY, S&P 500 ETF, EQUITY_INDEX
-QQQ, Nasdaq-100 ETF, EQUITY_INDEX
-VTI, Total US Market ETF, EQUITY_INDEX
-VT,	Total World Stock ETF, EQUITY_INDEX
-XLK, Technology Select Sector, SECTOR
-SOXX, Semiconductor ETF, SECTOR
-XLV, Health Care Select Sector, SECTOR
-XLF, Financial Select Sector, SECTOR
-XLE, Energy Select Sector, SECTOR
-SCHD, US Dividend Equity ETF, DIVIDEND
-VYM, High Dividend Yield ETF, DIVIDEND
-TLT, 20+ Year Treasury Bond ETF, BOND
-IEF, 7–10 Year Treasury Bond ETF, BOND
-SHY, 1–3 Year Treasury Bond ETF, BOND
-GLD, Gold ETF, COMMODITY
+# === Broad Market ===
+SPY, SPDR S&P 500 ETF, EQUITY_INDEX
+IVV, iShares Core S&P 500 ETF, EQUITY_INDEX
+VOO, Vanguard S&P 500 ETF, EQUITY_INDEX
+QQQ, Invesco Nasdaq-100 ETF, EQUITY_INDEX
+VTI, Vanguard Total US Market ETF, EQUITY_INDEX
+VT, Vanguard Total World Stock ETF, EQUITY_INDEX
+VXUS, Vanguard Total International Stock ETF, EQUITY_INDEX
+RSP, Invesco S&P 500 Equal Weight ETF, EQUITY_INDEX
+# === International ===
+EFA, iShares MSCI EAFE ETF, EQUITY_INDEX
+EEM, iShares MSCI Emerging Markets ETF, EQUITY_INDEX
+VWO, Vanguard Emerging Markets ETF, EQUITY_INDEX
+# === Sector ===
+XLK, Technology Select Sector SPDR, SECTOR
+XLV, Health Care Select Sector SPDR, SECTOR
+XLF, Financial Select Sector SPDR, SECTOR
+XLE, Energy Select Sector SPDR, SECTOR
+XLY, Consumer Discretionary Select Sector SPDR, SECTOR
+XLP, Consumer Staples Select Sector SPDR, SECTOR
+XLI, Industrials Select Sector SPDR, SECTOR
+XLU, Utilities Select Sector SPDR, SECTOR
+XLB, Materials Select Sector SPDR, SECTOR
+XLRE, Real Estate Select Sector SPDR, SECTOR
+SOXX, iShares Semiconductor ETF, SECTOR
+SMH, VanEck Semiconductor ETF, SECTOR
+XBI, SPDR S&P Biotech ETF, SECTOR
+IBB, iShares Nasdaq Biotechnology ETF, SECTOR
+# === Dividend ===
+SCHD, Schwab US Dividend Equity ETF, DIVIDEND
+VIG, Vanguard Dividend Appreciation ETF, DIVIDEND
+VYM, Vanguard High Dividend Yield ETF, DIVIDEND
+DGRO, iShares Core Dividend Growth ETF, DIVIDEND
+HDV, iShares Core High Dividend ETF, DIVIDEND
+DVY, iShares Select Dividend ETF, DIVIDEND
+# === Bond ===
+TLT, iShares 20+ Year Treasury Bond ETF, BOND
+IEF, iShares 7-10 Year Treasury Bond ETF, BOND
+SHY, iShares 1-3 Year Treasury Bond ETF, BOND
+AGG, iShares Core US Aggregate Bond ETF, BOND
+BND, Vanguard Total Bond Market ETF, BOND
+LQD, iShares iBoxx Investment Grade Corporate Bond ETF, BOND
+HYG, iShares iBoxx High Yield Corporate Bond ETF, BOND
+TIP, iShares TIPS Bond ETF, BOND
+# === Commodity ===
+GLD, SPDR Gold Shares, COMMODITY
+IAU, iShares Gold Trust, COMMODITY
+SLV, iShares Silver Trust, COMMODITY
