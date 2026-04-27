@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -24,6 +25,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 import java.util.UUID;
@@ -49,6 +51,7 @@ import java.util.UUID;
 public class UsAssetBatchJob {
 
     private static final int STATUS_CHECK_CHUNK_SIZE = 50;
+    private static final int PRICE_BACKFILL_CHUNK_SIZE = 20;
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
@@ -86,13 +89,14 @@ public class UsAssetBatchJob {
                 .processor(usAssetStatusProcessor())
                 .writer(usAssetStatusWriter())
                 .faultTolerant()
-                .skip(Exception.class)
+                .skip(RestClientException.class)
                 .noSkip(InterruptedException.class)
                 .skipLimit(100)
                 .build();
     }
 
     @Bean
+    @StepScope
     public ListItemReader<Asset> usAssetStatusReader() {
         List<Asset> stocks = assetRepository.findByMarketAndType(Asset.Market.US, Asset.AssetType.STOCK);
         log.info("Loaded {} US stocks for status check", stocks.size());
@@ -145,48 +149,57 @@ public class UsAssetBatchJob {
     @Bean
     public Step fetchHistoricalPricesForActiveStep() {
         return new StepBuilder("fetchHistoricalPricesForActiveStep", jobRepository)
-                .tasklet((contribution, chunkContext) -> {
-                    log.info("Starting historical price backfill for US stocks without price data");
-
-                    List<Asset> activeStocks = assetRepository.findByMarketAndTypeAndActiveTrue(
-                            Asset.Market.US, Asset.AssetType.STOCK);
-
-                    int backfilled = 0;
-                    int skipped = 0;
-
-                    for (Asset asset : activeStocks) {
-                        try {
-                            if (assetPriceRepository.existsByAsset(asset)) {
-                                skipped++;
-                                continue;
-                            }
-
-                            log.info("Backfilling historical prices for {}", asset.getSymbol());
-                            List<AssetPrice> prices = fmpProvider.fetchHistoricalPrices(asset);
-
-                            if (!prices.isEmpty()) {
-                                assetPriceRepository.saveAll(prices);
-                                backfilled++;
-                                log.info("Saved {} historical price records for {}", prices.size(), asset.getSymbol());
-                            }
-
-                            Thread.sleep(200);
-
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            log.warn("Historical price backfill interrupted at {}", asset.getSymbol());
-                            break;
-                        } catch (Exception e) {
-                            log.warn("Failed to backfill prices for {}: {}", asset.getSymbol(), e.getMessage());
-                        }
-                    }
-
-                    log.info("Historical price backfill complete: {} assets backfilled, {} already had data",
-                            backfilled, skipped);
-
-                    return RepeatStatus.FINISHED;
-                }, transactionManager)
+                .<Asset, AssetPriceBackfillResult>chunk(PRICE_BACKFILL_CHUNK_SIZE, transactionManager)
+                .reader(activeUsStockReader())
+                .processor(assetPriceBackfillProcessor())
+                .writer(assetPriceBackfillWriter())
                 .build();
+    }
+
+    @Bean
+    @StepScope
+    public ListItemReader<Asset> activeUsStockReader() {
+        List<Asset> activeStocks = assetRepository.findByMarketAndTypeAndActiveTrue(
+                Asset.Market.US, Asset.AssetType.STOCK);
+        log.info("Loaded {} active US stocks for historical price backfill", activeStocks.size());
+        return new ListItemReader<>(activeStocks);
+    }
+
+    @Bean
+    public ItemProcessor<Asset, AssetPriceBackfillResult> assetPriceBackfillProcessor() {
+        return asset -> {
+            try {
+                if (assetPriceRepository.existsByAsset(asset)) {
+                    return null;
+                }
+
+                log.info("Backfilling historical prices for {}", asset.getSymbol());
+                List<AssetPrice> prices = fmpProvider.fetchHistoricalPrices(asset);
+                Thread.sleep(200);
+
+                return new AssetPriceBackfillResult(asset.getSymbol(), prices);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                log.warn("Historical price backfill interrupted at {}", asset.getSymbol());
+                throw new IllegalStateException("Historical price backfill interrupted", ie);
+            } catch (Exception e) {
+                log.warn("Failed to backfill prices for {}: {}", asset.getSymbol(), e.getMessage());
+                return null;
+            }
+        };
+    }
+
+    @Bean
+    public ItemWriter<AssetPriceBackfillResult> assetPriceBackfillWriter() {
+        return chunk -> {
+            for (AssetPriceBackfillResult backfill : chunk.getItems()) {
+                if (backfill == null || backfill.prices().isEmpty()) {
+                    continue;
+                }
+                assetPriceRepository.saveAll(backfill.prices());
+                log.info("Saved {} historical price records for {}", backfill.prices().size(), backfill.symbol());
+            }
+        };
     }
 
     // -------------------------------------------------------------------------
@@ -202,11 +215,7 @@ public class UsAssetBatchJob {
                 .tasklet((contribution, chunkContext) -> {
 
                     List<UUID> allInactiveIds = assetRepository
-                            .findByMarketAndType(Asset.Market.US, Asset.AssetType.STOCK)
-                            .stream()
-                            .filter(a -> !Boolean.TRUE.equals(a.getActive()))
-                            .map(Asset::getId)
-                            .toList();
+                            .findIdsByMarketAndTypeAndActiveFalse(Asset.Market.US, Asset.AssetType.STOCK);
 
                     if (allInactiveIds.isEmpty()) {
                         log.info("No inactive US assets found. Portfolio finish step skipped.");
@@ -228,14 +237,18 @@ public class UsAssetBatchJob {
 
                     for (Portfolio portfolio : portfoliosToFinish) {
                         portfolio.finish();
-                        portfolioRepository.save(portfolio);
                         log.info("Finished portfolio {} (contains inactive asset)", portfolio.getId());
                     }
+
+                    portfolioRepository.saveAll(portfoliosToFinish);
 
                     log.info("Finished {} portfolios due to inactive assets", portfoliosToFinish.size());
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();
+    }
+
+    private record AssetPriceBackfillResult(String symbol, List<AssetPrice> prices) {
     }
 }
