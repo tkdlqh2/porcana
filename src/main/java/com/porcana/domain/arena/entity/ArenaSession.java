@@ -11,7 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -68,7 +68,7 @@ public class ArenaSession {
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "sector", length = 50)
-    private List<Sector> selectedSectors = Collections.emptyList();
+    private List<Sector> selectedSectors = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
@@ -77,7 +77,7 @@ public class ArenaSession {
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "market", length = 10)
-    private List<Asset.Market> selectedMarkets = Collections.emptyList();
+    private List<Asset.Market> selectedMarkets = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
@@ -86,7 +86,7 @@ public class ArenaSession {
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "asset_type", length = 10)
-    private List<Asset.AssetType> selectedAssetTypes = Collections.emptyList();
+    private List<Asset.AssetType> selectedAssetTypes = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -116,9 +116,9 @@ public class ArenaSession {
         this.currentRound = currentRound != null ? currentRound : 0;  // 0부터 시작 (0=Pre Round)
         this.totalRounds = totalRounds != null ? totalRounds : 11;  // Pre Round(0) + Asset Rounds(1-10)
         this.riskProfile = riskProfile;
-        this.selectedSectors = selectedSectors != null ? selectedSectors : Collections.emptyList();
-        this.selectedMarkets = selectedMarkets != null ? selectedMarkets : Collections.emptyList();
-        this.selectedAssetTypes = selectedAssetTypes != null ? selectedAssetTypes : Collections.emptyList();
+        this.selectedSectors = toMutableList(selectedSectors);
+        this.selectedMarkets = toMutableList(selectedMarkets);
+        this.selectedAssetTypes = toMutableList(selectedAssetTypes);
     }
 
     /**
@@ -189,15 +189,15 @@ public class ArenaSession {
     }
 
     public void setSelectedSectors(List<Sector> selectedSectors) {
-        this.selectedSectors = selectedSectors != null ? selectedSectors : Collections.emptyList();
+        this.selectedSectors = toMutableList(selectedSectors);
     }
 
     public void setSelectedMarkets(List<Asset.Market> selectedMarkets) {
-        this.selectedMarkets = selectedMarkets != null ? selectedMarkets : Collections.emptyList();
+        this.selectedMarkets = toMutableList(selectedMarkets);
     }
 
     public void setSelectedAssetTypes(List<Asset.AssetType> selectedAssetTypes) {
-        this.selectedAssetTypes = selectedAssetTypes != null ? selectedAssetTypes : Collections.emptyList();
+        this.selectedAssetTypes = toMutableList(selectedAssetTypes);
     }
 
     public void setCurrentRound(Integer currentRound) {
@@ -219,5 +219,9 @@ public class ArenaSession {
 
     public void abandon() {
         this.status = SessionStatus.ABANDONED;
+    }
+
+    private static <T> List<T> toMutableList(List<T> values) {
+        return values == null ? new ArrayList<>() : new ArrayList<>(values);
     }
 }
