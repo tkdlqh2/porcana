@@ -92,7 +92,7 @@ public class BatchScheduler {
      * Runs every Sunday at 02:00 KST.
      * On the 1st Sunday, runs after usUniverseSyncJob (01:00 KST) to activate newly added symbols.
      */
-    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
+//    @Scheduled(fixedDelay = 1800000) // 30 minutes = 1,800,000 ms
     public void runUsAssetBatch() {
         try {
             log.info("Starting scheduled US asset batch job");

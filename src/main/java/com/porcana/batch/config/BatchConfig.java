@@ -79,8 +79,8 @@ public class BatchConfig {
 
     /**
      * US universe sync - runs on the 1st Sunday of each month at 01:00 KST.
-     * Fetches S&P 500 / NASDAQ 100 / Dow 30 constituent lists from Wikipedia
-     * and adds newly listed symbols (inactive) to the DB.
+     * Fetches S&P 500 / NASDAQ 100 constituent lists from Wikipedia, and Dow 30 from CSV,
+     * then adds newly listed symbols (inactive) to the DB.
      * Runs 1 hour before the weekly status check (02:00) so new symbols get activated same day.
      */
     @Scheduled(cron = "0 0 1 ? * SUN#1", zone = "Asia/Seoul")

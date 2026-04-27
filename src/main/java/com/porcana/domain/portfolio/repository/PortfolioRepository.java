@@ -96,8 +96,8 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID>, Por
      * Find ACTIVE (non-deleted) portfolios by ID list.
      * Used by the asset status check job to finish portfolios containing deactivated assets.
      */
-    @Query("SELECT p FROM Portfolio p WHERE p.id IN :ids AND p.status = :status AND p.deletedAt IS NULL")
-    List<Portfolio> findActiveByIdIn(@Param("ids") List<UUID> ids, @Param("status") PortfolioStatus status);
+    @Query("SELECT p FROM Portfolio p WHERE p.id IN :ids AND p.status = 'ACTIVE' AND p.deletedAt IS NULL")
+    List<Portfolio> findActiveByIdIn(@Param("ids") List<UUID> ids);
 
     // ===== Admin API Support =====
 

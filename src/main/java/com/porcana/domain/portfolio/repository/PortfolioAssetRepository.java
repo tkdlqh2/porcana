@@ -32,6 +32,10 @@ public interface PortfolioAssetRepository extends JpaRepository<PortfolioAsset, 
     /**
      * Find portfolio IDs that contain any of the given asset IDs.
      * Used by the asset status check job to find portfolios affected by deactivated assets.
+     *
+     * <p><b>Precondition:</b> {@code assetIds} must be non-empty. Some JPA implementations
+     * throw on an empty {@code IN} clause. The caller (UsAssetBatchJob) is responsible for
+     * checking that the list is non-empty before invoking this method.
      */
     @Query("SELECT DISTINCT pa.portfolioId FROM PortfolioAsset pa WHERE pa.assetId IN :assetIds")
     List<UUID> findPortfolioIdsByAssetIdIn(@Param("assetIds") List<UUID> assetIds);

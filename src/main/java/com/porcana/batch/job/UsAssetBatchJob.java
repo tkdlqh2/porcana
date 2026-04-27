@@ -7,7 +7,6 @@ import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
 import com.porcana.domain.portfolio.entity.Portfolio;
-import com.porcana.domain.portfolio.entity.PortfolioStatus;
 import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import lombok.RequiredArgsConstructor;
@@ -79,6 +78,7 @@ public class UsAssetBatchJob {
                     log.info("Found {} US stocks to check", stocks.size());
 
                     List<UUID> deactivatedIds = new ArrayList<>();
+                    List<Asset> changedAssets = new ArrayList<>();
                     int activated = 0;
                     int deactivated = 0;
                     int unchanged = 0;
@@ -119,7 +119,7 @@ public class UsAssetBatchJob {
                                 asset.setDescription(profile.description());
                             }
 
-                            assetRepository.save(asset);
+                            changedAssets.add(asset);
                             Thread.sleep(150);
 
                         } catch (InterruptedException ie) {
@@ -132,10 +132,15 @@ public class UsAssetBatchJob {
                         }
                     }
 
-                    // Share deactivated IDs with step 3 via job execution context
+                    assetRepository.saveAll(changedAssets);
+
+                    // Share deactivated IDs with step 3 via job execution context (stored as String for safe serialization)
+                    List<String> deactivatedIdStrings = deactivatedIds.stream()
+                            .map(UUID::toString)
+                            .toList();
                     chunkContext.getStepContext().getStepExecution()
                             .getJobExecution().getExecutionContext()
-                            .put(DEACTIVATED_IDS_KEY, new ArrayList<>(deactivatedIds));
+                            .put(DEACTIVATED_IDS_KEY, new ArrayList<>(deactivatedIdStrings));
 
                     log.info("US asset status check complete: {} activated, {} deactivated, {} unchanged, {} failed",
                             activated, deactivated, unchanged, failed);
@@ -206,14 +211,18 @@ public class UsAssetBatchJob {
                 .tasklet((contribution, chunkContext) -> {
 
                     @SuppressWarnings("unchecked")
-                    List<UUID> deactivatedIds = (List<UUID>) chunkContext.getStepContext()
+                    List<String> deactivatedIdStrings = (List<String>) chunkContext.getStepContext()
                             .getStepExecution().getJobExecution().getExecutionContext()
                             .get(DEACTIVATED_IDS_KEY);
 
-                    if (deactivatedIds == null || deactivatedIds.isEmpty()) {
+                    if (deactivatedIdStrings == null || deactivatedIdStrings.isEmpty()) {
                         log.info("No assets were deactivated this run. Portfolio finish step skipped.");
                         return RepeatStatus.FINISHED;
                     }
+
+                    List<UUID> deactivatedIds = deactivatedIdStrings.stream()
+                            .map(UUID::fromString)
+                            .toList();
 
                     log.info("Checking portfolios affected by {} deactivated assets", deactivatedIds.size());
 
@@ -226,7 +235,7 @@ public class UsAssetBatchJob {
                     }
 
                     List<Portfolio> portfoliosToFinish =
-                            portfolioRepository.findActiveByIdIn(affectedPortfolioIds, PortfolioStatus.ACTIVE);
+                            portfolioRepository.findActiveByIdIn(affectedPortfolioIds);
 
                     for (Portfolio portfolio : portfoliosToFinish) {
                         portfolio.finish();

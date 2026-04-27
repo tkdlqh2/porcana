@@ -29,8 +29,9 @@ public class WikipediaUniverseProvider {
             "https://en.wikipedia.org/wiki/Nasdaq-100";
 
     private static final int TIMEOUT_MS = 20_000;
-    private static final int SP500_MIN_SYMBOLS    = 490;
+    private static final int SP500_MIN_SYMBOLS     = 490;
     private static final int NASDAQ100_MIN_SYMBOLS = 90;
+    private static final int NASDAQ100_MAX_SYMBOLS = 110;
 
     // -------------------------------------------------------------------------
     // Public API
@@ -81,7 +82,7 @@ public class WikipediaUniverseProvider {
 
             // Try common header keywords in order
             for (String keyword : new String[]{"ticker", "symbol"}) {
-                Set<String> symbols = parseWikitableByHeaderKeyword(doc, keyword, NASDAQ100_MIN_SYMBOLS);
+                Set<String> symbols = parseWikitableByHeaderKeyword(doc, keyword, NASDAQ100_MIN_SYMBOLS, NASDAQ100_MAX_SYMBOLS);
                 if (!symbols.isEmpty()) {
                     log.info("Fetched {} NASDAQ 100 symbols from Wikipedia", symbols.size());
                     return symbols;
@@ -103,15 +104,17 @@ public class WikipediaUniverseProvider {
 
     /**
      * Scans all wikitables on the page for one whose header contains {@code headerKeyword},
-     * then extracts that column's values if the result meets the minimum size threshold.
+     * then extracts that column's values if the result is within the expected size range.
+     * The upper bound guards against accidentally picking history/change tables that happen
+     * to contain a "ticker" column but have far more rows than the current constituent list.
      */
-    private Set<String> parseWikitableByHeaderKeyword(Document doc, String headerKeyword, int minExpected) {
+    private Set<String> parseWikitableByHeaderKeyword(Document doc, String headerKeyword, int minExpected, int maxExpected) {
         for (Element table : doc.select("table.wikitable")) {
             int colIndex = findColumnIndex(table, headerKeyword);
             if (colIndex < 0) continue;
 
             Set<String> symbols = extractColumnValues(table, colIndex);
-            if (symbols.size() >= minExpected) return symbols;
+            if (symbols.size() >= minExpected && symbols.size() <= maxExpected) return symbols;
         }
         return new LinkedHashSet<>();
     }
