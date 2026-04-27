@@ -1,12 +1,15 @@
 package com.porcana.batch.job;
 
-import com.porcana.batch.dto.AssetBatchDto;
 import com.porcana.batch.listener.BatchNotificationListener;
 import com.porcana.batch.provider.us.FmpAssetProvider;
 import com.porcana.domain.asset.AssetPriceRepository;
 import com.porcana.domain.asset.AssetRepository;
 import com.porcana.domain.asset.entity.Asset;
 import com.porcana.domain.asset.entity.AssetPrice;
+import com.porcana.domain.portfolio.entity.Portfolio;
+import com.porcana.domain.portfolio.entity.PortfolioStatus;
+import com.porcana.domain.portfolio.repository.PortfolioAssetRepository;
+import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -19,153 +22,219 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
 /**
- * Spring Batch job for fetching US market assets
+ * Weekly job that keeps US stock status up to date via FMP API.
  *
- * Steps:
- * 1. Fetch configured US stock universes from FMP API
+ * Responsibility: "Is each symbol still actively trading?"
+ * - Step 1: For every US STOCK in DB, call FMP profile → update active flag and metadata
+ * - Step 2: For active stocks with no price history, backfill historical prices (covers newly activated symbols)
+ * - Step 3: Finish ACTIVE portfolios that contain newly-deactivated assets
+ *
+ * Symbol discovery (which stocks to add) is handled by UsUniverseSyncJob (monthly).
+ * ETF status is handled by UsEtfBatchJob (separate job, CSV-driven).
+ *
+ * Schedule: Every Sunday 02:00 KST
  */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class UsAssetBatchJob {
 
+    private static final String DEACTIVATED_IDS_KEY = "deactivatedAssetIds";
+
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
     private final FmpAssetProvider fmpProvider;
     private final AssetRepository assetRepository;
     private final AssetPriceRepository assetPriceRepository;
+    private final PortfolioAssetRepository portfolioAssetRepository;
+    private final PortfolioRepository portfolioRepository;
     private final BatchNotificationListener batchNotificationListener;
 
     @Bean
     public Job usAssetJob() {
         return new JobBuilder("usAssetJob", jobRepository)
                 .listener(batchNotificationListener)
-                .start(fetchUsAssetsStep())
-                .next(fetchUsHistoricalPricesStep())
+                .start(checkUsAssetStatusStep())
+                .next(fetchHistoricalPricesForActiveStep())
+                .next(finishPortfoliosWithDeactivatedAssetsStep())
                 .build();
     }
 
-    /**
-     * Step 1: Fetch configured US stock universes from FMP
-     * Assets are already tagged and marked as active by the provider
-     */
+    // -------------------------------------------------------------------------
+    // Step 1: Check active status for every US stock via FMP profile API
+    // -------------------------------------------------------------------------
+
     @Bean
-    public Step fetchUsAssetsStep() {
-        return new StepBuilder("fetchUsAssetsStep", jobRepository)
+    public Step checkUsAssetStatusStep() {
+        return new StepBuilder("checkUsAssetStatusStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    log.info("Starting US stock universe fetch from FMP");
+                    log.info("Starting US asset status check via FMP");
 
-                    try {
-                        List<AssetBatchDto> assets = fmpProvider.fetchAssets();
-                        log.info("Fetched {} US stock assets from FMP", assets.size());
+                    List<Asset> stocks = assetRepository.findByMarketAndType(Asset.Market.US, Asset.AssetType.STOCK);
+                    log.info("Found {} US stocks to check", stocks.size());
 
-                        int created = 0;
-                        int updated = 0;
+                    List<UUID> deactivatedIds = new ArrayList<>();
+                    int activated = 0;
+                    int deactivated = 0;
+                    int unchanged = 0;
+                    int failed = 0;
 
-                        for (AssetBatchDto dto : assets) {
-                            boolean exists = assetRepository.existsBySymbolAndMarket(
-                                    dto.getSymbol(), dto.getMarket());
+                    for (Asset asset : stocks) {
+                        try {
+                            FmpAssetProvider.ProfileUpdateData profile =
+                                    fmpProvider.fetchProfileUpdateData(asset.getSymbol());
 
-                            if (exists) {
-                                // Update existing
-                                Asset existing = assetRepository.findBySymbolAndMarket(
-                                                dto.getSymbol(), dto.getMarket())
-                                        .orElseThrow();
-                                dto.updateEntity(existing);
-                                assetRepository.save(existing);
-                                updated++;
-                            } else {
-                                // Create new
-                                assetRepository.save(dto.toEntity());
-                                created++;
+                            if (profile == null) {
+                                log.warn("No FMP profile found for {}. Keeping current status.", asset.getSymbol());
+                                failed++;
+                                Thread.sleep(150);
+                                continue;
                             }
+
+                            boolean wasActive = Boolean.TRUE.equals(asset.getActive());
+                            boolean isNowActive = profile.activelyTrading();
+
+                            if (isNowActive && !wasActive) {
+                                asset.activate();
+                                activated++;
+                            } else if (!isNowActive && wasActive) {
+                                asset.deactivate();
+                                deactivatedIds.add(asset.getId());
+                                deactivated++;
+                                log.info("Deactivated: {} (FMP reports no longer actively trading)", asset.getSymbol());
+                            } else {
+                                unchanged++;
+                            }
+
+                            // Update profile metadata
+                            if (profile.imageUrl() != null && !profile.imageUrl().isBlank()) {
+                                asset.setImageUrl(profile.imageUrl());
+                            }
+                            if (profile.description() != null && !profile.description().isBlank()) {
+                                asset.setDescription(profile.description());
+                            }
+
+                            assetRepository.save(asset);
+                            Thread.sleep(150);
+
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            log.warn("Status check interrupted at symbol: {}", asset.getSymbol());
+                            break;
+                        } catch (Exception e) {
+                            log.warn("Failed to check status for {}: {}", asset.getSymbol(), e.getMessage());
+                            failed++;
                         }
-
-                        log.info("US stock universe upsert complete: {} created, {} updated",
-                                created, updated);
-
-                    } catch (Exception e) {
-                        log.error("Failed to fetch US stock universe", e);
-                        throw new RuntimeException("US asset fetch failed", e);
                     }
+
+                    // Share deactivated IDs with step 3 via job execution context
+                    chunkContext.getStepContext().getStepExecution()
+                            .getJobExecution().getExecutionContext()
+                            .put(DEACTIVATED_IDS_KEY, new ArrayList<>(deactivatedIds));
+
+                    log.info("US asset status check complete: {} activated, {} deactivated, {} unchanged, {} failed",
+                            activated, deactivated, unchanged, failed);
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();
     }
 
-    /**
-     * Step 2: Fetch historical prices for recently created assets
-     * Fetches prices for assets created within the last 24 hours
-     */
+    // -------------------------------------------------------------------------
+    // Step 2: Backfill historical prices for active stocks that have none yet
+    // -------------------------------------------------------------------------
+
     @Bean
-    public Step fetchUsHistoricalPricesStep() {
-        return new StepBuilder("fetchUsHistoricalPricesStep", jobRepository)
+    public Step fetchHistoricalPricesForActiveStep() {
+        return new StepBuilder("fetchHistoricalPricesForActiveStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    log.info("Starting historical price fetch for US assets");
+                    log.info("Starting historical price backfill for US stocks without price data");
 
-                    // Get timestamp from JobParameters
-                    Map<String, Object> jobParameters = chunkContext.getStepContext().getJobParameters();
-                    Long timestamp = (Long) jobParameters.get("timestamp");
-                    if (timestamp == null) {
-                        timestamp = System.currentTimeMillis();
-                        log.info("timestamp parameter is null, using current time: {}", timestamp);
-                    }
+                    List<Asset> activeStocks = assetRepository.findByMarketAndTypeAndActiveTrue(
+                            Asset.Market.US, Asset.AssetType.STOCK);
 
-                    // Convert timestamp to LocalDateTime (KST timezone)
-                    LocalDateTime baseDateTime = Instant.ofEpochMilli(timestamp)
-                            .atZone(ZoneId.of("Asia/Seoul"))
-                            .toLocalDateTime();
+                    int backfilled = 0;
+                    int skipped = 0;
 
-                    // Find assets created in the last 24 hours from base time
-                    LocalDateTime oneDayAgo = baseDateTime.minusDays(1);
-                    log.info("Using base time: {}, searching for assets created after: {}", baseDateTime, oneDayAgo);
-
-                    List<Asset> recentAssets = assetRepository.findByMarketAndCreatedAtAfter(
-                            Asset.Market.US, oneDayAgo);
-
-                    log.info("Found {} US assets created in the last 24 hours", recentAssets.size());
-
-                    int totalPricesFetched = 0;
-                    int assetsProcessed = 0;
-
-                    for (Asset asset : recentAssets) {
+                    for (Asset asset : activeStocks) {
                         try {
-                            // Check if historical prices already exist
-                            boolean hasHistoricalData = assetPriceRepository.existsByAsset(asset);
-                            if (hasHistoricalData) {
-                                log.info("Asset {} already has historical price data, skipping", asset.getSymbol());
+                            if (assetPriceRepository.existsByAsset(asset)) {
+                                skipped++;
                                 continue;
                             }
 
-                            log.info("Fetching historical prices for {}", asset.getSymbol());
+                            log.info("Backfilling historical prices for {}", asset.getSymbol());
                             List<AssetPrice> prices = fmpProvider.fetchHistoricalPrices(asset);
 
                             if (!prices.isEmpty()) {
-                                // Save all prices at once
                                 assetPriceRepository.saveAll(prices);
-                                totalPricesFetched += prices.size();
-                                assetsProcessed++;
-                                log.info("Saved {} historical prices for {}", prices.size(), asset.getSymbol());
+                                backfilled++;
+                                log.info("Saved {} historical price records for {}", prices.size(), asset.getSymbol());
                             }
-                            // Add delay to avoid rate limiting
+
                             Thread.sleep(200);
 
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            log.warn("Historical price backfill interrupted at {}", asset.getSymbol());
+                            break;
                         } catch (Exception e) {
-                            log.warn("Failed to fetch historical prices for {}: {}",
-                                    asset.getSymbol(), e.getMessage());
+                            log.warn("Failed to backfill prices for {}: {}", asset.getSymbol(), e.getMessage());
                         }
                     }
 
-                    log.info("Historical price fetch complete: {} prices saved for {} assets",
-                            totalPricesFetched, assetsProcessed);
+                    log.info("Historical price backfill complete: {} assets backfilled, {} already had data",
+                            backfilled, skipped);
+
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 3: Finish ACTIVE portfolios that contain newly deactivated assets
+    // -------------------------------------------------------------------------
+
+    @Bean
+    public Step finishPortfoliosWithDeactivatedAssetsStep() {
+        return new StepBuilder("finishPortfoliosWithDeactivatedAssetsStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+
+                    @SuppressWarnings("unchecked")
+                    List<UUID> deactivatedIds = (List<UUID>) chunkContext.getStepContext()
+                            .getStepExecution().getJobExecution().getExecutionContext()
+                            .get(DEACTIVATED_IDS_KEY);
+
+                    if (deactivatedIds == null || deactivatedIds.isEmpty()) {
+                        log.info("No assets were deactivated this run. Portfolio finish step skipped.");
+                        return RepeatStatus.FINISHED;
+                    }
+
+                    log.info("Checking portfolios affected by {} deactivated assets", deactivatedIds.size());
+
+                    List<UUID> affectedPortfolioIds =
+                            portfolioAssetRepository.findPortfolioIdsByAssetIdIn(deactivatedIds);
+
+                    if (affectedPortfolioIds.isEmpty()) {
+                        log.info("No active portfolios affected by deactivated assets.");
+                        return RepeatStatus.FINISHED;
+                    }
+
+                    List<Portfolio> portfoliosToFinish =
+                            portfolioRepository.findActiveByIdIn(affectedPortfolioIds, PortfolioStatus.ACTIVE);
+
+                    for (Portfolio portfolio : portfoliosToFinish) {
+                        portfolio.finish();
+                        portfolioRepository.save(portfolio);
+                        log.info("Finished portfolio {} (contains deactivated asset)", portfolio.getId());
+                    }
+
+                    log.info("Finished {} portfolios due to deactivated assets", portfoliosToFinish.size());
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
