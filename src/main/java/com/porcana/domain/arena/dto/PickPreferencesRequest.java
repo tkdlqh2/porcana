@@ -30,5 +30,16 @@ public record PickPreferencesRequest(
     public PickPreferencesRequest {
         markets = markets == null ? Collections.emptyList() : markets;
         assetTypes = assetTypes == null ? Collections.emptyList() : assetTypes;
+
+        if (containsNull(markets)) {
+            throw new IllegalArgumentException("Markets list cannot contain null values");
+        }
+        if (containsNull(assetTypes)) {
+            throw new IllegalArgumentException("Asset types list cannot contain null values");
+        }
+    }
+
+    private static <T> boolean containsNull(List<T> values) {
+        return values.stream().anyMatch(value -> value == null);
     }
 }
