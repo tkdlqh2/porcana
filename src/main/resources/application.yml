@@ -56,6 +56,7 @@ batch:
     kr:
       api-key: ${DATAGOKR_API_KEY:}
       api-url: https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService
+      image-catalog-path: ${KR_IMAGE_CATALOG_PATH:classpath:batch/kr_asset_images.csv}
     us:
       api-key: ${FMP_API_KEY:}
       base-url: https://financialmodelingprep.com
