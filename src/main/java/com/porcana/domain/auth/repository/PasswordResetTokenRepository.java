@@ -11,11 +11,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, UUID> {
-    Optional<PasswordResetToken> findByToken(UUID token);
+    Optional<PasswordResetToken> findByToken(String token);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select prt from PasswordResetToken prt where prt.token = :token")
-    Optional<PasswordResetToken> findByTokenForUpdate(@Param("token") UUID token);
+    Optional<PasswordResetToken> findByTokenForUpdate(@Param("token") String token);
 
     void deleteAllByUserId(UUID userId);
 }

@@ -1,6 +1,7 @@
 package com.porcana.domain.auth.entity;
 
 import com.porcana.domain.user.entity.User;
+import com.porcana.global.auth.TokenGenerator;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -24,8 +25,8 @@ public class PasswordResetToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, unique = true)
-    private UUID token;
+    @Column(nullable = false, unique = true, length = 16)
+    private String token;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
@@ -37,10 +38,12 @@ public class PasswordResetToken {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    private static final int TOKEN_LENGTH = 16;
+
     public static PasswordResetToken create(User user) {
         PasswordResetToken prt = new PasswordResetToken();
         prt.user = user;
-        prt.token = UUID.randomUUID();
+        prt.token = TokenGenerator.generate(TOKEN_LENGTH);
         prt.expiresAt = LocalDateTime.now().plusHours(1);
         return prt;
     }

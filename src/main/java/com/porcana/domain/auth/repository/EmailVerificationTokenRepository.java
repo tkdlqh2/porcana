@@ -7,6 +7,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface EmailVerificationTokenRepository extends JpaRepository<EmailVerificationToken, UUID> {
-    Optional<EmailVerificationToken> findByToken(UUID token);
+    Optional<EmailVerificationToken> findByToken(String token);
     void deleteAllByUserId(UUID userId);
 }

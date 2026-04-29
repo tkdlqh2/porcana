@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -147,14 +148,16 @@ public class AuthController {
 
     @Operation(
             summary = "이메일 인증",
-            description = "이메일로 발송된 인증 링크의 토큰을 검증합니다.",
+            description = "이메일로 발송된 8자리 인증 코드를 검증합니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "인증 성공"),
-                    @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 토큰", content = @Content)
+                    @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 코드", content = @Content)
             }
     )
     @GetMapping("/verify-email")
-    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam UUID token) {
+    public ResponseEntity<Map<String, String>> verifyEmail(
+            @RequestParam @Pattern(regexp = "^[A-Z0-9]{8}$", message = "인증 코드 형식이 올바르지 않습니다") String token
+    ) {
         authService.verifyEmail(token);
         return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다"));
     }

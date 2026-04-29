@@ -192,9 +192,9 @@ public class AuthService {
     }
 
     @Transactional
-    public void verifyEmail(UUID token) {
+    public void verifyEmail(String token) {
         EmailVerificationToken evt = emailVerificationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 인증 링크입니다"));
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 인증 코드입니다"));
 
         if (evt.isExpired()) {
             emailVerificationTokenRepository.delete(evt);
@@ -237,17 +237,17 @@ public class AuthService {
     }
 
     @Transactional
-    public void resetPassword(UUID token, String newPassword) {
+    public void resetPassword(String token, String newPassword) {
         PasswordResetToken prt = passwordResetTokenRepository.findByTokenForUpdate(token)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 재설정 링크입니다"));
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 재설정 코드입니다"));
 
         if (prt.isUsed()) {
-            throw new IllegalArgumentException("이미 사용된 링크입니다");
+            throw new IllegalArgumentException("이미 사용된 코드입니다");
         }
 
         if (prt.isExpired()) {
             passwordResetTokenRepository.delete(prt);
-            throw new IllegalArgumentException("링크가 만료되었습니다. 다시 요청해주세요");
+            throw new IllegalArgumentException("코드가 만료되었습니다. 다시 요청해주세요");
         }
 
         prt.getUser().updatePassword(passwordEncoder.encode(newPassword));
