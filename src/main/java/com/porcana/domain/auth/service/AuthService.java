@@ -198,7 +198,7 @@ public class AuthService {
 
         if (evt.isExpired()) {
             emailVerificationTokenRepository.delete(evt);
-            throw new IllegalArgumentException("인증 링크가 만료되었습니다. 재발송을 요청해주세요");
+            throw new IllegalArgumentException("인증 코드가 만료되었습니다. 재발송을 요청해주세요");
         }
 
         evt.getUser().verifyEmail();

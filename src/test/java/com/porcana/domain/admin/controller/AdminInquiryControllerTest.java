@@ -109,12 +109,17 @@ class AdminInquiryControllerTest extends BaseIntegrationTest {
         .when()
                 .post("/inquiries/{inquiryId}/responses", inquiryId)
         .then()
-                .statusCode(200)
+                .statusCode(201)
                 .body("inquiryId", equalTo(inquiryId.toString()))
                 .body("status", equalTo("IN_PROGRESS"))
                 .body("responses", hasSize(1))
                 .body("responses[0].responderId", equalTo(adminId.toString()))
                 .body("responses[0].content", equalTo("We are looking into it."));
+
+        var storedResponses = inquiryResponseRepository.findByInquiryIdOrderBySentAtAsc(inquiryId);
+        org.junit.jupiter.api.Assertions.assertEquals(1, storedResponses.size());
+        org.junit.jupiter.api.Assertions.assertEquals(adminId, storedResponses.get(0).getResponder().getId());
+        org.junit.jupiter.api.Assertions.assertEquals("We are looking into it.", storedResponses.get(0).getContent());
     }
 
     @Test

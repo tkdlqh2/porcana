@@ -70,6 +70,9 @@ public class Inquiry {
 
     @Builder
     public Inquiry(User user, UUID guestSessionId, String email, InquiryCategory category, String title, String content) {
+        if ((user == null) == (guestSessionId == null)) {
+            throw new IllegalArgumentException("Exactly one of user or guestSessionId must be set");
+        }
         this.user = user;
         this.guestSessionId = guestSessionId;
         this.email = email;

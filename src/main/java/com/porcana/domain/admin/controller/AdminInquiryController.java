@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,7 +63,8 @@ public class AdminInquiryController {
             @CurrentUser UUID adminUserId,
             @Valid @RequestBody CreateInquiryResponseRequest request
     ) {
-        return ResponseEntity.ok(adminInquiryService.respondToInquiry(inquiryId, adminUserId, request));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(adminInquiryService.respondToInquiry(inquiryId, adminUserId, request));
     }
 
     @Operation(summary = "Update inquiry status", description = "Update inquiry status.")

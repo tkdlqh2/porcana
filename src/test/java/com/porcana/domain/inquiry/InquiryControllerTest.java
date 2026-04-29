@@ -89,7 +89,7 @@ class InquiryControllerTest extends BaseIntegrationTest {
                 "Please help with my account."
         );
 
-        given()
+        UUID inquiryId = UUID.fromString(given()
                 .header("Authorization", "Bearer " + accessToken)
                 .contentType(ContentType.JSON)
                 .body(request)
@@ -98,9 +98,10 @@ class InquiryControllerTest extends BaseIntegrationTest {
         .then()
                 .statusCode(201)
                 .body("email", equalTo("inquiry-user@example.com"))
-                .body("category", equalTo("ACCOUNT"));
+                .body("category", equalTo("ACCOUNT"))
+                .extract().path("inquiryId"));
 
-        Inquiry savedInquiry = inquiryRepository.findAll().get(0);
+        Inquiry savedInquiry = inquiryRepository.findById(inquiryId).orElseThrow();
         org.junit.jupiter.api.Assertions.assertEquals(user.getId(), savedInquiry.getUser().getId());
     }
 

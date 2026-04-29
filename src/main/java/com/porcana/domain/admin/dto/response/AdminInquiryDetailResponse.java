@@ -4,6 +4,7 @@ import com.porcana.domain.inquiry.entity.Inquiry;
 import com.porcana.domain.inquiry.entity.InquiryCategory;
 import com.porcana.domain.inquiry.entity.InquiryResponse;
 import com.porcana.domain.inquiry.entity.InquiryStatus;
+import com.porcana.domain.user.entity.User;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -45,12 +46,13 @@ public record AdminInquiryDetailResponse(
     }
 
     public static AdminInquiryDetailResponse from(Inquiry inquiry, List<InquiryResponse> responses) {
+        User user = inquiry.getUser();
         return AdminInquiryDetailResponse.builder()
                 .inquiryId(inquiry.getId())
-                .userId(inquiry.getUser() != null ? inquiry.getUser().getId() : null)
+                .userId(user != null ? user.getId() : null)
                 .guestSessionId(inquiry.getGuestSessionId())
                 .email(inquiry.getEmail())
-                .nickname(inquiry.getUser() != null ? inquiry.getUser().getNickname() : null)
+                .nickname(user != null ? user.getNickname() : null)
                 .category(inquiry.getCategory())
                 .title(inquiry.getTitle())
                 .content(inquiry.getContent())

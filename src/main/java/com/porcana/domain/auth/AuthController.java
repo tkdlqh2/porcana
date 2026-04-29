@@ -8,6 +8,7 @@ import com.porcana.domain.auth.dto.LoginRequest;
 import com.porcana.domain.auth.dto.RefreshRequest;
 import com.porcana.domain.auth.dto.ResetPasswordRequest;
 import com.porcana.domain.auth.dto.SignupRequest;
+import com.porcana.domain.auth.dto.VerifyEmailRequest;
 import com.porcana.domain.auth.service.AuthService;
 import com.porcana.global.guest.GuestSessionExtractor;
 import com.porcana.global.security.CurrentUser;
@@ -20,7 +21,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -154,11 +154,9 @@ public class AuthController {
                     @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 코드", content = @Content)
             }
     )
-    @GetMapping("/verify-email")
-    public ResponseEntity<Map<String, String>> verifyEmail(
-            @RequestParam @Pattern(regexp = "^[A-Z0-9]{8}$", message = "인증 코드 형식이 올바르지 않습니다") String token
-    ) {
-        authService.verifyEmail(token);
+    @PostMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request.token());
         return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다"));
     }
 

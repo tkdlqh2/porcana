@@ -32,7 +32,7 @@ public class InquiryRepositoryCustomImpl implements InquiryRepositoryCustom {
                         statusEq(status),
                         keywordContains(keyword)
                 )
-                .orderBy(inquiry.createdAt.desc())
+                .orderBy(inquiry.createdAt.desc(), inquiry.id.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();

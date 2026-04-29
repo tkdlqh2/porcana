@@ -16,6 +16,9 @@ public final class TokenGenerator {
     }
 
     public static String generate(int length) {
+        if (length <= 0) {
+            throw new IllegalArgumentException("token length must be positive");
+        }
         char[] buf = new char[length];
         for (int i = 0; i < length; i++) {
             buf[i] = ALPHABET[RANDOM.nextInt(ALPHABET.length)];
