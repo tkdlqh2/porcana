@@ -133,9 +133,13 @@ public class Portfolio {
     }
 
     public void start() {
+        start(LocalDate.now());
+    }
+
+    public void start(LocalDate startedAt) {
         if (this.status == PortfolioStatus.DRAFT) {
             this.status = PortfolioStatus.ACTIVE;
-            this.startedAt = LocalDate.now();
+            this.startedAt = startedAt;
         }
         // If already ACTIVE or FINISHED, do nothing (idempotent)
     }
@@ -175,11 +179,15 @@ public class Portfolio {
      * Activate the portfolio (DRAFT -> ACTIVE)
      */
     public void activate() {
+        activate(LocalDate.now());
+    }
+
+    public void activate(LocalDate startedAt) {
         if (this.status != PortfolioStatus.DRAFT) {
             throw new IllegalStateException("Only DRAFT portfolios can be activated");
         }
         this.status = PortfolioStatus.ACTIVE;
-        this.startedAt = LocalDate.now();
+        this.startedAt = startedAt;
     }
 
     // ========== Aggregate Root: 하위 엔티티 생성 ==========

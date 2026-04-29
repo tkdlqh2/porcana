@@ -210,7 +210,7 @@ public class PortfolioService {
         Portfolio saved = portfolioRepository.save(portfolio);
 
         // 자산 추가 (DDD: Portfolio가 PortfolioAsset 생성)
-        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate today = todayInSeoul();
         for (DirectCreatePortfolioCommand.AssetWeight asset : assets) {
             PortfolioAsset portfolioAsset = saved.addAsset(asset.getAssetId(), weightMap.get(asset.getAssetId()));
             portfolioAssetRepository.save(portfolioAsset);
@@ -227,7 +227,7 @@ public class PortfolioService {
         }
 
         // ACTIVE 상태로 변경
-        saved.activate();
+        saved.activate(today);
         portfolioRepository.save(saved);
 
         return CreatePortfolioResponse.from(saved);
@@ -281,7 +281,7 @@ public class PortfolioService {
             throw new IllegalStateException("Portfolio is already started");
         }
 
-        portfolio.start();
+        portfolio.start(todayInSeoul());
         Portfolio saved = portfolioRepository.save(portfolio);
         return StartPortfolioResponse.from(saved);
     }
@@ -311,7 +311,7 @@ public class PortfolioService {
     }
 
     private PortfolioPerformanceResponse buildPortfolioPerformance(Portfolio portfolio, String range) {
-        LocalDate endDate = LocalDate.now();
+        LocalDate endDate = todayInSeoul();
         LocalDate startDate = calculateStartDate(endDate, range);
 
         List<PortfolioDailyReturn> returns = portfolioDailyReturnRepository
@@ -416,7 +416,7 @@ public class PortfolioService {
         // Get the latest snapshot
         Optional<PortfolioSnapshot> latestSnapshotOpt = portfolioSnapshotRepository
                 .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
-                        portfolioId, LocalDate.now());
+                        portfolioId, todayInSeoul());
 
         if (latestSnapshotOpt.isEmpty()) {
             return weights; // No snapshot yet, will fallback to PortfolioAsset weights
@@ -468,7 +468,7 @@ public class PortfolioService {
         // Get the latest snapshot
         Optional<PortfolioSnapshot> latestSnapshotOpt = portfolioSnapshotRepository
                 .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
-                        portfolioId, LocalDate.now());
+                        portfolioId, todayInSeoul());
 
         if (latestSnapshotOpt.isEmpty()) {
             return weights;
@@ -797,7 +797,7 @@ public class PortfolioService {
         }
 
         // Create snapshot for the weight update
-        LocalDate today = LocalDate.now();
+        LocalDate today = todayInSeoul();
         Map<UUID, BigDecimal> weightMap = command.getWeights().stream()
                 .collect(Collectors.toMap(
                         UpdateAssetWeightsCommand.AssetWeightUpdate::getAssetId,
@@ -844,6 +844,10 @@ public class PortfolioService {
             case "1Y" -> endDate.minusYears(1);
             default -> endDate.minusMonths(1);
         };
+    }
+
+    private LocalDate todayInSeoul() {
+        return LocalDate.now(SEOUL);
     }
 
     /**
@@ -916,7 +920,7 @@ public class PortfolioService {
      */
     private Map<UUID, Double> getDeckLatestWeights(UUID portfolioId, Set<UUID> assetIds) {
         Optional<PortfolioSnapshot> latestSnapshot = portfolioSnapshotRepository
-                .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(portfolioId, LocalDate.now());
+                .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(portfolioId, todayInSeoul());
 
         if (latestSnapshot.isEmpty()) {
             return Map.of();

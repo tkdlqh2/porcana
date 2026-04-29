@@ -361,7 +361,9 @@ public class PortfolioPerformanceBatchJob {
     private Optional<AssetReturnResult> calculateAssetReturn(Asset asset, LocalDate startDate, LocalDate targetDate,
                                                              Long jobExecutionId) {
         // Get start price
-        Optional<AssetPrice> startPriceOpt = findClosestPrice(asset, startDate);
+        Optional<AssetPrice> startPriceOpt = startDate.equals(targetDate)
+                ? findClosestPriceBefore(asset, startDate)
+                : findClosestPrice(asset, startDate);
         if (startPriceOpt.isEmpty()) {
             log.warn("No start price found for asset {} on {}", asset.getSymbol(), startDate);
             batchIssueCollector.recordAssetIssue(jobExecutionId, "calculatePortfolioPerformanceStep", asset,
@@ -424,7 +426,9 @@ public class PortfolioPerformanceBatchJob {
      */
     private Optional<BigDecimal> calculateFxReturn(LocalDate startDate, LocalDate targetDate) {
         // Get USD/KRW exchange rate at start date
-        Optional<ExchangeRate> startRateOpt = findClosestExchangeRate(CurrencyCode.USD, startDate);
+        Optional<ExchangeRate> startRateOpt = startDate.equals(targetDate)
+                ? findClosestExchangeRateBefore(CurrencyCode.USD, startDate)
+                : findClosestExchangeRate(CurrencyCode.USD, startDate);
         if (startRateOpt.isEmpty()) {
             log.warn("No USD exchange rate found for start date {}", startDate);
             return Optional.empty();
@@ -476,6 +480,23 @@ public class PortfolioPerformanceBatchJob {
         return Optional.of(prices.get(prices.size() - 1));
     }
 
+    private Optional<AssetPrice> findClosestPriceBefore(Asset asset, LocalDate date) {
+        LocalDate lookbackStart = date.minusDays(7);
+        LocalDate dayBefore = date.minusDays(1);
+        if (dayBefore.isBefore(lookbackStart)) {
+            return Optional.empty();
+        }
+
+        List<AssetPrice> prices = assetPriceRepository.findByAssetAndPriceDateBetweenOrderByPriceDateAsc(
+                asset, lookbackStart, dayBefore);
+
+        if (prices.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(prices.get(prices.size() - 1));
+    }
+
     /**
      * 특정 날짜에 가장 가까운 환율을 찾습니다
      * (정확한 날짜가 없으면 7일 이내 가장 최근 환율 사용)
@@ -501,6 +522,23 @@ public class PortfolioPerformanceBatchJob {
         }
 
         // Return the closest rate (first in descending order)
+        return Optional.of(rates.get(0));
+    }
+
+    private Optional<ExchangeRate> findClosestExchangeRateBefore(CurrencyCode currencyCode, LocalDate date) {
+        LocalDate lookbackStart = date.minusDays(7);
+        LocalDate dayBefore = date.minusDays(1);
+        if (dayBefore.isBefore(lookbackStart)) {
+            return Optional.empty();
+        }
+
+        List<ExchangeRate> rates = exchangeRateRepository.findByCurrencyCodeAndExchangeDateBetweenOrderByExchangeDateDesc(
+                currencyCode, lookbackStart, dayBefore);
+
+        if (rates.isEmpty()) {
+            return Optional.empty();
+        }
+
         return Optional.of(rates.get(0));
     }
 
