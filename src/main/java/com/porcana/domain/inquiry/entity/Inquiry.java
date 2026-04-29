@@ -81,7 +81,7 @@ public class Inquiry {
 
     public void updateStatus(InquiryStatus status) {
         this.status = Objects.requireNonNull(status, "status must not be null");
-        if (status == InquiryStatus.RESOLVED) {
+        if (status == InquiryStatus.RESOLVED && this.respondedAt == null) {
             this.respondedAt = LocalDateTime.now();
         }
     }
