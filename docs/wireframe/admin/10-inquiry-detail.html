@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inquiry Detail - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <nav class="sidebar">
+      <div class="sidebar-logo"><span>P</span> Porcana Admin</div>
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item"><span class="sidebar-icon">D</span>Dashboard</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Operations</div>
+        <a href="02-user-list.html" class="sidebar-item"><span class="sidebar-icon">U</span>Users</a>
+        <a href="04-asset-list.html" class="sidebar-item"><span class="sidebar-icon">A</span>Assets</a>
+        <a href="05-portfolio-list.html" class="sidebar-item"><span class="sidebar-icon">P</span>Portfolios</a>
+        <a href="09-inquiry-list.html" class="sidebar-item active"><span class="sidebar-icon">I</span>Inquiries</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">System</div>
+        <a href="07-batch-list.html" class="sidebar-item"><span class="sidebar-icon">B</span>Batch Logs</a>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <a href="09-inquiry-list.html" class="nav-back">&larr; Inquiry list</a>
+
+      <div class="detail-header">
+        <div>
+          <div class="detail-title">Account recovery request</div>
+          <div class="detail-subtitle">ACCOUNT inquiry from guest-user@example.com</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline">Mark in progress</button>
+          <button class="btn btn-primary">Resolve</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-section">
+          <div class="detail-section-title">Inquiry Summary</div>
+          <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-user" style="background:#1d4ed820;color:#60a5fa;">IN_PROGRESS</span></span></div>
+          <div class="detail-row"><span class="detail-label">Created at</span><span class="detail-value">2026-04-29 13:12</span></div>
+          <div class="detail-row"><span class="detail-label">Responded at</span><span class="detail-value">2026-04-29 14:03</span></div>
+          <div class="detail-row"><span class="detail-label">Guest session</span><span class="detail-value" style="font-family:monospace;font-size:12px;">f87f4f5f-a3bb-4fae-8a4b-5c99dd01e500</span></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Routing</div>
+          <div class="detail-row"><span class="detail-label">Assigned queue</span><span class="detail-value">Account Support</span></div>
+          <div class="detail-row"><span class="detail-label">Last responder</span><span class="detail-value">admin-user</span></div>
+          <div class="detail-row"><span class="detail-label">SLA target</span><span class="detail-value">Within 24 hours</span></div>
+          <div class="detail-row"><span class="detail-label">Internal note</span><span class="detail-value">Verify original sign-up email first</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">User Message</div>
+        <div style="background:#111;border:1px solid #222;border-radius:12px;padding:16px;line-height:1.7;color:#d4d4d8;">
+          I signed up with the wrong email address and cannot complete verification.
+          Please help me move the account to a new email before I fund the portfolio.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Response Timeline</div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="padding:16px;border:1px solid #222;border-radius:12px;background:#111;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <strong>guest-user@example.com</strong>
+              <span style="font-size:12px;color:#666;">2026-04-29 13:12</span>
+            </div>
+            <div style="color:#a1a1aa;line-height:1.6;">Initial inquiry created from the mobile app inquiry form.</div>
+          </div>
+          <div style="padding:16px;border:1px solid #312e81;border-radius:12px;background:#111827;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <strong>admin-user</strong>
+              <span style="font-size:12px;color:#666;">2026-04-29 14:03</span>
+            </div>
+            <div style="color:#cbd5e1;line-height:1.6;">Thanks. Please share the new email address and the previous nickname so we can verify ownership.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Reply</div>
+        <textarea class="form-input" rows="6" style="resize:vertical;" placeholder="Write a response to the user"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+          <select class="filter-select">
+            <option>Keep status: IN_PROGRESS</option>
+            <option>Set status: RESOLVED</option>
+          </select>
+          <button class="btn btn-primary">Send response</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

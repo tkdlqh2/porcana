@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inquiry List - Porcana Admin</title>
+  <link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <nav class="sidebar">
+      <div class="sidebar-logo"><span>P</span> Porcana Admin</div>
+      <div class="sidebar-section">
+        <a href="01-dashboard.html" class="sidebar-item"><span class="sidebar-icon">D</span>Dashboard</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Operations</div>
+        <a href="02-user-list.html" class="sidebar-item"><span class="sidebar-icon">U</span>Users</a>
+        <a href="04-asset-list.html" class="sidebar-item"><span class="sidebar-icon">A</span>Assets</a>
+        <a href="05-portfolio-list.html" class="sidebar-item"><span class="sidebar-icon">P</span>Portfolios</a>
+        <a href="09-inquiry-list.html" class="sidebar-item active"><span class="sidebar-icon">I</span>Inquiries</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">System</div>
+        <a href="07-batch-list.html" class="sidebar-item"><span class="sidebar-icon">B</span>Batch Logs</a>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Inquiry Management</div>
+          <div class="page-subtitle">Monitor support requests from members and guests.</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-card-label">Total inquiries</div><div class="stat-card-value">328</div></div>
+        <div class="stat-card"><div class="stat-card-label">Received</div><div class="stat-card-value" style="color:#fbbf24;">41</div></div>
+        <div class="stat-card"><div class="stat-card-label">In progress</div><div class="stat-card-value" style="color:#60a5fa;">23</div></div>
+        <div class="stat-card"><div class="stat-card-label">Resolved today</div><div class="stat-card-value" style="color:#22c55e;">17</div></div>
+      </div>
+
+      <div class="toolbar">
+        <input type="text" class="search-input" placeholder="Search by title, email, nickname">
+        <select class="filter-select">
+          <option>All status</option>
+          <option>RECEIVED</option>
+          <option>IN_PROGRESS</option>
+          <option>RESOLVED</option>
+        </select>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Inquiry</th>
+              <th>Category</th>
+              <th>User</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Responded</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="10-inquiry-detail.html" class="table-link">Account recovery request</a><div style="font-size:12px;color:#666;margin-top:4px;">guest-user@example.com</div></td>
+              <td>ACCOUNT</td>
+              <td>Guest session</td>
+              <td><span class="badge badge-user" style="background:#1d4ed820;color:#60a5fa;">IN_PROGRESS</span></td>
+              <td>2026-04-29 13:12</td>
+              <td>2026-04-29 14:03</td>
+              <td><a href="10-inquiry-detail.html" class="btn btn-outline btn-sm">Open</a></td>
+            </tr>
+            <tr>
+              <td><a href="10-inquiry-detail.html" class="table-link">Chart bug on mobile</a><div style="font-size:12px;color:#666;margin-top:4px;">member@example.com</div></td>
+              <td>BUG_REPORT</td>
+              <td>member-user</td>
+              <td><span class="badge badge-draft">RECEIVED</span></td>
+              <td>2026-04-29 12:40</td>
+              <td>-</td>
+              <td><a href="10-inquiry-detail.html" class="btn btn-outline btn-sm">Open</a></td>
+            </tr>
+            <tr>
+              <td><a href="10-inquiry-detail.html" class="table-link">Feature request for alerts</a><div style="font-size:12px;color:#666;margin-top:4px;">investor@example.com</div></td>
+              <td>FEATURE_REQUEST</td>
+              <td>investor-pro</td>
+              <td><span class="badge badge-active">RESOLVED</span></td>
+              <td>2026-04-28 21:05</td>
+              <td>2026-04-29 09:18</td>
+              <td><a href="10-inquiry-detail.html" class="btn btn-outline btn-sm">Open</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

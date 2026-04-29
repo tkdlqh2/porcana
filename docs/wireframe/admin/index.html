@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Porcana Admin Wireframe - Index</title>
+  <title>Porcana Admin Wireframe Index</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -46,9 +46,6 @@
       font-size: 16px;
       font-weight: 600;
       margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
     .card-desc {
       font-size: 13px;
@@ -62,6 +59,7 @@
       font-weight: 700;
       padding: 2px 6px;
       border-radius: 4px;
+      margin-left: 8px;
     }
     .back-link {
       display: inline-block;
@@ -78,110 +76,46 @@
       border-radius: 12px;
       border: 1px solid #222;
     }
-    .api-ref-title {
-      font-size: 14px;
-      color: #888;
-      margin-bottom: 12px;
-    }
-    .api-endpoint {
-      font-family: monospace;
-      font-size: 13px;
-      color: #666;
-      margin-bottom: 6px;
-      padding: 4px 0;
-    }
-    .api-endpoint .method {
-      display: inline-block;
-      width: 60px;
-      color: #22c55e;
-    }
-    .api-endpoint .method.post { color: #fbbf24; }
-    .api-endpoint .method.patch { color: #3b82f6; }
-    .api-endpoint .method.delete { color: #ef4444; }
+    .api-ref-title { font-size: 14px; color: #888; margin-bottom: 12px; }
+    .api-endpoint { font-family: monospace; font-size: 13px; color: #666; margin-bottom: 6px; }
+    .method { display: inline-block; width: 60px; color: #22c55e; }
+    .method.post { color: #fbbf24; }
+    .method.patch { color: #3b82f6; }
+    .method.delete { color: #ef4444; }
   </style>
 </head>
 <body>
-  <a href="../index.html" class="back-link">&larr; 사용자 앱 와이어프레임</a>
-
+  <a href="../index.html" class="back-link">&larr; Back to app wireframes</a>
   <h1>Porcana Admin Wireframe <span class="admin-tag">ADMIN</span></h1>
-  <p class="subtitle">관리자 대시보드 화면 프로토타입</p>
+  <p class="subtitle">Reference screens for admin operations and support flows.</p>
 
   <div class="section">
-    <div class="section-title">대시보드</div>
+    <div class="section-title">Core</div>
     <div class="grid">
-      <a href="01-dashboard.html" class="card">
-        <div class="card-title">1. 대시보드</div>
-        <div class="card-desc">전체 현황 요약 - 회원 수, 종목 수, 포트폴리오 수 통계</div>
-      </a>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">회원 관리</div>
-    <div class="grid">
-      <a href="02-user-list.html" class="card">
-        <div class="card-title">2. 회원 목록</div>
-        <div class="card-desc">회원 검색, 역할 필터링, 페이지네이션</div>
-      </a>
-      <a href="03-user-detail.html" class="card">
-        <div class="card-title">3. 회원 상세</div>
-        <div class="card-desc">회원 정보, 포트폴리오 목록, 아레나 이력</div>
-      </a>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">종목 관리</div>
-    <div class="grid">
-      <a href="04-asset-list.html" class="card">
-        <div class="card-title">4. 종목 목록</div>
-        <div class="card-desc">종목 검색, 시장 필터, 이미지/배당 정보 수정</div>
-      </a>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">포트폴리오 관리</div>
-    <div class="grid">
-      <a href="05-portfolio-list.html" class="card">
-        <div class="card-title">5. 포트폴리오 목록</div>
-        <div class="card-desc">전체 포트폴리오 조회, 이름 검색</div>
-      </a>
-      <a href="06-portfolio-detail.html" class="card">
-        <div class="card-title">6. 포트폴리오 상세</div>
-        <div class="card-desc">포트폴리오 정보, 보유 종목, 수익률</div>
-      </a>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">시스템</div>
-    <div class="grid">
-      <a href="07-batch-list.html" class="card">
-        <div class="card-title">7. 배치 로그 목록</div>
-        <div class="card-desc">배치 작업 실행 이력, 오늘의 이슈 현황</div>
-      </a>
-      <a href="08-batch-detail.html" class="card">
-        <div class="card-title">8. 배치 로그 상세</div>
-        <div class="card-desc">실행 상세 정보, 이슈 목록, 에러 메시지</div>
-      </a>
+      <a href="01-dashboard.html" class="card"><div class="card-title">1. Dashboard</div><div class="card-desc">Operational overview.</div></a>
+      <a href="02-user-list.html" class="card"><div class="card-title">2. User List</div><div class="card-desc">Search and review users.</div></a>
+      <a href="03-user-detail.html" class="card"><div class="card-title">3. User Detail</div><div class="card-desc">Inspect user details and ownership.</div></a>
+      <a href="04-asset-list.html" class="card"><div class="card-title">4. Asset List</div><div class="card-desc">Asset operations and edits.</div></a>
+      <a href="05-portfolio-list.html" class="card"><div class="card-title">5. Portfolio List</div><div class="card-desc">Portfolio search and filtering.</div></a>
+      <a href="06-portfolio-detail.html" class="card"><div class="card-title">6. Portfolio Detail</div><div class="card-desc">Holdings and performance detail.</div></a>
+      <a href="07-batch-list.html" class="card"><div class="card-title">7. Batch List</div><div class="card-desc">Batch execution history.</div></a>
+      <a href="08-batch-detail.html" class="card"><div class="card-title">8. Batch Detail</div><div class="card-desc">Inspect batch issues and logs.</div></a>
+      <a href="09-inquiry-list.html" class="card"><div class="card-title">9. Inquiry List</div><div class="card-desc">Track incoming inquiries by status and user.</div></a>
+      <a href="10-inquiry-detail.html" class="card"><div class="card-title">10. Inquiry Detail</div><div class="card-desc">Review thread, update status, and reply.</div></a>
     </div>
   </div>
 
   <div class="api-ref">
-    <div class="api-ref-title">Admin API Endpoints (참고)</div>
-    <div class="api-endpoint"><span class="method post">POST</span> /api/v1/admin/admins - 관리자 생성</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/users - 회원 목록</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/users/{userId} - 회원 상세</div>
-    <div class="api-endpoint"><span class="method delete">DELETE</span> /api/v1/admin/users/{userId} - 회원 탈퇴</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/assets - 종목 목록</div>
-    <div class="api-endpoint"><span class="method patch">PATCH</span> /api/v1/admin/assets/{assetId}/image - 이미지 수정</div>
-    <div class="api-endpoint"><span class="method patch">PATCH</span> /api/v1/admin/assets/{assetId}/dividend - 배당 수정</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/portfolios - 포트폴리오 목록</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/portfolios/{portfolioId} - 포트폴리오 상세</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/batch-runs - 배치 실행 목록</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/batch-runs/{runId} - 배치 실행 상세</div>
-    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/batch-runs/today-issues - 오늘의 이슈</div>
+    <div class="api-ref-title">Admin API Reference</div>
+    <div class="api-endpoint"><span class="method post">POST</span> /api/v1/admin/admins</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/users</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/assets</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/portfolios</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/inquiries</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/inquiries/{inquiryId}</div>
+    <div class="api-endpoint"><span class="method post">POST</span> /api/v1/admin/inquiries/{inquiryId}/responses</div>
+    <div class="api-endpoint"><span class="method patch">PATCH</span> /api/v1/admin/inquiries/{inquiryId}/status</div>
+    <div class="api-endpoint"><span class="method">GET</span> /api/v1/admin/batch-runs</div>
   </div>
 </body>
 </html>
