@@ -191,7 +191,7 @@ public class AuthService {
         return new AuthResponse(newAccessToken, newRefreshToken, UserResponse.from(user));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public void verifyEmail(String token) {
         EmailVerificationToken evt = emailVerificationTokenRepository.findByToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 인증 코드입니다"));
@@ -236,7 +236,7 @@ public class AuthService {
         });
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public void resetPassword(String token, String newPassword) {
         PasswordResetToken prt = passwordResetTokenRepository.findByTokenForUpdate(token)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 재설정 코드입니다"));
