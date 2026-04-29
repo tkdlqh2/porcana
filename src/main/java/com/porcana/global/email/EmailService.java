@@ -2,6 +2,7 @@ package com.porcana.global.email;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -16,9 +17,9 @@ import jakarta.mail.internet.MimeMessage;
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
-    @Value("${app.mail.from}")
+    @Value("${app.mail.from:noreply@porcana.co.kr}")
     private String from;
 
     @Async
@@ -34,6 +35,12 @@ public class EmailService {
     }
 
     private void sendHtmlEmail(String to, String subject, String htmlContent) {
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) {
+            log.warn("JavaMailSender not configured. Skipping email to {}: {}", to, subject);
+            return;
+        }
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");

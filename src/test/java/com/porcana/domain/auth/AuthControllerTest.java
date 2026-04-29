@@ -4,6 +4,8 @@ import com.porcana.BaseIntegrationTest;
 import com.porcana.domain.auth.dto.LoginRequest;
 import com.porcana.domain.auth.dto.RefreshRequest;
 import com.porcana.domain.auth.dto.SignupRequest;
+import com.porcana.domain.auth.repository.EmailVerificationTokenRepository;
+import com.porcana.domain.auth.repository.PasswordResetTokenRepository;
 import com.porcana.domain.user.repository.UserRepository;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,8 +21,16 @@ class AuthControllerTest extends BaseIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
     @BeforeEach
     void setUp() {
+        passwordResetTokenRepository.deleteAll();
+        emailVerificationTokenRepository.deleteAll();
         userRepository.deleteAll();
     }
 

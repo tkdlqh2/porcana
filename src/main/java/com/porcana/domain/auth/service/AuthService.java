@@ -47,7 +47,7 @@ public class AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
 
-    @Value("${app.base-url}")
+    @Value("${app.base-url:http://localhost:8080}")
     private String appBaseUrl;
 
     @Transactional
