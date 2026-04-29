@@ -9,10 +9,12 @@ import com.porcana.domain.inquiry.entity.InquiryStatus;
 import com.porcana.domain.inquiry.repository.InquiryRepository;
 import com.porcana.domain.inquiry.repository.InquiryResponseRepository;
 import com.porcana.domain.user.entity.User;
+import com.porcana.domain.user.entity.UserRole;
 import com.porcana.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -51,6 +53,9 @@ public class AdminInquiryService {
                 .orElseThrow(() -> new IllegalArgumentException("Inquiry not found: " + inquiryId));
         User responder = userRepository.findByIdAndDeletedAtIsNull(adminUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Admin user not found"));
+        if (responder.getRole() != UserRole.ADMIN) {
+            throw new AccessDeniedException("Admin role required");
+        }
 
         LocalDateTime sentAt = LocalDateTime.now();
         InquiryResponse response = InquiryResponse.builder()

@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 public record CreateInquiryRequest(
         @NotBlank
         @Email
+        @Size(max = 255)
         String email,
 
         @NotNull

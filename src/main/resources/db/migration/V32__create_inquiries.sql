@@ -9,7 +9,11 @@ CREATE TABLE inquiries (
     status VARCHAR(30) NOT NULL,
     responded_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_inquiries_owner CHECK (
+        (user_id IS NOT NULL AND guest_session_id IS NULL)
+        OR (user_id IS NULL AND guest_session_id IS NOT NULL)
+    )
 );
 
 CREATE TABLE inquiry_responses (

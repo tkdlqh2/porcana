@@ -26,12 +26,22 @@ public class InquiryService {
 
     @Transactional
     public InquiryItemResponse createInquiry(CreateInquiryRequest request, UUID userId, UUID guestSessionId) {
-        User user = userId == null ? null : userRepository.findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (userId == null && guestSessionId == null) {
+            throw new IllegalArgumentException("Either userId or guestSessionId is required");
+        }
+
+        User user = null;
+        UUID effectiveGuestSessionId = null;
+        if (userId != null) {
+            user = userRepository.findByIdAndDeletedAtIsNull(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        } else {
+            effectiveGuestSessionId = guestSessionId;
+        }
 
         Inquiry inquiry = Inquiry.builder()
                 .user(user)
-                .guestSessionId(guestSessionId)
+                .guestSessionId(effectiveGuestSessionId)
                 .email(request.email())
                 .category(request.category())
                 .title(request.title())
@@ -39,8 +49,8 @@ public class InquiryService {
                 .build();
 
         Inquiry savedInquiry = inquiryRepository.save(inquiry);
-        log.info("Inquiry created: inquiryId={}, userId={}, guestSessionId={}",
-                savedInquiry.getId(), userId, guestSessionId);
+        log.info("Inquiry created: inquiryId={}, actorType={}",
+                savedInquiry.getId(), userId != null ? "USER" : "GUEST");
 
         return InquiryItemResponse.from(savedInquiry);
     }

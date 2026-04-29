@@ -5,6 +5,7 @@ import com.porcana.domain.inquiry.dto.InquiryItemResponse;
 import com.porcana.domain.inquiry.dto.MyInquiryListResponse;
 import com.porcana.domain.inquiry.service.InquiryService;
 import com.porcana.global.guest.GuestSessionExtractor;
+import com.porcana.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -59,9 +60,10 @@ public class InquiryController {
     )
     @GetMapping("/me/inquiries")
     public ResponseEntity<MyInquiryListResponse> getMyInquiries(
+            @CurrentUser UUID userId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        MyInquiryListResponse response = inquiryService.getMyInquiries(requireCurrentUserId(), pageable);
+        MyInquiryListResponse response = inquiryService.getMyInquiries(userId, pageable);
         return ResponseEntity.ok(response);
     }
 
@@ -69,14 +71,6 @@ public class InquiryController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof UUID userId)) {
             return null;
-        }
-        return userId;
-    }
-
-    private UUID requireCurrentUserId() {
-        UUID userId = extractCurrentUserId();
-        if (userId == null) {
-            throw new IllegalArgumentException("User is not authenticated");
         }
         return userId;
     }

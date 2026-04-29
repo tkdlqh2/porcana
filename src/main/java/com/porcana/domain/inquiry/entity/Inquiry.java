@@ -20,6 +20,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -79,7 +80,7 @@ public class Inquiry {
     }
 
     public void updateStatus(InquiryStatus status) {
-        this.status = status;
+        this.status = Objects.requireNonNull(status, "status must not be null");
         if (status == InquiryStatus.RESOLVED) {
             this.respondedAt = LocalDateTime.now();
         }
