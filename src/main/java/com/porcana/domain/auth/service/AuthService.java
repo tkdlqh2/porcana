@@ -238,7 +238,7 @@ public class AuthService {
 
     @Transactional
     public void resetPassword(UUID token, String newPassword) {
-        PasswordResetToken prt = passwordResetTokenRepository.findByToken(token)
+        PasswordResetToken prt = passwordResetTokenRepository.findByTokenForUpdate(token)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 재설정 링크입니다"));
 
         if (prt.isUsed()) {
