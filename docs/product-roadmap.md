@@ -1,6 +1,6 @@
 # Product Roadmap
 
-Last updated: 2026-04-27
+Last updated: 2026-04-29
 
 ## Goal
 
@@ -34,6 +34,78 @@ Last updated: 2026-04-27
 - AMEX를 "거래소 전체"가 아닌 큐레이션 리스트로 제한 → `us_etf.csv`에 포함하는 방식 채택
 - Wikipedia 파싱 실패 시 빈 Set 반환하여 데이터 손실 방지 (skip 정책)
 - Dow Jones Wikipedia 파싱은 HTML 구조 불안정으로 제외, CSV 방식 유지
+
+---
+
+## Phase 0: Infrastructure & Auth (진행 중)
+
+### 0-1. 이메일 인프라 (noreply@porcana.co.kr)
+
+현황:
+- Cloudflare 계정 생성 및 네임서버 등록 완료
+
+남은 작업:
+- **수신**: Cloudflare Email Routing 활성화 → `noreply@porcana.co.kr` → `ddact2141@gmail.com` 포워딩 (무료)
+- **발신 서비스 선택**: Resend / SendGrid / AWS SES 중 택 1
+  - 추천: Resend (3,000통/월 무료, API 단순)
+- **DNS 추가**: SPF, DKIM, DMARC 레코드를 Cloudflare에 등록
+- **Spring Boot 연동**: `spring.mail` 설정 + `JavaMailSender` Bean
+
+### 0-2. 이메일 인증 (회원가입)
+
+목표:
+- 이메일 회원가입 후 인증 메일 발송 → 링크 클릭 시 계정 활성화
+
+구현 방향:
+- `User.emailVerified: Boolean` 필드 추가
+- 회원가입 시 UUID 토큰 생성 → `email_verification_token` 테이블 저장 (TTL 24h)
+- `GET /auth/verify-email?token={token}` 엔드포인트
+- 미인증 상태에서 특정 API 접근 시 `403` 반환 (정책 결정 필요: 전면 차단 vs 일부 허용)
+
+### 0-3. 비밀번호 변경 (이메일 로그인 사용자)
+
+목표:
+- 로그인 후 비밀번호 변경, 비밀번호 분실 시 재설정 메일 발송
+
+구현 방향:
+- `PATCH /me/password` — 현재 비밀번호 확인 후 변경 (로그인 상태)
+- `POST /auth/forgot-password` — 이메일로 재설정 링크 발송
+- `POST /auth/reset-password?token={token}` — 토큰 검증 후 새 비밀번호 설정
+- 재설정 토큰 TTL: 1시간
+
+### 0-4. 내 정보 — 이메일 / 로그인 경로 노출
+
+목표:
+- `GET /me` 응답에 이메일 주소와 로그인 방법(EMAIL / GOOGLE / APPLE) 추가
+
+현황:
+- `GET /me`가 이미 있으나 `authProvider` 필드 미포함
+
+구현 방향:
+- `MeResponse`에 `email`, `authProvider` 필드 추가
+- 소셜 로그인 사용자는 비밀번호 변경 UI 숨김 (프론트엔드 판단 근거)
+
+### 0-5. 개인정보 처리방침 & 이용약관 문서
+
+목표:
+- 앱 내 링크로 연결되는 정적 페이지 또는 마크다운 문서
+
+구현 방향:
+- `docs/legal/privacy-policy.md` — 개인정보 수집 항목, 보유 기간, 제3자 제공 여부
+- `docs/legal/terms-of-service.md` — 서비스 이용 조건
+- API 불필요: 프론트엔드에서 정적 URL로 연결 (웹뷰 또는 외부 링크)
+- 법적 요건: 이메일 수집 명시, 게스트 세션 데이터 보유 기간(30일) 포함
+
+### 0-6. 온보딩 가이드라인 이미지
+
+목표:
+- 앱 첫 진입 또는 포트폴리오 생성 전 Arena 흐름을 이미지로 설명
+
+구현 방향:
+- 화면 3~4장: Arena 규칙, 리스크 프로필 선택, 종목 픽 방법, 포트폴리오 완성
+- 디자인: 기존 와이어프레임 스타일 유지 (다크 테마)
+- 저장 위치: `docs/image/onboarding/` 또는 앱 에셋으로 관리
+- 노출 조건: 첫 로그인 또는 첫 Arena 세션 시작 시 1회 표시 (로컬 플래그)
 
 ---
 
@@ -183,6 +255,7 @@ Open Questions:
 
 | Phase | 단계 | 내용 |
 |-------|------|------|
+| 0 | Infrastructure & Auth | 이메일 인프라 → 이메일 인증 → 비밀번호 변경 → 내정보 개선 → 개인정보처리방침 → 온보딩 이미지 |
 | 1 | Asset Enrichment | KR 설명 생성 → KR 이미지 → 종목 상세 카드 구조화 |
 | 2 | Portfolio Analytics | 포트폴리오 점수 + 기간별 지표 |
 | 3 | Portfolio Sharing | 공유 코드 + 복사 기능 |
