@@ -1,11 +1,13 @@
 package com.porcana.domain.user;
 
 import com.porcana.domain.user.command.UpdateUserCommand;
+import com.porcana.domain.user.dto.ChangePasswordRequest;
 import com.porcana.domain.user.dto.UpdateUserRequest;
 import com.porcana.domain.user.dto.UserResponse;
 import com.porcana.domain.user.service.UserService;
 import com.porcana.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -55,6 +57,24 @@ public class UserController {
         UpdateUserCommand command = UpdateUserCommand.from(request);
         UserResponse response = userService.updateMe(userId, command);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "비밀번호 변경",
+            description = "현재 비밀번호를 확인 후 새 비밀번호로 변경합니다. 이메일 로그인 사용자만 가능합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "변경 성공"),
+                    @ApiResponse(responseCode = "400", description = "현재 비밀번호 불일치 또는 소셜 로그인 사용자", content = @Content),
+                    @ApiResponse(responseCode = "401", description = "인증 실패")
+            }
+    )
+    @PatchMapping("/me/password")
+    public ResponseEntity<Void> changePassword(
+            @CurrentUser UUID userId,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        userService.changePassword(userId, request.currentPassword(), request.newPassword());
+        return ResponseEntity.ok().build();
     }
 
     @Operation(

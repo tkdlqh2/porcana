@@ -59,6 +59,21 @@ public interface AssetRepository extends JpaRepository<Asset, UUID>, AssetReposi
     List<Asset> findByMarketAndType(Asset.Market market, Asset.AssetType type);
 
     /**
+     * Find all assets by market and type with universe tags preloaded.
+     * Used by batch runners that build prompts from tag metadata outside
+     * of an open persistence context.
+     */
+    @Query("""
+        SELECT DISTINCT a
+        FROM Asset a
+        LEFT JOIN FETCH a.universeTags
+        WHERE a.market = :market
+          AND a.type = :type
+        """)
+    List<Asset> findByMarketAndTypeWithTags(@Param("market") Asset.Market market,
+                                            @Param("type") Asset.AssetType type);
+
+    /**
      * Find inactive asset IDs by market and type.
      * Used by batch jobs that only need affected asset IDs.
      */
