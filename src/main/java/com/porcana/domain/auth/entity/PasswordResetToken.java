@@ -1,0 +1,59 @@
+package com.porcana.domain.auth.entity;
+
+import com.porcana.domain.user.entity.User;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "password_reset_tokens")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class PasswordResetToken {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(nullable = false, unique = true)
+    private UUID token;
+
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;
+
+    @Column(name = "used_at")
+    private LocalDateTime usedAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    public static PasswordResetToken create(User user) {
+        PasswordResetToken prt = new PasswordResetToken();
+        prt.user = user;
+        prt.token = UUID.randomUUID();
+        prt.expiresAt = LocalDateTime.now().plusHours(1);
+        return prt;
+    }
+
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(this.expiresAt);
+    }
+
+    public boolean isUsed() {
+        return this.usedAt != null;
+    }
+
+    public void markUsed() {
+        this.usedAt = LocalDateTime.now();
+    }
+}
