@@ -13,7 +13,6 @@ public class UserResponse {
     private String email;
     private String nickname;
     private User.AuthProvider provider;
-    private boolean emailVerified;
     private UUID mainPortfolioId;
 
     public static UserResponse from(User user) {
@@ -22,7 +21,6 @@ public class UserResponse {
                 .email(user.getEmail())
                 .nickname(user.getNickname())
                 .provider(user.getProvider())
-                .emailVerified(user.isEmailVerified())
                 .mainPortfolioId(user.getMainPortfolioId())
                 .build();
     }
