@@ -8,6 +8,7 @@ import com.porcana.domain.auth.dto.LoginRequest;
 import com.porcana.domain.auth.dto.RefreshRequest;
 import com.porcana.domain.auth.dto.ResetPasswordRequest;
 import com.porcana.domain.auth.dto.SignupRequest;
+import com.porcana.domain.auth.dto.VerifyEmailRequest;
 import com.porcana.domain.auth.service.AuthService;
 import com.porcana.global.guest.GuestSessionExtractor;
 import com.porcana.global.security.CurrentUser;
@@ -147,15 +148,15 @@ public class AuthController {
 
     @Operation(
             summary = "이메일 인증",
-            description = "이메일로 발송된 인증 링크의 토큰을 검증합니다.",
+            description = "이메일로 발송된 8자리 인증 코드를 검증합니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "인증 성공"),
-                    @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 토큰", content = @Content)
+                    @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 코드", content = @Content)
             }
     )
-    @GetMapping("/verify-email")
-    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam UUID token) {
-        authService.verifyEmail(token);
+    @PostMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request.token());
         return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다"));
     }
 
