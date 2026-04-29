@@ -3,11 +3,14 @@ package com.porcana.domain.auth;
 import com.porcana.domain.auth.command.LoginCommand;
 import com.porcana.domain.auth.command.SignupCommand;
 import com.porcana.domain.auth.dto.AuthResponse;
+import com.porcana.domain.auth.dto.ForgotPasswordRequest;
 import com.porcana.domain.auth.dto.LoginRequest;
 import com.porcana.domain.auth.dto.RefreshRequest;
+import com.porcana.domain.auth.dto.ResetPasswordRequest;
 import com.porcana.domain.auth.dto.SignupRequest;
 import com.porcana.domain.auth.service.AuthService;
 import com.porcana.global.guest.GuestSessionExtractor;
+import com.porcana.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -140,6 +143,62 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         AuthResponse response = authService.refresh(request.refreshToken());
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "이메일 인증",
+            description = "이메일로 발송된 인증 링크의 토큰을 검증합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "인증 성공"),
+                    @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 토큰", content = @Content)
+            }
+    )
+    @GetMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam UUID token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다"));
+    }
+
+    @Operation(
+            summary = "인증 이메일 재발송",
+            description = "이메일 인증 링크를 재발송합니다. JWT 인증 필요.",
+            security = {@SecurityRequirement(name = "JWT")},
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "발송 성공"),
+                    @ApiResponse(responseCode = "400", description = "이미 인증된 이메일", content = @Content)
+            }
+    )
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@CurrentUser UUID userId) {
+        authService.resendVerificationEmail(userId);
+        return ResponseEntity.ok(Map.of("message", "인증 이메일을 발송했습니다"));
+    }
+
+    @Operation(
+            summary = "비밀번호 재설정 이메일 발송",
+            description = "입력한 이메일로 비밀번호 재설정 링크를 발송합니다. 존재하지 않는 이메일이어도 200을 반환합니다 (보안).",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "발송 완료 (이메일 존재 여부 무관)")
+            }
+    )
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.email());
+        return ResponseEntity.ok(Map.of("message", "비밀번호 재설정 이메일을 발송했습니다"));
+    }
+
+    @Operation(
+            summary = "비밀번호 재설정",
+            description = "재설정 링크의 토큰으로 새 비밀번호를 설정합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "재설정 성공"),
+                    @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 토큰", content = @Content)
+            }
+    )
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(UUID.fromString(request.token()), request.newPassword());
+        return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다"));
     }
 
     /**

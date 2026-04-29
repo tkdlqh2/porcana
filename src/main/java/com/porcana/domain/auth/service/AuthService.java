@@ -5,17 +5,23 @@ import com.porcana.domain.arena.repository.ArenaSessionRepository;
 import com.porcana.domain.auth.command.LoginCommand;
 import com.porcana.domain.auth.command.SignupCommand;
 import com.porcana.domain.auth.dto.AuthResponse;
+import com.porcana.domain.auth.entity.EmailVerificationToken;
+import com.porcana.domain.auth.entity.PasswordResetToken;
 import com.porcana.domain.auth.oauth.OAuth2Provider;
 import com.porcana.domain.auth.oauth.OAuth2ProviderFactory;
+import com.porcana.domain.auth.repository.EmailVerificationTokenRepository;
+import com.porcana.domain.auth.repository.PasswordResetTokenRepository;
 import com.porcana.domain.portfolio.entity.Portfolio;
 import com.porcana.domain.portfolio.repository.PortfolioRepository;
 import com.porcana.domain.user.dto.UserResponse;
 import com.porcana.domain.user.entity.User;
 import com.porcana.domain.user.repository.UserRepository;
+import com.porcana.global.email.EmailService;
 import com.porcana.global.security.JwtTokenProvider;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,6 +43,12 @@ public class AuthService {
     private final PortfolioRepository portfolioRepository;
     private final ArenaSessionRepository arenaSessionRepository;
     private final OAuth2ProviderFactory oauth2ProviderFactory;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
+
+    @Value("${app.base-url}")
+    private String appBaseUrl;
 
     @Transactional
     public AuthResponse signup(SignupCommand command) {
@@ -48,6 +60,11 @@ public class AuthService {
         User user = User.from(command, encodedPassword);
 
         User savedUser = userRepository.save(user);
+
+        EmailVerificationToken evt = EmailVerificationToken.create(savedUser);
+        emailVerificationTokenRepository.save(evt);
+        String verificationUrl = appBaseUrl + "/api/v1/auth/verify-email?token=" + evt.getToken();
+        emailService.sendVerificationEmail(savedUser.getEmail(), verificationUrl);
 
         String accessToken = jwtTokenProvider.createAccessToken(savedUser.getId(), savedUser.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(savedUser.getId());
@@ -177,6 +194,71 @@ public class AuthService {
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         return new AuthResponse(newAccessToken, newRefreshToken, UserResponse.from(user));
+    }
+
+    @Transactional
+    public void verifyEmail(UUID token) {
+        EmailVerificationToken evt = emailVerificationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 인증 링크입니다"));
+
+        if (evt.isExpired()) {
+            emailVerificationTokenRepository.delete(evt);
+            throw new IllegalArgumentException("인증 링크가 만료되었습니다. 재발송을 요청해주세요");
+        }
+
+        evt.getUser().verifyEmail();
+        emailVerificationTokenRepository.delete(evt);
+    }
+
+    @Transactional
+    public void resendVerificationEmail(UUID userId) {
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (user.isEmailVerified()) {
+            throw new IllegalArgumentException("이미 인증된 이메일입니다");
+        }
+
+        emailVerificationTokenRepository.deleteAllByUserId(userId);
+
+        EmailVerificationToken evt = EmailVerificationToken.create(user);
+        emailVerificationTokenRepository.save(evt);
+        String verificationUrl = appBaseUrl + "/api/v1/auth/verify-email?token=" + evt.getToken();
+        emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
+    }
+
+    @Transactional
+    public void forgotPassword(String email) {
+        userRepository.findByEmailAndDeletedAtIsNull(email).ifPresent(user -> {
+            if (user.getProvider() != User.AuthProvider.EMAIL) {
+                return;
+            }
+
+            passwordResetTokenRepository.deleteAllByUserId(user.getId());
+
+            PasswordResetToken prt = PasswordResetToken.create(user);
+            passwordResetTokenRepository.save(prt);
+            String resetUrl = appBaseUrl + "/api/v1/auth/reset-password?token=" + prt.getToken();
+            emailService.sendPasswordResetEmail(user.getEmail(), resetUrl);
+        });
+    }
+
+    @Transactional
+    public void resetPassword(UUID token, String newPassword) {
+        PasswordResetToken prt = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 재설정 링크입니다"));
+
+        if (prt.isUsed()) {
+            throw new IllegalArgumentException("이미 사용된 링크입니다");
+        }
+
+        if (prt.isExpired()) {
+            passwordResetTokenRepository.delete(prt);
+            throw new IllegalArgumentException("링크가 만료되었습니다. 다시 요청해주세요");
+        }
+
+        prt.getUser().updatePassword(passwordEncoder.encode(newPassword));
+        prt.markUsed();
     }
 
     /**
