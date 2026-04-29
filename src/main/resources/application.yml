@@ -18,6 +18,18 @@ spring:
         highlight_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  mail:
+    host: smtp.resend.com
+    port: 587
+    username: resend
+    password: ${RESEND_API_KEY:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -81,6 +93,11 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+  mail:
+    from: noreply@porcana.co.kr
 
 notification:
   discord:
