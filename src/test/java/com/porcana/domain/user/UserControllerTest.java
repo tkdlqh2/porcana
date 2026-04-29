@@ -46,6 +46,7 @@ class UserControllerTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .body("userId", equalTo(TEST_USER_ID.toString()))
                 .body("nickname", equalTo("tester"))
+                .body("emailVerified", equalTo(false))
                 .body("mainPortfolioId", nullValue());
     }
 
@@ -86,6 +87,7 @@ class UserControllerTest extends BaseIntegrationTest {
         .then()
                 .statusCode(200)
                 .body("userId", equalTo(TEST_USER_ID.toString()))
+                .body("emailVerified", equalTo(false))
                 .body("nickname", equalTo("updated-user"));
     }
 

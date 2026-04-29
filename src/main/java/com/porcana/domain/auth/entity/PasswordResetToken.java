@@ -54,6 +54,9 @@ public class PasswordResetToken {
     }
 
     public void markUsed() {
+        if (this.usedAt != null) {
+            throw new IllegalStateException("이미 사용된 토큰입니다");
+        }
         this.usedAt = LocalDateTime.now();
     }
 }

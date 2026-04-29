@@ -197,7 +197,7 @@ public class AuthController {
     )
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(UUID.fromString(request.token()), request.newPassword());
+        authService.resetPassword(request.token(), request.newPassword());
         return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다"));
     }
 

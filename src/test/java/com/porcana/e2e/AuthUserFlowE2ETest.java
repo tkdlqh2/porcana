@@ -59,6 +59,7 @@ class AuthUserFlowE2ETest extends BaseIntegrationTest {
                 .body("refreshToken", notNullValue())
                 .body("user.email", equalTo("e2e-user@example.com"))
                 .body("user.nickname", equalTo("e2e-user"))
+                .body("user.emailVerified", equalTo(false))
                 .extract();
 
         String accessToken = signupResponse.path("accessToken");
@@ -86,6 +87,7 @@ class AuthUserFlowE2ETest extends BaseIntegrationTest {
                 .statusCode(200)
                 .body("userId", equalTo(createdUser.getId().toString()))
                 .body("email", equalTo("e2e-user@example.com"))
+                .body("emailVerified", equalTo(false))
                 .body("nickname", equalTo("e2e-user"));
 
         given()

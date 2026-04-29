@@ -8,6 +8,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -37,7 +38,7 @@ public class EmailService {
     private void sendHtmlEmail(String to, String subject, String htmlContent) {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
-            log.warn("JavaMailSender not configured. Skipping email to {}: {}", to, subject);
+            log.warn("JavaMailSender not configured. Skipping email to {}: {}", maskEmail(to), subject);
             return;
         }
 
@@ -49,9 +50,9 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
             mailSender.send(message);
-            log.info("Email sent to {}: {}", to, subject);
+            log.info("Email sent to {}: {}", maskEmail(to), subject);
         } catch (MessagingException e) {
-            log.error("Failed to send email to {}: {}", to, e.getMessage());
+            log.error("Failed to send email to {}: {}", maskEmail(to), e.getMessage());
         }
     }
 
@@ -84,7 +85,7 @@ public class EmailService {
                   </div>
                 </body>
                 </html>
-                """.replace("{{VERIFICATION_URL}}", verificationUrl);
+                """.replace("{{VERIFICATION_URL}}", HtmlUtils.htmlEscape(verificationUrl));
     }
 
     private String buildPasswordResetHtml(String resetUrl) {
@@ -117,6 +118,21 @@ public class EmailService {
                   </div>
                 </body>
                 </html>
-                """.replace("{{RESET_URL}}", resetUrl);
+                """.replace("{{RESET_URL}}", HtmlUtils.htmlEscape(resetUrl));
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "<empty>";
+        }
+
+        int atIndex = email.indexOf('@');
+        if (atIndex <= 0 || atIndex == email.length() - 1) {
+            return "***";
+        }
+
+        String localPart = email.substring(0, atIndex);
+        String domain = email.substring(atIndex);
+        return localPart.charAt(0) + "***" + domain;
     }
 }

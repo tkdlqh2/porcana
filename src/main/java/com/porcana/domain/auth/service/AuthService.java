@@ -50,6 +50,9 @@ public class AuthService {
     @Value("${app.base-url:http://localhost:8080}")
     private String appBaseUrl;
 
+    @Value("${app.frontend-url:http://localhost:8080}")
+    private String frontendUrl;
+
     @Transactional
     public AuthResponse signup(SignupCommand command) {
         if (userRepository.existsByEmail(command.getEmail())) {
@@ -238,7 +241,7 @@ public class AuthService {
 
             PasswordResetToken prt = PasswordResetToken.create(user);
             passwordResetTokenRepository.save(prt);
-            String resetUrl = appBaseUrl + "/api/v1/auth/reset-password?token=" + prt.getToken();
+            String resetUrl = frontendUrl + "/reset-password?token=" + prt.getToken();
             emailService.sendPasswordResetEmail(user.getEmail(), resetUrl);
         });
     }

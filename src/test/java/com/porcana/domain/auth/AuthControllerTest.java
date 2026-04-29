@@ -53,7 +53,8 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .log().all()
                 .statusCode(200)
                 .body("accessToken", notNullValue())
-                .body("refreshToken", notNullValue());
+                .body("refreshToken", notNullValue())
+                .body("user.emailVerified", is(false));
     }
 
     @Test

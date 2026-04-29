@@ -70,7 +70,7 @@ Last updated: 2026-04-29
 구현 방향:
 - `PATCH /me/password` — 현재 비밀번호 확인 후 변경 (로그인 상태)
 - `POST /auth/forgot-password` — 이메일로 재설정 링크 발송
-- `POST /auth/reset-password?token={token}` — 토큰 검증 후 새 비밀번호 설정
+- `POST /auth/reset-password` — body(`token`, `newPassword`) 검증 후 새 비밀번호 설정
 - 재설정 토큰 TTL: 1시간
 
 ### 0-4. 내 정보 — 이메일 / 로그인 경로 노출
@@ -79,10 +79,10 @@ Last updated: 2026-04-29
 - `GET /me` 응답에 이메일 주소와 로그인 방법(EMAIL / GOOGLE / APPLE) 추가
 
 현황:
-- `GET /me`가 이미 있으나 `authProvider` 필드 미포함
+- `GET /me`가 이미 있으나 `provider`, `emailVerified` 필드 명시가 필요함
 
 구현 방향:
-- `MeResponse`에 `email`, `authProvider` 필드 추가
+- `UserResponse`에 `email`, `provider`, `emailVerified` 필드 반영
 - 소셜 로그인 사용자는 비밀번호 변경 UI 숨김 (프론트엔드 판단 근거)
 
 ### 0-5. 개인정보 처리방침 & 이용약관 문서
