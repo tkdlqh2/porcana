@@ -37,75 +37,121 @@ Last updated: 2026-04-29
 
 ---
 
-## Phase 0: Infrastructure & Auth (진행 중)
+## Completed (feat/email-auth PR #41)
 
-### 0-1. 이메일 인프라 (noreply@porcana.co.kr)
+**Auth & Email Foundation**
 
-현황:
-- Cloudflare 계정 생성 및 네임서버 등록 완료
+구현된 항목:
+- `spring-boot-starter-mail` 기반 메일 발송 인프라와 `@Async` 실행기 구성
+- 회원가입 후 이메일 인증 토큰 발급/검증/재발송 API
+  - `GET /auth/verify-email?token=...`
+  - `POST /auth/resend-verification`
+- 비밀번호 재설정 흐름
+  - `POST /auth/forgot-password`
+  - `POST /auth/reset-password` with body(`token`, `newPassword`)
+- 로그인 상태 비밀번호 변경 API
+  - `PATCH /me/password`
+- `GET /me` 응답 확장
+  - `email`, `provider`, `emailVerified` 포함
+- `email_verification_tokens`, `password_reset_tokens` 마이그레이션 추가
+- Auth/User/E2E 테스트 및 CI 부팅 이슈 정리
+
+남은 운영 보완:
+- 프로덕션 메일 도메인/DNS/SPF/DKIM/DMARC 최종 연결
+- 인증 메일/재설정 메일 재발송 rate limiting
+- 메일 발송 실패 재시도 및 운영 알림
+- 미인증 사용자 접근 정책 확정
+
+---
+
+## Phase 1.5: Pre-Launch Operational Foundation
+
+Phase 2 진입 전에 처리해야 할 운영/계정 기반 작업. 현재 이메일 인증과 비밀번호 재설정의 백엔드 뼈대는 구현되었고, 아래는 남은 운영/제품 정리 항목이다.
+
+### A. 메일 인프라 운영 전환
+
+목표:
+- 개발 환경 구현을 실제 운영 도메인 메일로 전환
+- 인증/재설정/문의 답신 메일 전달률 안정화
 
 남은 작업:
-- **수신**: Cloudflare Email Routing 활성화 → `noreply@porcana.co.kr` → `ddact2141@gmail.com` 포워딩 (무료)
-- **발신 서비스 선택**: Resend / SendGrid / AWS SES 중 택 1
-  - 추천: Resend (3,000통/월 무료, API 단순)
-- **DNS 추가**: SPF, DKIM, DMARC 레코드를 Cloudflare에 등록
-- **Spring Boot 연동**: `spring.mail` 설정 + `JavaMailSender` Bean
+- **DNS**: Cloudflare 기준 SPF / DKIM / DMARC 최종 반영
+- **발신**: Resend 운영 도메인 인증 및 `APP_FRONTEND_URL`/`APP_BASE_URL` 배포 환경값 정리
+- **수신**: 운영 문의 수신 주소 포워딩 구성 (`noreply@porcana.io` 또는 별도 support 주소)
+- **관측성**: 메일 발송 실패 로그, 재시도 정책, 운영 알림 연계
 
-### 0-2. 이메일 인증 (회원가입)
-
-목표:
-- 이메일 회원가입 후 인증 메일 발송 → 링크 클릭 시 계정 활성화
-
-구현 방향:
-- `User.emailVerified: Boolean` 필드 추가
-- 회원가입 시 UUID 토큰 생성 → `email_verification_token` 테이블 저장 (TTL 24h)
-- `GET /auth/verify-email?token={token}` 엔드포인트
-- 미인증 상태에서 특정 API 접근 시 `403` 반환 (정책 결정 필요: 전면 차단 vs 일부 허용)
-
-### 0-3. 비밀번호 변경 (이메일 로그인 사용자)
+### B. 계정 보안/복구 후속 보강
 
 목표:
-- 로그인 후 비밀번호 변경, 비밀번호 분실 시 재설정 메일 발송
+- EMAIL provider 사용자 계정의 안정성과 운영 정책 보완
 
-구현 방향:
-- `PATCH /me/password` — 현재 비밀번호 확인 후 변경 (로그인 상태)
-- `POST /auth/forgot-password` — 이메일로 재설정 링크 발송
-- `POST /auth/reset-password` — body(`token`, `newPassword`) 검증 후 새 비밀번호 설정
-- 재설정 토큰 TTL: 1시간
+추가 작업:
+- 인증 메일 재발송 / 비밀번호 재설정 요청 rate limiting
+- 토큰 재발급 경쟁 조건 완화 정책 검토
+- 미인증 사용자 차단 범위 결정
+- 메일 템플릿 문구/브랜딩 다듬기
 
-### 0-4. 내 정보 — 이메일 / 로그인 경로 노출
-
-목표:
-- `GET /me` 응답에 이메일 주소와 로그인 방법(EMAIL / GOOGLE / APPLE) 추가
-
-현황:
-- `GET /me`가 이미 있으나 `provider`, `emailVerified` 필드 명시가 필요함
-
-구현 방향:
-- `UserResponse`에 `email`, `provider`, `emailVerified` 필드 반영
-- 소셜 로그인 사용자는 비밀번호 변경 UI 숨김 (프론트엔드 판단 근거)
-
-### 0-5. 개인정보 처리방침 & 이용약관 문서
+### C. 문의(Inquiry) API
 
 목표:
-- 앱 내 링크로 연결되는 정적 페이지 또는 마크다운 문서
+- 사용자가 앱 내에서 문의를 작성하고, 운영자가 어드민에서 처리/답신
 
-구현 방향:
-- `docs/legal/privacy-policy.md` — 개인정보 수집 항목, 보유 기간, 제3자 제공 여부
-- `docs/legal/terms-of-service.md` — 서비스 이용 조건
-- API 불필요: 프론트엔드에서 정적 URL로 연결 (웹뷰 또는 외부 링크)
-- 법적 요건: 이메일 수집 명시, 게스트 세션 데이터 보유 기간(30일) 포함
+데이터 모델:
+- `inquiry`
+  - id, userId(nullable), guestSessionId(nullable), email, category, title, content, status (RECEIVED/IN_PROGRESS/RESOLVED), createdAt, respondedAt
+- `inquiry_response`
+  - inquiryId, responderId, content, sentAt
 
-### 0-6. 온보딩 가이드라인 이미지
+API (사용자):
+- `POST /inquiries` — 비회원 가능 (email 필수)
+- `GET /me/inquiries` — 회원 본인 문의 내역
+
+API (어드민):
+- `GET /admin/inquiries`
+- `GET /admin/inquiries/{id}`
+- `POST /admin/inquiries/{id}/responses`
+- `PATCH /admin/inquiries/{id}/status`
+
+### D. 약관 / 개인정보 처리방침 관리
 
 목표:
-- 앱 첫 진입 또는 포트폴리오 생성 전 Arena 흐름을 이미지로 설명
+- 법적 필수 문서를 버전 관리하며 노출
 
-구현 방향:
-- 화면 3~4장: Arena 규칙, 리스크 프로필 선택, 종목 픽 방법, 포트폴리오 완성
-- 디자인: 기존 와이어프레임 스타일 유지 (다크 테마)
-- 저장 위치: `docs/image/onboarding/` 또는 앱 에셋으로 관리
-- 노출 조건: 첫 로그인 또는 첫 Arena 세션 시작 시 1회 표시 (로컬 플래그)
+데이터 모델:
+- `legal_document`
+  - id, type (PRIVACY_POLICY / TERMS_OF_SERVICE / MARKETING_CONSENT), version, content (markdown), publishedAt, effectiveAt
+- `user_consent`
+  - userId, documentType, documentVersion, consentedAt
+
+API:
+- 공개: `GET /legal/{type}`
+- 어드민: `GET /admin/legal/{type}/versions`, `POST /admin/legal/{type}`
+
+### E. 온보딩 가이드 이미지
+
+목표:
+- 신규 사용자에게 Arena 흐름과 앱 사용 방식을 초기 가이드로 제공
+
+작업 항목:
+- 디자인 에셋 준비
+- 정적 자원 저장소 결정 (Cloudflare R2 또는 S3)
+- 어드민 또는 정적 설정으로 노출 순서 관리
+
+데이터 모델 후보:
+- `onboarding_slide`
+  - id, imageUrl, title, description, displayOrder, active
+
+API 후보:
+- `GET /onboarding/slides`
+- `GET /admin/onboarding/slides`, `POST`, `PATCH`
+
+### 실행 순서 (Phase 1.5 내부)
+
+1. 메일 인프라 운영 전환
+2. 계정 보안/복구 후속 보강
+3. 약관 / 개인정보 처리방침 관리
+4. 문의 API
+5. 온보딩 가이드 이미지
 
 ---
 
@@ -255,8 +301,8 @@ Open Questions:
 
 | Phase | 단계 | 내용 |
 |-------|------|------|
-| 0 | Infrastructure & Auth | 이메일 인프라 → 이메일 인증 → 비밀번호 변경 → 내정보 개선 → 개인정보처리방침 → 온보딩 이미지 |
 | 1 | Asset Enrichment | KR 설명 생성 → KR 이미지 → 종목 상세 카드 구조화 |
+| 1.5 | Pre-Launch Foundation | 메일 운영 전환 → 계정 보안/복구 보강 → 약관/개인정보 → 문의 API → 온보딩 가이드 |
 | 2 | Portfolio Analytics | 포트폴리오 점수 + 기간별 지표 |
 | 3 | Portfolio Sharing | 공유 코드 + 복사 기능 |
 | 4 | AI Report | 메타 리포트 배치 + AI 문장 생성 |
