@@ -21,7 +21,6 @@ import com.porcana.global.security.JwtTokenProvider;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -47,12 +46,6 @@ public class AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
 
-    @Value("${app.base-url:http://localhost:8080}")
-    private String appBaseUrl;
-
-    @Value("${app.frontend-url:http://localhost:8080}")
-    private String frontendUrl;
-
     @Transactional
     public AuthResponse signup(SignupCommand command) {
         if (userRepository.existsByEmail(command.getEmail())) {
@@ -66,8 +59,7 @@ public class AuthService {
 
         EmailVerificationToken evt = EmailVerificationToken.create(savedUser);
         emailVerificationTokenRepository.save(evt);
-        String verificationUrl = appBaseUrl + "/api/v1/auth/verify-email?token=" + evt.getToken();
-        emailService.sendVerificationEmail(savedUser.getEmail(), verificationUrl);
+        emailService.sendVerificationEmail(savedUser.getEmail(), evt.getToken());
 
         String accessToken = jwtTokenProvider.createAccessToken(savedUser.getId(), savedUser.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(savedUser.getId());
@@ -226,8 +218,7 @@ public class AuthService {
 
         EmailVerificationToken evt = EmailVerificationToken.create(user);
         emailVerificationTokenRepository.save(evt);
-        String verificationUrl = appBaseUrl + "/api/v1/auth/verify-email?token=" + evt.getToken();
-        emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
+        emailService.sendVerificationEmail(user.getEmail(), evt.getToken());
     }
 
     @Transactional
@@ -241,8 +232,7 @@ public class AuthService {
 
             PasswordResetToken prt = PasswordResetToken.create(user);
             passwordResetTokenRepository.save(prt);
-            String resetUrl = frontendUrl + "/reset-password?token=" + prt.getToken();
-            emailService.sendPasswordResetEmail(user.getEmail(), resetUrl);
+            emailService.sendPasswordResetEmail(user.getEmail(), prt.getToken());
         });
     }
 
