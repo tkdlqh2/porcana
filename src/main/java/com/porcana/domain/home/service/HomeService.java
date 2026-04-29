@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class HomeService {
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     private final UserRepository userRepository;
     private final PortfolioRepository portfolioRepository;
@@ -190,7 +192,7 @@ public class HomeService {
         // Get the latest snapshot
         Optional<PortfolioSnapshot> latestSnapshotOpt = portfolioSnapshotRepository
                 .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
-                        portfolioId, LocalDate.now());
+                        portfolioId, todayInSeoul());
 
         if (latestSnapshotOpt.isEmpty()) {
             return weights; // No snapshot yet, will fallback to PortfolioAsset weights
@@ -236,6 +238,10 @@ public class HomeService {
         return portfolioReturnCalculator.calculateAssetReturns(portfolioId, assetIds);
     }
 
+    private LocalDate todayInSeoul() {
+        return LocalDate.now(SEOUL);
+    }
+
     /**
      * Get snapshot target weights for assets
      * Returns the weights set in the latest snapshot (target/initial allocation)
@@ -246,7 +252,7 @@ public class HomeService {
         // Get the latest snapshot
         Optional<PortfolioSnapshot> latestSnapshotOpt = portfolioSnapshotRepository
                 .findFirstByPortfolioIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
-                        portfolioId, LocalDate.now());
+                        portfolioId, todayInSeoul());
 
         if (latestSnapshotOpt.isEmpty()) {
             return weights;
